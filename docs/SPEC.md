@@ -767,19 +767,7 @@ until 12.1 through 12.3 pass.
 
 ---
 
-## 14. Known Risks (not blockers)
-
-1. **8 players is thin.** 54 cards over 8 is 6 to 7 each, and the exchange pattern
-   makes the Dai-Hinmin surrender 4 of them, over half their hand. Expect to cap at
-   6 after playtesting, or to clamp exchange counts at 8 players.
-2. **Hand legibility above ~15 cards.** At 3 players hands run to 18. The weighted
-   shrink helps but the fan gets dense. Revisit if it grates.
-3. **The 3 of Spades exclusion from forced exchange** was stated for the 3-player
-   case and generalised here to all forced selections. Confirm after a session.
-
----
-
-## 15. Infrastructure Addendum
+## 14. Infrastructure Addendum
 
 Decided after the original spec was written. Supersedes any in-memory assumption
 in Section 8.

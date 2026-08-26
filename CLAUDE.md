@@ -21,7 +21,7 @@ These are load-bearing. Violating one breaks something far from where you change
 - **`stateVersion` strictly increases**, and is the compare-and-set key for the
   Firestore transaction. Never write state without bumping it.
 - **A `TICK` arriving before `deadline` is a no-op.** This is what makes a duplicate
-  sweep from a second instance safe (§15).
+  sweep from a second instance safe (§14).
 - **No bare strings enter `GameState`.** History and banners are i18n keys with
   params (§11). Retrofitting the history log later is painful.
 - **House rules read the *resolved* rank after joker binding**, never
