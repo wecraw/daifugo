@@ -1,16 +1,29 @@
-# React + Vite
+# Daifugo
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Private multiplayer Daifugo (Japanese card game) for the author and friends.
+TypeScript npm-workspaces monorepo — see [`docs/SPEC.md`](docs/SPEC.md) for the
+full specification.
 
-Currently, two official plugins are available:
+```text
+packages/
+├── core/    # Pure, deterministic game engine (@daifugo/core)
+├── server/  # Fastify + Socket.IO authoritative server
+└── client/  # Vite + React client
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Setup
 
-## React Compiler
+```bash
+npm install
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Commands
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```bash
+npm run test -w @daifugo/core   # core test matrix — must be green before client work
+npm run dev                     # server on :4000, client (Vite) on :5173
+npm run test                    # all workspace tests
+npm run typecheck               # project-referenced tsc across all packages
+npm run lint                    # eslint
+npm run build                   # build core, server, then client
+```

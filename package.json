@@ -1,23 +1,31 @@
 {
-  "name": "daifugo",
+  "name": "daifugo-monorepo",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "packages/core",
+    "packages/server",
+    "packages/client"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "dev": "npm run build -w @daifugo/core && concurrently -k -n server,client -c blue,green \"npm run dev -w @daifugo/server\" \"npm run dev -w @daifugo/client\"",
+    "build": "npm run build -w @daifugo/core && npm run build -w @daifugo/server && npm run build -w @daifugo/client",
+    "test": "vitest run",
+    "typecheck": "tsc -b packages/core packages/server && tsc --noEmit -p packages/client/tsconfig.json",
+    "lint": "eslint .",
+    "format": "prettier --write ."
   },
   "devDependencies": {
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
-    "@vitejs/plugin-react": "^6.1.0",
-    "oxlint": "^1.79.0",
-    "vite": "^8.2.2"
+    "@eslint/js": "^9.17.0",
+    "@typescript-eslint/eslint-plugin": "^8.19.0",
+    "@typescript-eslint/parser": "^8.19.0",
+    "concurrently": "^9.1.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }
