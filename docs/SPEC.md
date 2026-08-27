@@ -100,14 +100,12 @@ export interface JokerBinding {
   suit: Suit;
 }
 
-export type ComboType = 'SINGLE' | 'PAIR' | 'TRIPLE' | 'QUAD' | 'N_OF_A_KIND' | 'SEQUENCE';
-
+/** The result of parsing a play and resolving its joker bindings. Every field
+ *  beyond `cards` and `bindings` is the resolved view; card count is `cards.length`. */
 export interface PlayCombo {
-  type: ComboType;
   cards: Card[];
   bindings: JokerBinding[];     // empty when no jokers, or jokers played pure
-  count: number;                // cards.length
-  /** Rank all cards resolve to for N_OF_A_KIND. null for SEQUENCE. */
+  /** Rank every card resolves to. null only for a pure joker play. */
   resolvedRank: Rank | null;
   /** Multiset of suits after binding. Pure jokers contribute null. */
   suits: (Suit | null)[];
@@ -318,27 +316,22 @@ effectiveInverted = state.isRevolution XOR state.trickInverted
 ```
 
 When inverted, comparison reverses: index 0 is strongest, 13 weakest. The pure
-joker is therefore the *weakest* card during revolution. Note that inversion never
-changes sequence adjacency (Section 5.4), only comparison.
+joker is therefore the *weakest* card during revolution.
 
 ### 5.3 N-of-a-kind
-1 through 4+ cards sharing a resolved rank. Comparison is by strength index of that
-rank. Count must match the top play exactly.
+**N-of-a-kind is the only combo shape in this game.** A play is 1 through 4+ cards
+sharing a single resolved rank. There are no sequences, runs, or straights: cards of
+differing ranks never form a legal play. Comparison is by the strength index of the
+shared rank, and count must match the top play exactly.
 
 Two pure jokers form a legal pair of jokers. Nothing beats it in normal orientation.
 A pure joker cannot combine with a non-joker to form a pair, because its rank is
 "joker", not a number. To pair with an 8 the joker must be bound to an 8.
 
-### 5.4 Sequences
-* Minimum length 3, all cards the same suit, consecutive by strength index.
-* `K-A-2` is legal (indices 10, 11, 12). Wrapping past 2 back to 3 is **not**
-  legal, so `A-2-3` is invalid.
-* Comparison is by the **highest** card's strength index.
-* Length must match the top play exactly. A 4-card sequence cannot beat a 3-card one.
-* Jokers may fill any position including interior gaps, bound to the required rank
-  and the sequence's suit.
+Because every combo has exactly one resolved rank, **at most one rank-triggered house
+rule fires per play** (Section 6).
 
-### 5.5 Joker binding
+### 5.4 Joker binding
 Each joker is either **pure** (strength 13, suit null) or **wildcard** (bound to a
 specific rank and suit via `JokerBinding`).
 
@@ -350,11 +343,11 @@ Consequences, all intentional:
 * The 3 of Spades counter applies **only** to a pure joker played as a single.
   A joker bound to a 4 is a 4 and beats the 3 of Spades normally. The check reads
   the binding, never `card.isJoker`.
-* Both jokers may appear in one combo with **different** bindings.
-  `JKR-as-5H + JKR-as-6H + 7H` is a legal sequence.
+* Both jokers may appear in one combo, but they must resolve to the **same rank**
+  as the rest of the combo. `JKR-as-8S + JKR-as-8D + 8H` is a legal triple of 8s.
 * A pure joker satisfies any active suit lock and does not break it.
 
-### 5.6 Binding resolution
+### 5.5 Binding resolution
 The client sends explicit `bindings`. The server validates them and never trusts
 them blindly. When `bindings` is absent, the server applies the default rule.
 
@@ -372,20 +365,21 @@ Leading a lone joker therefore always resolves to pure, which is correct.
 
 ## 6. House Rules
 
-All rules read the **resolved** rank after binding. On a sequence, the trigger
-count is the number of cards in the combo resolving to that rank, so `7-8-9` fires
-7-pass with count 1 and 8-giri, and `5-6-7` fires a 1-player skip and a 1-card pass.
+All rules read the **resolved** rank after binding, never `card.isJoker`. A joker
+bound to an 8 fires 8-giri. Since a combo resolves to exactly one rank (Section 5.3),
+a play triggers at most one of these rules, and the trigger count is simply the
+combo's card count: a pair of 5s skips 2, a triple of 7s passes up to 3.
 
 | Rule | Trigger | Mechanics |
 | :--- | :--- | :--- |
 | **Spade 3 Beats Joker** | Trick top is a **single pure joker**. | A single 3 of Spades is legal over it in any inversion state and is treated as the strongest card over that joker. Does not apply to a pair of jokers or to a bound joker. |
-| **5-Skip** | Combo contains rank 5. | `S` = number of 5s. Skip the next `S` **eligible** players (non-finished and not yet passed). If `S >= (eligible players other than self)`, clear the trick instead and keep the lead. |
-| **7-Pass** | Combo contains rank 7. | `C` = number of 7s, `k = min(C, cards remaining in hand)`. Sets `RESOLVE_7_PASS`. Target is the nearest **non-finished** player to the left, regardless of whether they have passed or would be skipped. |
-| **8-Giri** | Combo contains rank 8. | Trick clears immediately, lead stays with the player. |
-| **9-Giri** | Combo contains **two or more** cards of rank 9. | Same as 8-Giri. A single 9 does nothing. |
-| **10-Discard** | Combo contains rank 10. | `D` = number of 10s, `k = min(D, cards remaining)`. Sets `RESOLVE_10_DISCARD`. Selected cards go to `graveyard`. |
-| **11-Back** | Combo contains rank 11. | `J` = number of Jacks. Odd toggles `trickInverted`. Even is a no-op. Resets on trick clear. |
-| **Revolution** | **Four or more cards of the same rank** played simultaneously. | Toggles `isRevolution` for the rest of the round. Sequences never trigger revolution regardless of length. |
+| **5-Skip** | Resolved rank is 5. | `S` = combo count. Skip the next `S` **eligible** players (non-finished and not yet passed). If `S >= (eligible players other than self)`, clear the trick instead and keep the lead. |
+| **7-Pass** | Resolved rank is 7. | `C` = combo count, `k = min(C, cards remaining in hand)`. Sets `RESOLVE_7_PASS`. Target is the nearest **non-finished** player to the left, regardless of whether they have passed or would be skipped. |
+| **8-Giri** | Resolved rank is 8. | Trick clears immediately, lead stays with the player. |
+| **9-Giri** | Resolved rank is 9 and count is **two or more**. | Same as 8-Giri. A single 9 does nothing. |
+| **10-Discard** | Resolved rank is 10. | `D` = combo count, `k = min(D, cards remaining)`. Sets `RESOLVE_10_DISCARD`. Selected cards go to `graveyard`. |
+| **11-Back** | Resolved rank is 11. | `J` = combo count. Odd toggles `trickInverted`. Even is a no-op. Resets on trick clear. |
+| **Revolution** | **Four or more cards of the same rank** played simultaneously. | Toggles `isRevolution` for the rest of the round. |
 | **Shibari** | Consecutive plays in a trick share an identical suit multiset. | Sets `suitLock` to that exact multiset. Subsequent plays must match it exactly. Overlap is not a partial lock. Mixed sets lock too: hearts+spades followed by hearts+spades locks to {H,S}. Pure jokers satisfy any lock and maintain an existing one. |
 
 ---
@@ -407,35 +401,35 @@ PHASE 0 - VALIDATE
   ├── status is IN_PROGRESS, pendingAction is null, playerId is active player
   ├── All cardIds are in the player's hand
   ├── Parse into PlayCombo; resolve or validate joker bindings
-  ├── If trick non-empty: combo type and count match the top exactly
+  ├── Combo is N-of-a-kind: every card resolves to one rank (no sequences)
+  ├── If trick non-empty: count matches the top exactly
   ├── Strength check under effectiveInverted, plus the Spade-3-over-pure-joker exception
   └── Shibari: if suitLock is set, combo suit multiset must match exactly
       (pure jokers wildcard through)
 
 PHASE A - IMMEDIATE STATE EFFECTS (applied in this order)
   ├── Move cards from hand to currentTrick, set trickLeaderId = playerId
-  ├── Revolution: if count >= 4 and all resolve to one rank -> toggle isRevolution
-  ├── 11-Back: if jackCount is odd -> toggle trickInverted
+  ├── Revolution: if count >= 4 -> toggle isRevolution
+  ├── 11-Back: if resolved rank is 11 and count is odd -> toggle trickInverted
   └── Shibari: if suit multiset equals the previous play's -> set suitLock
 
   Note: Phase 0 validates against the PRE-play inversion state. Revolution and
   11-back apply only to subsequent plays.
 
-PHASE B - INTERACTIVE RULES (ascending rank, each halts the pipeline)
-  ├── Rank 7 present and k > 0 -> pendingAction = RESOLVE_7_PASS, return
-  └── Rank 10 present and k > 0 -> pendingAction = RESOLVE_10_DISCARD, return
+PHASE B - INTERACTIVE RULE (halts the pipeline)
+  ├── Resolved rank is 7 and k > 0 -> pendingAction = RESOLVE_7_PASS, return
+  └── Resolved rank is 10 and k > 0 -> pendingAction = RESOLVE_10_DISCARD, return
 
 PHASE C - AGARI
   └── If hand empty -> append playerId to finishedPlayerIds
       If non-finished players <= 1 -> assign remaining player last place, ROUND_END
 
-PHASE D - TRICK ENDERS (ascending rank)
-  ├── Rank 8 present -> clearTrick(leader = playerId)
-  └── Two or more 9s -> clearTrick(leader = playerId)
-      If either fired, skip Phase E entirely. Skips are consumed by the clear.
+PHASE D - TRICK ENDERS
+  ├── Resolved rank is 8 -> clearTrick(leader = playerId)
+  └── Resolved rank is 9 and count >= 2 -> clearTrick(leader = playerId)
 
 PHASE E - 5-SKIP
-  └── S = number of 5s. If S >= (eligible players other than self)
+  └── Resolved rank is 5. S = count. If S >= (eligible players other than self)
       -> clearTrick(leader = playerId). Otherwise advance by (1 + S) eligible seats.
 
 PHASE F - ADVANCE
@@ -443,12 +437,12 @@ PHASE F - ADVANCE
 ```
 
 ### 7.2 Resuming after a pendingAction
-`SUBMIT_7_PASS` and `SUBMIT_10_DISCARD` do **not** simply clear the flag and advance.
-They apply the transfer or discard, then **re-enter the pipeline at Phase B** to pick
-up any higher-ranked interactive rule, then continue through C, D, E, F.
+`SUBMIT_7_PASS` and `SUBMIT_10_DISCARD` apply the transfer or discard, then resume the
+pipeline at **Phase C** and run through D, E, F. They do not simply clear the flag and
+advance: the transfer can empty the hand (§7.3), and Phases D and E have not run yet.
 
-This matters: `7-8-9` halts at Phase B, and 8-giri must still fire on resume.
-`7-10` in a sequence halts twice.
+Phase B never fires twice — a combo has one resolved rank — so there is nothing to
+re-check.
 
 ### 7.3 Agari via pass or discard
 Both can empty a hand. Playing a single 7 with two cards in hand leaves one card,
@@ -528,6 +522,31 @@ export interface ClientToServerEvents {
   exchangeCards: (cardIds: string[]) => void;
 }
 ```
+
+### 8.0 ErrorCode
+
+The `E` of `Result<GameState, ErrorCode>` (Section 7) and the `code` of `gameError`.
+Enumerated in `core/src/i18n-keys.ts` and translated under `error.*`.
+
+This is not only a transport vocabulary. Section 10.6 renders the specific reason
+inline on the disabled Play button, so **every distinct reason a play can be illegal
+carries its own code**. Do not collapse them into an `ILLEGAL_PLAY` bucket: widening
+this union later means changing core at the bottom of the dependency chain.
+
+N-of-a-kind is the only combo shape (Section 5.3), so shape rejection is just
+`MIXED_RANKS`, and count is the only thing that can mismatch the trick top.
+
+| Group | Codes |
+| :--- | :--- |
+| Permissions and phase | `NOT_HOST`, `NOT_YOUR_TURN`, `WRONG_STATUS`, `GAME_ALREADY_STARTED`, `NOT_ENOUGH_PLAYERS`, `TOO_MANY_PLAYERS`, `PLAYER_NOT_FOUND`, `INVALID_ROUND_LIMIT` |
+| Pending actions (7.2) | `PENDING_ACTION_BLOCKS`, `NO_PENDING_ACTION`, `WRONG_PENDING_ACTION` |
+| Card selection | `EMPTY_SELECTION`, `DUPLICATE_CARD_IDS`, `CARD_NOT_IN_HAND`, `WRONG_CARD_COUNT` |
+| Combo shape (5.3) | `MIXED_RANKS`, `JOKER_MUST_BE_BOUND` |
+| Joker binding (5.4, 5.5) | `INVALID_BINDING`, `DUPLICATE_BINDING`, `NO_LEGAL_BINDING` |
+| Legality vs trick top (7.1) | `COMBO_COUNT_MISMATCH`, `TOO_WEAK`, `SUIT_LOCK_MISMATCH` |
+| Pass (7.5) | `CANNOT_PASS_AS_LEADER`, `ALREADY_PASSED` |
+| Exchange (4) | `NOT_IN_EXCHANGE`, `NOT_EXCHANGE_PARTICIPANT`, `EXCHANGE_FORCED`, `EXCHANGE_ALREADY_SUBMITTED` |
+| Room lifecycle (8) | `ROOM_NOT_FOUND`, `ROOM_FULL`, `NAME_TAKEN`, `INVALID_ACTION` |
 
 ### 8.1 Identity and reconnect
 Socket id is not player id. On first join the server issues a `resumeToken` which
@@ -637,7 +656,8 @@ cycle bindings. The default is the strongest legal binding. The Play button labe
 always reflects the resolved combo.
 
 ### 10.6 Action bar
-The Play button names the resolved combo: "Play Pair of 8s", "Play 5-6-7 of Hearts".
+The Play button names the resolved combo from its count and rank: "Play Pair of 8s",
+"Play Four 3s".
 When a selection is illegal the button is disabled with the reason inline, for
 example "Must follow Hearts" or "Not high enough". Never surface a validation error
 the player could have seen coming as a toast.
@@ -683,6 +703,36 @@ strings enter `GameState`.
 
 Key namespaces: `rule.*`, `role.*`, `history.*`, `error.*`, `ui.*`.
 
+**Ownership of the namespaces is split.** `core/src/i18n-keys.ts` enumerates the
+four namespaces core can emit - `rule.*`, `role.*`, `history.*`, `error.*` - and
+exports them as `CoreI18nKey`. `ui.*` is client-only presentation text; nothing in
+core emits it, and it must not be moved into core. The client owns `UiI18nKey` and
+composes the union itself:
+
+```ts
+type I18nKey = CoreI18nKey | UiI18nKey;
+```
+
+`en.json` and `ja.json` are typechecked against that composed union, so adding a key
+on either side is a compile error until both bundles carry a translation.
+
+`rule.*` and `role.*` are derived types, not hand-written lists: `rule.${keyof
+HouseRulesConfig}` and `role.${Role['kind']}`. A new house rule cannot exist without
+a key.
+
+**No bare strings.** `HistoryEntry.key` is typed as `HistoryKey`, not `string`, and
+entries are built only through the `history(key, params, options)` builder in
+`i18n-keys.ts`, which returns a frozen entry. This makes "no bare strings enter
+`GameState`" a compile error rather than a convention.
+
+**The `*Redacted` pairing rule.** Every history key whose entry carries
+`privateCardParams` has a counterpart named `<key>Redacted` - `history.sevenPass`
+pairs with `history.sevenPassRedacted`. The sanitizer (Section 8.5) derives the
+public key mechanically by appending `Redacted`, and swaps the private card params
+for a `count` param. The redacted variant therefore takes `{count}` where the
+original takes card ids; all other params are identical. A test asserts that every
+`*Redacted` key has a non-redacted counterpart, so the derivation can never go stale.
+
 Sample mappings:
 
 | Key | en | ja |
@@ -709,12 +759,12 @@ Language toggle on the main menu, persisted to localStorage, no server involveme
 6. `tenDiscard.test.ts` - pair of 10s discards 2 to graveyard; non-active players rejected.
 7. `elevenBack.test.ts` - 1, 2, 3 Jacks parity; reset on trick clear.
 8. `shibari.test.ts` - two hearts plays lock; mixed {H,S} locks; overlapping but unequal sets do not lock; non-matching play rejected; pure joker satisfies and maintains.
-9. `kakumei.test.ts` - 4 of a kind toggles; 5-card sequence does not; wildcard joker counts toward the four.
-10. `sequence.test.ts` - min length 3; K-A-2 legal; A-2-3 illegal; exact length match; highest-card comparison; interior joker fill.
+9. `kakumei.test.ts` - 4 of a kind toggles; a triple does not; wildcard joker counts toward the four.
+10. `combo.test.ts` - mixed ranks rejected (no sequences); count must match the top exactly; pair of pure jokers legal; pure joker cannot pair with a non-joker; both jokers bound to the combo's rank.
 
 ### 12.2 Interaction tests (where the bugs will be)
-11. `7-8-9` fires 7-pass, halts, and 8-giri still fires on resume.
-12. `5-6-7` fires both skip and pass, with pass targeting correctly despite the skip.
+11. 7-pass halts the pipeline, and on resume Phase D and E still run against the post-transfer hand.
+12. A triple of 7s sets k = min(3, remaining) and the target resolves before Phase F advances.
 13. Revolution and 11-back simultaneously, verifying XOR.
 14. Shibari plus revolution together.
 15. 5-skip wrapping past finished players.
