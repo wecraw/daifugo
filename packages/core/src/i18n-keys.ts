@@ -144,22 +144,20 @@ export const ERROR_CODES = [
   "CARD_NOT_IN_HAND",
   "WRONG_CARD_COUNT",
 
-  // Combo shape (§5.3, §5.4) - the selection is not a combo at all.
-  // Each of these is a distinct inline reason on the disabled Play button (§10.6),
-  // so they are never collapsed into a single ILLEGAL_PLAY.
+  // Combo shape (§5.3) - the selection is not a combo at all. N-of-a-kind is the
+  // only shape in this game, so a mixed-rank selection is simply rejected; there is
+  // no sequence for it to fall back to. Each reason is a distinct inline label on
+  // the disabled Play button (§10.6), never collapsed into one ILLEGAL_PLAY.
   "MIXED_RANKS",
   "JOKER_MUST_BE_BOUND",
-  "SEQUENCE_TOO_SHORT",
-  "SEQUENCE_SUIT_MISMATCH",
-  "SEQUENCE_NOT_CONSECUTIVE",
 
-  // Joker binding (§5.5, §5.6)
+  // Joker binding (§5.4, §5.5)
   "INVALID_BINDING",
   "DUPLICATE_BINDING",
   "NO_LEGAL_BINDING",
 
-  // Legality against the trick top (§7.1 Phase 0)
-  "COMBO_TYPE_MISMATCH",
+  // Legality against the trick top (§7.1 Phase 0). Count is the only shape check
+  // against the top: with one combo shape there is no type to mismatch.
   "COMBO_COUNT_MISMATCH",
   "TOO_WEAK",
   "SUIT_LOCK_MISMATCH",

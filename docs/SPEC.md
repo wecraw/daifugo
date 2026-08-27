@@ -533,14 +533,17 @@ inline on the disabled Play button, so **every distinct reason a play can be ill
 carries its own code**. Do not collapse them into an `ILLEGAL_PLAY` bucket: widening
 this union later means changing core at the bottom of the dependency chain.
 
+N-of-a-kind is the only combo shape (Section 5.3), so shape rejection is just
+`MIXED_RANKS`, and count is the only thing that can mismatch the trick top.
+
 | Group | Codes |
 | :--- | :--- |
 | Permissions and phase | `NOT_HOST`, `NOT_YOUR_TURN`, `WRONG_STATUS`, `GAME_ALREADY_STARTED`, `NOT_ENOUGH_PLAYERS`, `TOO_MANY_PLAYERS`, `PLAYER_NOT_FOUND`, `INVALID_ROUND_LIMIT` |
 | Pending actions (7.2) | `PENDING_ACTION_BLOCKS`, `NO_PENDING_ACTION`, `WRONG_PENDING_ACTION` |
 | Card selection | `EMPTY_SELECTION`, `DUPLICATE_CARD_IDS`, `CARD_NOT_IN_HAND`, `WRONG_CARD_COUNT` |
-| Combo shape (5.3, 5.4) | `MIXED_RANKS`, `JOKER_MUST_BE_BOUND`, `SEQUENCE_TOO_SHORT`, `SEQUENCE_SUIT_MISMATCH`, `SEQUENCE_NOT_CONSECUTIVE` |
-| Joker binding (5.5, 5.6) | `INVALID_BINDING`, `DUPLICATE_BINDING`, `NO_LEGAL_BINDING` |
-| Legality vs trick top (7.1) | `COMBO_TYPE_MISMATCH`, `COMBO_COUNT_MISMATCH`, `TOO_WEAK`, `SUIT_LOCK_MISMATCH` |
+| Combo shape (5.3) | `MIXED_RANKS`, `JOKER_MUST_BE_BOUND` |
+| Joker binding (5.4, 5.5) | `INVALID_BINDING`, `DUPLICATE_BINDING`, `NO_LEGAL_BINDING` |
+| Legality vs trick top (7.1) | `COMBO_COUNT_MISMATCH`, `TOO_WEAK`, `SUIT_LOCK_MISMATCH` |
 | Pass (7.5) | `CANNOT_PASS_AS_LEADER`, `ALREADY_PASSED` |
 | Exchange (4) | `NOT_IN_EXCHANGE`, `NOT_EXCHANGE_PARTICIPANT`, `EXCHANGE_FORCED`, `EXCHANGE_ALREADY_SUBMITTED` |
 | Room lifecycle (8) | `ROOM_NOT_FOUND`, `ROOM_FULL`, `NAME_TAKEN`, `INVALID_ACTION` |

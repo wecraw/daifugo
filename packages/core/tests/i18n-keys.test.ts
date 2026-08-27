@@ -59,13 +59,9 @@ describe("error codes", () => {
       expect.arrayContaining([
         "MIXED_RANKS",
         "JOKER_MUST_BE_BOUND",
-        "SEQUENCE_TOO_SHORT",
-        "SEQUENCE_SUIT_MISMATCH",
-        "SEQUENCE_NOT_CONSECUTIVE",
         "INVALID_BINDING",
         "DUPLICATE_BINDING",
         "NO_LEGAL_BINDING",
-        "COMBO_TYPE_MISMATCH",
         "COMBO_COUNT_MISMATCH",
         "TOO_WEAK",
         "SUIT_LOCK_MISMATCH",
@@ -76,6 +72,14 @@ describe("error codes", () => {
   it("has no catch-all illegality bucket", () => {
     for (const code of ERROR_CODES) {
       expect(code).not.toMatch(/^(ILLEGAL_PLAY|INVALID_COMBO|INVALID_PLAY)$/);
+    }
+  });
+
+  // N-of-a-kind is the only combo shape (§5.3). No sequence vocabulary may creep
+  // back in, and there is no combo type to mismatch against the trick top.
+  it("carries no sequence or combo-type vocabulary", () => {
+    for (const code of ERROR_CODES) {
+      expect(code).not.toMatch(/SEQUENCE|COMBO_TYPE/);
     }
   });
 

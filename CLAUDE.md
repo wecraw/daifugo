@@ -50,16 +50,13 @@ npm run dev                     # server :4000, vite :5173
   spec pre-enumerates the test matrix; §12.1 maps 1:1 onto the rule files.
 - Assert the invariants above after every action in every engine test, not just in
   the dedicated invariant tests.
-- **Sequences exist.** §5.4 defines them: min length 3, same suit, consecutive by
-  strength index, `K-A-2` legal and `A-2-3` not, jokers filling interior gaps. A
-  sequence has `resolvedRank: null` and can fire several rank-triggered house rules
-  at once — `7-8-9` fires both 7-pass and 8-giri (§6). Sequences never trigger
-  revolution regardless of length.
-- The trickiest code in the project is the Phase B **re-entry** in §7.2. `SUBMIT_7_PASS`
-  and `SUBMIT_10_DISCARD` do not clear the flag and advance: they apply the transfer,
-  then re-enter at Phase B so a higher-ranked interactive rule still fires, then run
-  C-F. `7-8-9` halts and still fires 8-giri on resume; `7-10` halts twice. Plan before
-  writing it.
+- **Only N-of-a-kind exists.** No sequences, runs, or straights (§5.3). Cards of
+  differing ranks never form a legal play, `PlayCombo` carries no combo type, and the
+  count is `cards.length`. Every combo resolves to a single rank, so at most one
+  rank-triggered house rule fires per play and the trigger count is the combo count.
+- After a 7-pass or 10-discard resolves, the pipeline resumes at **Phase C**, not
+  Phase B — the transfer can empty a hand (§7.3), and Phases D-F have not run yet.
+  Phase B never fires twice, because a combo has one resolved rank (§7.2).
 - **Every distinct illegality reason gets its own `ErrorCode`.** The client renders the
   reason inline on the disabled Play button (§10.6), so there is no `ILLEGAL_PLAY`
   bucket. The full enumeration is §8.0; a test fails if a catch-all reappears.
