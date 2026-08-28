@@ -285,6 +285,24 @@ describe("5-skip wraps past finished players (test 15, §6)", () => {
   });
 });
 
+describe("5-skip reaching every opponent (§6, §7.1 Phase E)", () => {
+  it("clears the trick and passes the lead on when the skip was also an agari", () => {
+    const state = table({
+      hands: { p0: ["S-5", "H-5", "D-5"], p1: ["H-9"], p2: ["D-9"], p3: ["C-9"] },
+    });
+
+    // Three 5s at four players skips every eligible opponent, so the trick ends
+    // and the lead stays with the player — who has just gone out, which hands it
+    // to the nearest eligible player to their left (§7.4).
+    const played = act(state, { type: "PLAY_CARDS", cardIds: ["S-5", "H-5", "D-5"] }, "p0");
+
+    expect(played.finishedPlayerIds).toEqual(["p0"]);
+    expect(played.currentTrick).toEqual([]);
+    expect(played.trickLeaderId).toBe("p0");
+    expect(activeId(played)).toBe("p1");
+  });
+});
+
 describe("8-giri played as the final card (test 16, §6, §7.4)", () => {
   it("clears the trick and hands the lead to the nearest eligible left neighbour", () => {
     const state = table({
