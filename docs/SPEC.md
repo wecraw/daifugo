@@ -318,6 +318,13 @@ effectiveInverted = state.isRevolution XOR state.trickInverted
 When inverted, comparison reverses: index 0 is strongest, 13 weakest. The pure
 joker is therefore the *weakest* card during revolution.
 
+A pure joker beats nothing while inverted, so a joker that has to beat something
+must be bound. Bound to a 3 it beats a 4; it can never beat a 3, because equal
+strength does not beat (Section 7.1). The 3 of Spades exception below is
+consequently inert during revolution: a 3 already outranks every other card there,
+and a pure joker sits at the bottom, so nothing needs the exception to get over
+it.
+
 ### 5.3 N-of-a-kind
 **N-of-a-kind is the only combo shape in this game.** A play is 1 through 4+ cards
 sharing a single resolved rank. There are no sequences, runs, or straights: cards of
@@ -341,8 +348,14 @@ Consequences, all intentional:
   Jack counts toward 11-back parity.
 * A wildcard joker counts toward revolution. `JKR-as-K + K + K + K` is four kings.
 * The 3 of Spades counter applies **only** to a pure joker played as a single.
-  A joker bound to a 4 is a 4 and beats the 3 of Spades normally. The check reads
-  the binding, never `card.isJoker`.
+  A joker bound to a 4 is a 4 and beats the 3 of Spades normally; a joker bound to
+  a 10 is a 10, and the 3 of Spades does not beat it. On the *victim* side the
+  check reads the binding, never `card.isJoker`.
+* On the *beater* side the counter is the sole place in the game where card
+  identity matters rather than resolved rank: it must be the true `S-3`. A joker
+  bound to the 3 of Spades does **not** beat a pure joker — it is a 3, and a 3
+  loses to a joker in the standard orientation like any other card. The counter is
+  a specific card's privilege, not a rank's.
 * Both jokers may appear in one combo, but they must resolve to the **same rank**
   as the rest of the combo. `JKR-as-8S + JKR-as-8D + 8H` is a legal triple of 8s.
 * A pure joker satisfies any active suit lock and does not break it.
@@ -359,7 +372,19 @@ them blindly. When `bindings` is absent, the server applies the default rule.
 3. Select the one with the greatest effective strength. Pure counts as a binding
    candidate and wins ties.
 
-Leading a lone joker therefore always resolves to pure, which is correct.
+**The default is a recommendation, not a commitment.** The client pre-selects the
+resolved binding in the binding picker and the player may override it before
+playing (Section 10). Resolution therefore maximises *raw strength only* and
+ignores Section 6 entirely: it will not reach for a 7 to fish for a 7-pass, nor
+avoid an 8 to dodge 8-giri. A player who wants the joker to be a 7 so it sheds
+cards says so explicitly; guessing at intent would only make the suggestion harder
+to predict.
+
+Leading a lone joker therefore resolves to pure in the standard orientation, where
+pure is the strongest card there is. Under revolution pure is the *weakest* card
+(Section 5.2), so the same rule binds it to a 3, the strongest card while inverted.
+Both are correct: the default is always "the strongest thing this can be right
+now.
 
 ---
 
@@ -372,7 +397,7 @@ combo's card count: a pair of 5s skips 2, a triple of 7s passes up to 3.
 
 | Rule | Trigger | Mechanics |
 | :--- | :--- | :--- |
-| **Spade 3 Beats Joker** | Trick top is a **single pure joker**. | A single 3 of Spades is legal over it in any inversion state and is treated as the strongest card over that joker. Does not apply to a pair of jokers or to a bound joker. |
+| **Spade 3 Beats Joker** | Trick top is a **single pure joker**. | A single 3 of Spades is legal over it in any inversion state and is treated as the strongest card over that joker. The beater must be the true `S-3`: a joker bound to the 3 of Spades does not qualify (Section 5.4). Does not apply to a pair of jokers, or to a joker played bound: a joker played as a 10 is a 10 and the 3 of Spades does not beat it. Inert under revolution, where a 3 already outranks a pure joker without the exception (Section 5.2). |
 | **5-Skip** | Resolved rank is 5. | `S` = combo count. Skip the next `S` **eligible** players (non-finished and not yet passed). If `S >= (eligible players other than self)`, clear the trick instead and keep the lead. |
 | **7-Pass** | Resolved rank is 7. | `C` = combo count, `k = min(C, cards remaining in hand)`. Sets `RESOLVE_7_PASS`. Target is the nearest **non-finished** player to the left, regardless of whether they have passed or would be skipped. |
 | **8-Giri** | Resolved rank is 8. | Trick clears immediately, lead stays with the player. |
@@ -752,7 +777,7 @@ Language toggle on the main menu, persisted to localStorage, no server involveme
 
 ### 12.1 Unit, single rule
 1. `strength.test.ts` - standard order, inverted order, `effectiveInverted` XOR truth table.
-2. `spade3.test.ts` - beats a single pure joker normally and under revolution; loses to a joker bound to a 4; illegal against a pair of jokers.
+2. `spade3.test.ts` - beats a single pure joker normally and under revolution; loses to a joker bound to a 4; does not beat a joker played as a 10; illegal against a pair of jokers; a joker bound to the 3 of Spades does **not** beat a pure joker (Section 5.4).
 3. `fiveSkip.test.ts` - 1, 2, and 3 fives at 4 players; the stacking case that clears the trick and returns the lead.
 4. `sevenPass.test.ts` - state transition; `k = min(C, remaining)`; k = 0 when playing the last card; target skips finished players but not passed ones.
 5. `nineGiri.test.ts` - single 9 does not clear; pair and triple do.
