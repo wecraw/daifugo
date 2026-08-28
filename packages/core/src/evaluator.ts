@@ -19,8 +19,8 @@
  */
 import { comboStrength, parseCombo } from "./combo.js";
 import { DEFAULT_HOUSE_RULES } from "./config.js";
-import { SPADE_3_ID } from "./deck.js";
 import type { ErrorCode } from "./i18n-keys.js";
+import { spade3BeatsJoker } from "./rules/spade3BeatsJoker.js";
 import { compareStrength, effectiveInverted, isStronger } from "./strength.js";
 import type { Card, GameState, HouseRulesConfig, PlayCombo, Rank, Result, Suit } from "./types.js";
 import { err, ok } from "./types.js";
@@ -116,35 +116,8 @@ export function canBeat(
 ): boolean {
   if (top === null) return true;
   if (top.cards.length !== candidate.cards.length) return false;
-  if (spade3BeatsJoker(top, candidate, ctx)) return true;
+  if (spade3BeatsJoker(top, candidate, configIn(ctx))) return true;
   return isStronger(comboStrength(candidate), comboStrength(top), invertedIn(ctx));
-}
-
-/**
- * The 3 of Spades over a single pure joker (§6).
- *
- * On the **victim** side the check reads the binding, via `isPureJokerPlay`, and
- * never `card.isJoker`: a joker played as a 10 is a 10 and the 3 of Spades does
- * not beat it (§5.4). A pair of jokers is out of scope — the counter is a single's
- * privilege — and the count check above has already rejected a single against it.
- *
- * On the **beater** side the card id must be the true `S-3`. This is the sole
- * place in the game where card identity matters rather than resolved rank: a joker
- * bound to the 3 of Spades resolves to a 3 of spades in every observable way and
- * still does not qualify, because the counter is that card's privilege, not the
- * rank's (§5.4).
- *
- * Under revolution the exception is inert rather than absent: a 3 is the strongest
- * card while inverted and a pure joker the weakest (§5.2), so the comparison below
- * would have said yes anyway. Nothing needs to switch it off, and switching it off
- * would only add a branch that no play can distinguish.
- */
-function spade3BeatsJoker(top: PlayCombo, candidate: PlayCombo, ctx: TrickContext): boolean {
-  if (!configIn(ctx).spade3BeatsJoker) return false;
-  if (top.cards.length !== 1 || !top.isPureJokerPlay) return false;
-  if (candidate.cards.length !== 1) return false;
-  const beater = candidate.cards[0];
-  return beater !== undefined && beater.id === SPADE_3_ID;
 }
 
 /**
