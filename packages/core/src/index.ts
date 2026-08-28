@@ -9,3 +9,4 @@ export * from "./roles.js";
 export * from "./combo.js";
 export * from "./evaluator.js";
 export * from "./rules/index.js";
+export * from "./engine.js";

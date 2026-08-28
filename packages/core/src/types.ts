@@ -101,7 +101,14 @@ export interface GameState {
 
   players: Player[]; // ordered by seatIndex
   hands: Record<string, Card[]>;
-  graveyard: Card[]; // 10-discard sink
+  /**
+   * Every card out of play: the 10-discard sink, miyako-ochi hands (§4.5), and
+   * the cards of each trick as it clears (§7.4). §2 names the first two; the
+   * third follows from card conservation being a sum over hands, trick and
+   * graveyard (§12.3) — a played card never returns to a hand, so this is the
+   * only place an emptied trick can go.
+   */
+  graveyard: Card[];
 
   dealerId: string; // previous round's last place
   turnOrder: string[]; // ALL player ids in seat order. Never mutated mid-round.
@@ -131,6 +138,16 @@ export interface GameState {
 
   pendingJoins: Player[]; // applied at next round boundary
   pendingLeaves: string[];
+
+  /**
+   * Match standings: cumulative `N - finishPosition` per player (§9).
+   *
+   * The one field here that §2 does not list. §9 requires points to accumulate
+   * across rounds and `matchFinished` to emit them, and neither `GameState` nor
+   * `Player` as written in §2 has anywhere to keep them, so they live here rather
+   * than being recomputed from a round history that the engine does not keep.
+   */
+  points: Record<string, number>;
 
   history: HistoryEntry[];
 }

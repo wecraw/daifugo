@@ -3,15 +3,22 @@
  *
  * `turnOrder` is never mutated mid-round and always holds every player, finished
  * and departed included (§2). Eligibility is therefore *derived* here rather than
- * enforced by removal: "eligible" means not finished and not in `passedPlayerIds`
- * (§7.5), and every seat advance in the game is a walk over that predicate.
+ * enforced by removal: "eligible" means still in the round — not finished, not in
+ * `droppedPlayerIds` — and not in `passedPlayerIds` (§7.5), and every seat advance
+ * in the game is a walk over that predicate.
+ *
+ * A dropped player is one who left the round without an agari: a miyako-ochi
+ * demotion (§4.5) or a mid-round leave (§7.7). They count exactly as a finished
+ * player does for every walk here — they cannot be advanced to, skipped over,
+ * counted for 5-skip, or targeted by a 7-pass — and differ only in where §4.1
+ * places them in the finish order.
  *
  * Two different predicates matter and they are not interchangeable. 5-skip counts
  * *eligible* seats, so a player who has already passed costs the skip nothing
- * (§6). 7-pass targets the nearest *non-finished* player, passed or not, because a
- * passed player is still in the round and will pick the cards up next trick (§6).
- * Keeping both here, rather than inlining a loop at each call site, is what stops
- * the two from quietly converging.
+ * (§6). 7-pass targets the nearest player still *in the round*, passed or not,
+ * because a passed player is still in the round and will pick the cards up next
+ * trick (§6). Keeping both here, rather than inlining a loop at each call site, is
+ * what stops the two from quietly converging.
  */
 import type { GameState } from "./types.js";
 
@@ -19,17 +26,23 @@ import type { GameState } from "./types.js";
 export interface SeatingContext {
   turnOrder: readonly string[];
   finishedPlayerIds: readonly string[];
+  /** Absent is the same as empty: nobody has been demoted or has left (§4.5, §7.7). */
+  droppedPlayerIds?: readonly string[];
   /** Absent is the same as empty: a fresh trick has nobody locked out. */
   passedPlayerIds?: readonly string[];
 }
 
 /** The seating context of a live game state. */
 export function seatingOf(
-  state: Pick<GameState, "turnOrder" | "finishedPlayerIds" | "passedPlayerIds">,
+  state: Pick<
+    GameState,
+    "turnOrder" | "finishedPlayerIds" | "droppedPlayerIds" | "passedPlayerIds"
+  >,
 ): SeatingContext {
   return {
     turnOrder: state.turnOrder,
     finishedPlayerIds: state.finishedPlayerIds,
+    droppedPlayerIds: state.droppedPlayerIds,
     passedPlayerIds: state.passedPlayerIds,
   };
 }
@@ -38,21 +51,32 @@ export function hasFinished(playerId: string, seating: SeatingContext): boolean 
   return seating.finishedPlayerIds.includes(playerId);
 }
 
+/** Demoted by miyako-ochi (§4.5) or gone from the table (§7.7). */
+export function hasDropped(playerId: string, seating: SeatingContext): boolean {
+  return seating.droppedPlayerIds?.includes(playerId) ?? false;
+}
+
 export function hasPassed(playerId: string, seating: SeatingContext): boolean {
   return seating.passedPlayerIds?.includes(playerId) ?? false;
 }
 
-/** Not finished and not passed: still owed a turn in this trick (§7.5). */
+/** Still holding cards and still playing: neither finished nor dropped. */
+export function isInRound(playerId: string, seating: SeatingContext): boolean {
+  return !hasFinished(playerId, seating) && !hasDropped(playerId, seating);
+}
+
+/** In the round and not yet passed: still owed a turn in this trick (§7.5). */
 export function isEligible(playerId: string, seating: SeatingContext): boolean {
-  return !hasFinished(playerId, seating) && !hasPassed(playerId, seating);
+  return isInRound(playerId, seating) && !hasPassed(playerId, seating);
 }
 
 export function eligiblePlayerIds(seating: SeatingContext): string[] {
   return seating.turnOrder.filter((id) => isEligible(id, seating));
 }
 
-export function nonFinishedPlayerIds(seating: SeatingContext): string[] {
-  return seating.turnOrder.filter((id) => !hasFinished(id, seating));
+/** Everyone still in the round, passed or not. Phase C counts these (§7.1). */
+export function inRoundPlayerIds(seating: SeatingContext): string[] {
+  return seating.turnOrder.filter((id) => isInRound(id, seating));
 }
 
 /** Index into `turnOrder`, or -1. Seat order is the play order, left-hand first. */
@@ -109,10 +133,10 @@ export function nextEligibleIndex(
 }
 
 /** The next seat still in the round, passed or not (§6 7-pass, §7.4). */
-export function nextNonFinishedIndex(
+export function nextInRoundIndex(
   seating: SeatingContext,
   fromIndex: number,
   steps = 1,
 ): number | null {
-  return advanceSeats(seating, fromIndex, steps, (id) => !hasFinished(id, seating));
+  return advanceSeats(seating, fromIndex, steps, (id) => isInRound(id, seating));
 }

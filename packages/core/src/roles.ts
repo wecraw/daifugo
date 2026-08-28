@@ -327,3 +327,25 @@ export function applyExchange(
 
   return ok(next);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Scoring (§9)                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The round's points: `N - finishPosition` over the §4.1 finish order, so the
+ * winner of a 5-player round scores 4 and last place scores 0.
+ *
+ * Position is 1-indexed, which is what makes last place score nothing — including
+ * a player demoted by miyako-ochi (§4.5), who is last place whatever their hand
+ * held. The result is this round's award alone; the engine adds it onto the
+ * standings it carries across the match.
+ */
+export function roundPoints(finishOrder: readonly string[]): Record<string, number> {
+  const count = finishOrder.length;
+  const points: Record<string, number> = {};
+  finishOrder.forEach((playerId, index) => {
+    points[playerId] = count - (index + 1);
+  });
+  return points;
+}
