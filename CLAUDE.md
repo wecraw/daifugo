@@ -28,7 +28,9 @@ These are load-bearing. Violating one breaks something far from where you change
   `i18n-keys.ts`. Every key carrying `privateCardParams` has a `<key>Redacted`
   counterpart the sanitizer derives by appending `Redacted` (§11).
 - **House rules read the *resolved* rank after joker binding**, never
-  `card.isJoker`. A joker bound to an 8 fires 8-giri (§6).
+  `card.isJoker`. A joker bound to an 8 fires 8-giri (§6). The single exception is
+  the *beater* side of Spade-3-beats-joker, which matches the card id `S-3`: a
+  joker bound to the 3 of Spades does not qualify (§5.4).
 
 ## Build order
 
