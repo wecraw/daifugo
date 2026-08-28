@@ -5,6 +5,7 @@ export * from "./strength.js";
 export * from "./deck.js";
 export * from "./hand.js";
 export * from "./turnOrder.js";
+export * from "./roles.js";
 export * from "./combo.js";
 export * from "./evaluator.js";
 export * from "./rules/index.js";

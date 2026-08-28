@@ -111,6 +111,13 @@ export interface GameState {
   trickLeaderId: string | null; // last player who actually played
   passedPlayerIds: string[];
   finishedPlayerIds: string[]; // in order of going out (agari)
+  /**
+   * Players removed from the round without an agari: a miyako-ochi demotion
+   * (§4.5) or a mid-round leave (§7.7). Pinned below everyone who still held
+   * cards when the round ended, best-placed first, so the last entry is dead
+   * last. A miyako-ochi entry stays last: a later leave inserts before it.
+   */
+  droppedPlayerIds: string[];
 
   isRevolution: boolean; // persists for the round
   trickInverted: boolean; // 11-back; resets on trick clear
