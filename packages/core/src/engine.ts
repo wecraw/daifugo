@@ -242,7 +242,11 @@ function setRoundLimit(
   if (playerId !== state.hostId) return err("NOT_HOST");
   if (state.status !== "LOBBY" && state.status !== "ROUND_END") return err("WRONG_STATUS");
   if (limit !== null && (!Number.isInteger(limit) || limit < 1)) return err("INVALID_ROUND_LIMIT");
-  if (limit !== null && limit < state.roundNumber) return err("INVALID_ROUND_LIMIT");
+  // A limit only ends a round still to come. In `ROUND_END` after round r,
+  // `roundNumber` is r and that round is already scored, so r itself is as
+  // unreachable as r - 1: accepting it would leave the status at `ROUND_END`
+  // and let `START_GAME` deal an r + 1 the limit was meant to forbid (§9).
+  if (limit !== null && limit <= state.roundNumber) return err("INVALID_ROUND_LIMIT");
 
   const next = draft(state);
   next.roundLimit = limit;

@@ -107,6 +107,22 @@ describe("UPDATE_RULES and SET_ROUND_LIMIT (§8.2, §10.11)", () => {
     );
   });
 
+  it("refuse a limit the match has already reached (§9)", () => {
+    const between = table({
+      hands: { p0: [], p1: [], p2: [] },
+      status: "ROUND_END",
+      roundNumber: 3,
+      finished: ["p1", "p0", "p2"],
+    });
+    expect(reject(between, { type: "SET_ROUND_LIMIT", limit: 3 }, "p0")).toBe(
+      "INVALID_ROUND_LIMIT",
+    );
+    expect(reject(between, { type: "SET_ROUND_LIMIT", limit: 2 }, "p0")).toBe(
+      "INVALID_ROUND_LIMIT",
+    );
+    expect(act(between, { type: "SET_ROUND_LIMIT", limit: 4 }, "p0").roundLimit).toBe(4);
+  });
+
   it("are refused mid-round: the toggles live in the lobby (§10.11)", () => {
     const playing = table({ hands: { p0: ["S-4"], p1: ["S-5"], p2: ["S-6"] } });
     expect(reject(playing, { type: "UPDATE_RULES", config: { kakumei: false } }, "p0")).toBe(
