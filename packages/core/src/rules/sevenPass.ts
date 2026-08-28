@@ -6,15 +6,15 @@
  * transfer can empty their hand (§7.3).
  *
  * `k = min(C, cards remaining after the play)`, so playing your last 7 passes
- * nothing and the pipeline never halts at all. The target is the nearest
- * **non-finished** player to the left — passed players included, since a passed
- * player is still in the round and simply picks the cards up next trick. That is
- * deliberately a different predicate from 5-skip's (§6), which counts eligible
- * seats.
+ * nothing and the pipeline never halts at all. The target is the nearest player
+ * still **in the round** to the left — passed players included, since a passed
+ * player simply picks the cards up next trick, but never a finished or dropped
+ * one (§4.5). That is deliberately a different predicate from 5-skip's (§6),
+ * which counts eligible seats.
  */
 import { takeFromHand } from "../hand.js";
 import type { ErrorCode } from "../i18n-keys.js";
-import { type SeatingContext, nextNonFinishedIndex, seatIndexOf } from "../turnOrder.js";
+import { type SeatingContext, nextInRoundIndex, seatIndexOf } from "../turnOrder.js";
 import type { Card, HouseRulesConfig, PendingAction, PlayCombo, Result } from "../types.js";
 import { err, ok } from "../types.js";
 
@@ -35,11 +35,11 @@ export function sevenPassCount(combo: PlayCombo, cardsRemaining: number): number
   return Math.max(0, Math.min(combo.cards.length, cardsRemaining));
 }
 
-/** The nearest non-finished player to the left, or null when nobody is left. */
+/** The nearest player still in the round to the left, or null when nobody is. */
 export function sevenPassTarget(playerId: string, seating: SeatingContext): string | null {
   const from = seatIndexOf(playerId, seating);
   if (from === -1) return null;
-  const index = nextNonFinishedIndex(seating, from);
+  const index = nextInRoundIndex(seating, from);
   if (index === null) return null;
   const target = seating.turnOrder[index];
   return target === undefined || target === playerId ? null : target;
