@@ -25,6 +25,16 @@ export function countCards(state: GameState): number {
   return inHands + inTrick + state.graveyard.length;
 }
 
+/** The ids a deal is entitled to seat: everyone staying, plus everyone arriving (§7.7). */
+function rosterAfterChanges(state: GameState): string[] {
+  const leaving = new Set(state.pendingLeaves);
+  const staying = state.turnOrder.filter((id) => !leaving.has(id));
+  const arriving = state.pendingJoins
+    .map((player) => player.id)
+    .filter((id) => !leaving.has(id) && !staying.includes(id));
+  return [...staying, ...arriving];
+}
+
 /** Every card id the state holds, for spotting a duplicate as well as a loss. */
 export function cardIds(state: GameState): string[] {
   return [
@@ -51,10 +61,15 @@ export function assertInvariants(before: GameState, after: GameState): void {
 
   // 22
   expect(after.turnOrder).toHaveLength(after.players.length);
-  if (after.roundNumber === before.roundNumber) {
+  if (before.status === "LOBBY" && after.status === "LOBBY") {
+    // The lobby is not a round: seats come and go as players arrive and leave.
+  } else if (after.roundNumber === before.roundNumber) {
     expect(after.turnOrder).toEqual(before.turnOrder);
   } else {
-    expect([...after.turnOrder].sort()).toEqual([...before.turnOrder].sort());
+    // A deal is the one point reseating may rewrite `turnOrder` (§3.2), and the
+    // one boundary at which a queued join or leave applies (§7.7). Anything else
+    // appearing or disappearing is the bug this invariant is here to catch.
+    expect([...after.turnOrder].sort()).toEqual(rosterAfterChanges(before).sort());
   }
 
   // 23

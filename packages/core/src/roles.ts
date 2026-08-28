@@ -349,3 +349,29 @@ export function roundPoints(finishOrder: readonly string[]): Record<string, numb
   });
   return points;
 }
+
+/**
+ * Remove a player and their partner from the exchange (§4.3, §7.7).
+ *
+ * A leave mid-exchange leaves a pair with one side: the departing hand is in the
+ * graveyard, so there is nothing to give and nobody to give it to. Dissolving
+ * both sides rather than only the leaver's is what keeps the partner's hand
+ * intact — a half-pair would otherwise hand cards to a player who has left the
+ * room, and `applyExchange` would look for cards that are no longer in a hand.
+ *
+ * Everyone outside that pair is untouched, so the rest of the table exchanges as
+ * though nothing happened.
+ */
+export function withdrawFromExchange(exchange: ExchangeState, playerId: string): ExchangeState {
+  const partnerId = exchange.partner[playerId];
+  const gone = new Set([playerId, ...(partnerId === undefined ? [] : [partnerId])]);
+  const keep = <T>(record: Readonly<Record<string, T>>): Record<string, T> =>
+    Object.fromEntries(Object.entries(record).filter(([id]) => !gone.has(id)));
+
+  return {
+    required: keep(exchange.required),
+    partner: keep(exchange.partner),
+    forced: keep(exchange.forced),
+    submitted: keep(exchange.submitted),
+  };
+}

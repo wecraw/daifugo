@@ -242,6 +242,9 @@ describe("post-demotion eligibility (test 41, §4.5, §7.5)", () => {
 /* -------------------------------------------------------------------------- */
 
 describe("the round after a demotion (§4.5 downstream)", () => {
+  // Test 42's other half — a mid-round leave after a demotion sitting above the
+  // demoted player, not below — lives with the rest of §7.7 in `roster.test.ts`.
+
   it("makes the demoted player dealer at seat 0 and the winner DAI_FUGO at N-1", () => {
     const state = table({
       hands: { p0: ["S-3"], p1: ["H-9", "H-10"], p2: ["D-9"] },
