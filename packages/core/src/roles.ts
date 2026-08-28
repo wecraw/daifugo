@@ -32,20 +32,34 @@ export const EXCHANGE_DURATION_MS = 60_000;
 
 /**
  * The round's finish order, best first: everyone who went out, in the order they
- * did, then everyone who did not.
+ * did, then whoever was still holding cards, then the dropped block (§4.1).
  *
- * There is normally exactly one player left holding cards and they are last place.
- * A mid-round departure is recorded in `finishedPlayerIds` by the engine at the
- * point it happens (§7.7), so the tail here stays a one-element list in practice;
- * it is written as a filter rather than a lookup so that a state caught mid-sweep
- * still produces a total order over every seat.
+ * The three bands are what make the order total. Normally only one player is
+ * still holding cards and they are last place; the filter rather than a lookup is
+ * so that a state caught mid-sweep still produces an order over every seat.
+ *
+ * `droppedPlayerIds` are the players who left the round without an agari — a
+ * miyako-ochi demotion (§4.5) or a mid-round leave (§7.7). They rank below
+ * everyone who still held cards, **whatever those hands looked like**: a demoted
+ * DAI_FUGO holding eleven cards is still above nobody. The block arrives already
+ * ordered best-placed first, so it is appended as it stands and its last element
+ * is dead last — the engine owns keeping a miyako-ochi entry there when a later
+ * leave inserts into the same block.
+ *
+ * An id in both lists is taken as dropped: the drop is the later, and lower, of
+ * the two facts.
  */
 export function finishOrderOf(
   finishedPlayerIds: readonly string[],
   turnOrder: readonly string[],
+  droppedPlayerIds: readonly string[] = [],
 ): string[] {
-  const finished = finishedPlayerIds.filter((id) => turnOrder.includes(id));
-  return [...finished, ...turnOrder.filter((id) => !finished.includes(id))];
+  const dropped = droppedPlayerIds.filter((id) => turnOrder.includes(id));
+  const finished = finishedPlayerIds.filter(
+    (id) => turnOrder.includes(id) && !dropped.includes(id),
+  );
+  const holding = turnOrder.filter((id) => !finished.includes(id) && !dropped.includes(id));
+  return [...finished, ...holding, ...dropped];
 }
 
 /**
@@ -127,19 +141,22 @@ function strongestFirst(hand: readonly Card[]): Card[] {
  *
  * The exclusion is the point of the rule — the 3 of Spades is the one card that
  * beats a lone joker (§5.4), so handing it up with the rest of the hand would make
- * the counter unreachable from the bottom of the table. It is only ever taken as a
- * last resort, when the hand holds nothing else to satisfy the count; a hand that
- * short cannot arise from a legal deal, but the count is what the rich side is
- * owed, so it is honoured rather than silently short-changed.
+ * the counter unreachable from the bottom of the table. It is unconditional: a
+ * hand with fewer eligible cards than the count yields a short list rather than
+ * reaching for the protected card.
+ *
+ * That short list cannot arise from a legal deal — the exchange runs on full
+ * hands, so the smallest is 6 cards against a largest count of 4 — so the engine
+ * is entitled to treat `forced[p].length < required[p]` as the bug it would be.
  *
  * Returned strongest first: §10 renders this read-only to the poor player, and the
  * first card is the one they most want to see going.
  */
 export function forcedSelection(hand: readonly Card[], count: number): string[] {
-  const ranked = strongestFirst(hand);
-  const eligible = ranked.filter((card) => card.id !== SPADE_3_ID);
-  const excluded = ranked.filter((card) => card.id === SPADE_3_ID);
-  return [...eligible, ...excluded].slice(0, count).map((card) => card.id);
+  return strongestFirst(hand)
+    .filter((card) => card.id !== SPADE_3_ID)
+    .slice(0, count)
+    .map((card) => card.id);
 }
 
 /**

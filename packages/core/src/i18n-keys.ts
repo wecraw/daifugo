@@ -63,6 +63,9 @@ export const HISTORY_KEYS = [
   "history.roundEnded",
   "history.matchEnded",
   "history.roleAssigned",
+  // Miyako-ochi (§4.5): `{ player, target, count }`. The demoted player's hand is
+  // never named, only counted, so this is public and takes no `*Redacted` pair.
+  "history.miyakoOchi",
   "history.dealt",
 
   // Exchange (§4)

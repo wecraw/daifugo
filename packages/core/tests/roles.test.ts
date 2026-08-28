@@ -74,6 +74,64 @@ describe("finish order (§4.1, §7.7)", () => {
   it("keeps every unfinished player, in seat order, at the bottom", () => {
     expect(finishOrderOf(["p3"], ["p0", "p1", "p2", "p3"])).toEqual(["p3", "p0", "p1", "p2"]);
   });
+
+  it("pins the dropped block below everyone who still held cards (§4.5, §7.7)", () => {
+    expect(finishOrderOf(["p3"], ["p0", "p1", "p2", "p3"], ["p0"])).toEqual([
+      "p3",
+      "p1",
+      "p2",
+      "p0",
+    ]);
+  });
+
+  it("keeps the dropped block in its own order, dead last entry last", () => {
+    // A mid-round leave ranks above a miyako-ochi demotion, which stays last.
+    expect(finishOrderOf(["p1"], ["p0", "p1", "p2", "p3"], ["p2", "p0"])).toEqual([
+      "p1",
+      "p3",
+      "p2",
+      "p0",
+    ]);
+  });
+
+  it("takes a player recorded both ways as dropped", () => {
+    expect(finishOrderOf(["p0", "p1"], ["p0", "p1", "p2"], ["p0"])).toEqual(["p1", "p2", "p0"]);
+  });
+});
+
+/** §12.6 test 42: miyako-ochi (§4.5) seen through the role table it produces. */
+describe("miyako-ochi, after the engine has recorded the demotion (§4.5)", () => {
+  // Last round dfg was DAI_FUGO and dhm was DAI_HINMIN. This round dhm goes out
+  // first, so dfg is dropped on the spot, whatever they were still holding.
+  const turnOrder = ["dfg", "b", "c", "dhm"];
+  const order = finishOrderOf(["dhm", "b"], turnOrder, ["dfg"]);
+
+  it("sends the winner to the top and the demoted player to the bottom", () => {
+    expect(order).toEqual(["dhm", "b", "c", "dfg"]);
+    const roles = assignRoles(order);
+    expect(roles["dhm"]).toEqual({ kind: "DAI_FUGO" });
+    expect(roles["dfg"]).toEqual({ kind: "DAI_HINMIN" });
+    expect(roles["b"]).toEqual({ kind: "FUGO" });
+    expect(roles["c"]).toEqual({ kind: "HINMIN" });
+  });
+
+  it("swaps the pair, and the counts still follow §4.2", () => {
+    expect(exchangePairs(order)).toEqual([
+      { richId: "dhm", poorId: "dfg", count: 2 },
+      { richId: "b", poorId: "c", count: 1 },
+    ]);
+  });
+
+  it("forces the demoted player's strongest two up, 3 of Spades still excluded", () => {
+    const exchange = createExchangeState(order, {
+      dhm: cards("C-3", "H-4", "D-5"),
+      b: cards("C-6", "S-7"),
+      c: cards("H-8", "D-9"),
+      dfg: cards("S-3", "JKR-1", "D-2", "C-10"),
+    });
+    expect(exchange.required["dfg"]).toBe(2);
+    expect(exchange.forced["dfg"]).toEqual(["JKR-1", "D-2"]);
+  });
 });
 
 /** §12.5 test 33. */
@@ -109,9 +167,9 @@ describe("forced selection (§4.3)", () => {
     expect(forcedSelection(cards("C-4", "D-2"), 1)).toEqual(["D-2"]);
   });
 
-  it("falls back to the 3 of Spades only when the hand holds nothing else", () => {
-    expect(forcedSelection(cards("S-3", "H-5"), 2)).toEqual(["H-5", "S-3"]);
-    expect(forcedSelection(cards("S-3"), 1)).toEqual(["S-3"]);
+  it("excludes it unconditionally, short-listing rather than reaching for it", () => {
+    expect(forcedSelection(cards("S-3", "H-5"), 2)).toEqual(["H-5"]);
+    expect(forcedSelection(cards("S-3"), 1)).toEqual([]);
   });
 
   it("never returns more cards than the hand holds", () => {
