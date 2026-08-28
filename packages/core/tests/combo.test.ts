@@ -260,8 +260,21 @@ describe("default binding resolution (§5.5)", () => {
     expect(combo.suits).toEqual(["D", "H"]);
   });
 
-  it("treats an empty bindings array as absent", () => {
-    expect(parsed(cards("JKR-1", "H-8"), []).resolvedRank).toBe(8);
+  it("distinguishes an empty bindings array from an absent one", () => {
+    // Absent asks for the default, which binds the joker to the 8 (§5.5).
+    expect(parsed(cards("JKR-1", "H-8")).resolvedRank).toBe(8);
+    // An empty array explicitly binds nothing, so the joker stays pure — which
+    // beside an 8 is not a combo at all, and says so rather than silently binding.
+    expect(error(cards("JKR-1", "H-8"), [])).toBe("JOKER_MUST_BE_BOUND");
+  });
+
+  it("lets an explicit empty array play a led joker pure under revolution", () => {
+    // The default resolves this to a 3, the strongest card when inverted; sending
+    // no bindings is how the player overrides that and leads the joker pure (§10.5).
+    expect(parsed(cards("JKR-1"), undefined, { inverted: true }).resolvedRank).toBe(3);
+    const pure = parsed(cards("JKR-1"), [], { inverted: true });
+    expect(pure.isPureJokerPlay).toBe(true);
+    expect(pure.resolvedRank).toBeNull();
   });
 });
 

@@ -48,9 +48,10 @@ const NO_BINDINGS: ReadonlyMap<string, JokerBinding> = new Map();
  * Parse a selection into a `PlayCombo`, validating supplied bindings or resolving
  * them by the default rule when they are absent.
  *
- * An empty `bindings` array is treated as absent: it carries no more information
- * than `undefined`, and a client that means "play this joker pure" gets that
- * answer from the default rule anyway.
+ * `undefined` bindings request the default; an empty array is an explicit "no
+ * joker is bound", which is how a client plays a joker pure over the default's
+ * suggestion — under revolution the default binds a led joker to a 3 (§5.5), so
+ * without this distinction a deliberate pure play would be unreachable (§10.5).
  */
 export function parseCombo(
   cards: readonly Card[],
@@ -74,7 +75,7 @@ export function parseCombo(
   const top = context.top ?? null;
   if (top !== null && top.cards.length !== cards.length) return err("COMBO_COUNT_MISMATCH");
 
-  if (bindings === undefined || bindings.length === 0) {
+  if (bindings === undefined) {
     return resolveDefaultBindings(cards, naturals, forcedRank, context);
   }
 
