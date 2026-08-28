@@ -157,7 +157,7 @@ export interface GameState {
 
   players: Player[];                    // ordered by seatIndex
   hands: Record<string, Card[]>;
-  graveyard: Card[];                    // 10-discard sink
+  graveyard: Card[];                    // 10-discard sink, and miyako-ochi hands (§4.5)
 
   dealerId: string;                     // previous round's last place
   turnOrder: string[];                  // ALL player ids in seat order. Never mutated mid-round.
@@ -167,6 +167,11 @@ export interface GameState {
   trickLeaderId: string | null;         // last player who actually played
   passedPlayerIds: string[];
   finishedPlayerIds: string[];          // in order of going out (agari)
+  /** Players removed from the round without an agari, pinned to the bottom of the
+   *  finish order: miyako-ochi (§4.5) and mid-round leavers (§7.7). Ordered
+   *  best-placed first, so the last entry is dead last. Never mutated except by
+   *  those two paths. */
+  droppedPlayerIds: string[];
 
   isRevolution: boolean;                // persists for the round
   trickInverted: boolean;               // 11-back; resets on trick clear
@@ -223,7 +228,9 @@ All time enters through `TICK`.
 Round 1 seating is join order, dealer chosen at random.
 
 After each round, reseat before the next deal:
-1. The last-place finisher becomes dealer and takes `seatIndex 0`.
+1. The last-place finisher becomes dealer and takes `seatIndex 0`. After a
+   miyako-ochi (§4.5) that is the demoted player, not the last player still holding
+   cards.
 2. The winner takes the seat to the dealer's **right**, which is `seatIndex N-1`
    (since left is `+1`).
 3. Runner-up sits to the winner's right at `N-2`, and so on.
@@ -248,8 +255,18 @@ exchange phase completes. `trickLeaderId` is set to that player and
 ## 4. Roles and the Exchange Phase
 
 ### 4.1 Role assignment
-Derived from `finishedPlayerIds` order plus the final remaining player, who is
-always last place.
+Derived from the round's **final finish order**, which is
+
+```text
+finishedPlayerIds            (agari order, 1st first)
+  ++ the single remaining player, if any
+  ++ droppedPlayerIds        (bottom block, best-placed first)
+```
+
+With no drops that reduces to `finishedPlayerIds` plus the final remaining player,
+who is always last place. `droppedPlayerIds` carries miyako-ochi demotions (§4.5)
+and mid-round leavers (§7.7); those players never occupy anything but the bottom
+positions, whatever their hand held.
 
 | Finish position | Role |
 | :--- | :--- |
@@ -296,6 +313,58 @@ Worked results:
 ### 4.4 Exchange timer
 60 seconds, `deadline` set on entry to `EXCHANGE`, countdown visible to all.
 On expiry, any unsubmitted rich player auto-gives their **weakest** eligible cards.
+
+### 4.5 Miyako-ochi (都落ち)
+**If the previous round's `DAI_HINMIN` wins the round, the previous round's
+`DAI_FUGO` immediately drops out in last place, regardless of their hand.** The
+pauper who climbed all the way to the top throws the old ruler out of the capital.
+
+Always on. This is not a `HouseRulesConfig` entry and has no lobby toggle: it reads
+carried roles, not a resolved rank, so none of §6's rank-trigger machinery applies
+to it and it cannot collide with a house rule.
+
+**Trigger.** In Phase C (§7.1), at the moment `finishedPlayerIds` goes from empty to
+one entry — a first-place agari, however it was reached, including agari via 7-pass
+or 10-discard (§7.3) — check the *carried* roles on `Player.role`, which are the
+previous round's:
+
+* the finisher's carried role is `DAI_HINMIN`, and
+* some other player in `turnOrder` carries `DAI_FUGO`, has not finished, and is not
+  already in `droppedPlayerIds`.
+
+Both hold or nothing happens. It therefore never fires in round 1 (`Player.role` is
+`null` for everyone), never fires on a 2nd-or-later agari, and no-ops when the
+previous `DAI_FUGO` has left the room (§7.7) — a departed player is already at the
+bottom. The demoted player is never the active player: the trigger runs inside the
+winner's own action.
+
+**Effect**, applied in this order, before Phase C's remaining-player count is taken:
+
+```text
+1. Move the demoted player's entire hand to `graveyard`. Their hand becomes [].
+   (Card conservation is a sum over hands + trick + graveyard, so it holds.)
+2. Append the demoted player id to `droppedPlayerIds`, and keep it last: a later
+   drop — a mid-round leave (§7.7) — inserts *before* the miyako-ochi player, who
+   stays dead last. The rule is absolute; nothing outranks it downward.
+3. They are no longer eligible (§7.5): they cannot be advanced to, skipped over,
+   counted for 5-skip, or targeted by a 7-pass, exactly as if finished. They stay
+   in `turnOrder` — its length never changes mid-round (§2).
+4. If `trickLeaderId` is the demoted player, leave it set; `clearTrick` already
+   advances past an ineligible leader (§7.4).
+5. Emit `history.miyakoOchi { player, target, count }`, where `count` is the number
+   of cards that went to the graveyard. Public: no card ids leave the hand, so the
+   entry needs no `*Redacted` counterpart.
+```
+
+Phase C then continues: the drop can leave one non-finished, non-dropped player, in
+which case the round ends immediately and that player takes the position directly
+above the bottom block.
+
+**Downstream.** The demoted player is last place, so they score `0` (§9), become the
+next dealer at `seatIndex 0` (§3.2), and take `DAI_HINMIN` for the next exchange
+(§4.1) — the two players swap the top and bottom roles outright. The new `DAI_FUGO`
+is the player who was `DAI_HINMIN`, so miyako-ochi can fire again the following
+round on the reverse pairing.
 
 ---
 
@@ -446,8 +515,13 @@ PHASE B - INTERACTIVE RULE (halts the pipeline)
   └── Resolved rank is 10 and k > 0 -> pendingAction = RESOLVE_10_DISCARD, return
 
 PHASE C - AGARI
-  └── If hand empty -> append playerId to finishedPlayerIds
-      If non-finished players <= 1 -> assign remaining player last place, ROUND_END
+  ├── If hand empty -> append playerId to finishedPlayerIds
+  ├── Miyako-ochi (§4.5): if that was the FIRST agari of the round, playerId carries
+  │   DAI_HINMIN, and the carrier of DAI_FUGO is still in the round -> move their
+  │   hand to graveyard, append them to droppedPlayerIds (kept last), drop them from
+  │   eligibility
+  └── If non-finished, non-dropped players <= 1 -> assign the remaining player the
+      position directly above droppedPlayerIds, ROUND_END
 
 PHASE D - TRICK ENDERS
   ├── Resolved rank is 8 -> clearTrick(leader = playerId)
@@ -473,7 +547,10 @@ re-check.
 Both can empty a hand. Playing a single 7 with two cards in hand leaves one card,
 `k = min(1,1) = 1`, and passing it empties the hand. The same applies to 10-discard.
 Phase C runs after every pendingAction resolution as well as after the initial play.
-Emptying your hand this way is a normal agari.
+Emptying your hand this way is a normal agari, miyako-ochi (§4.5) included: a 7-pass
+that empties the previous `DAI_HINMIN`'s hand wins the round and demotes the previous
+`DAI_FUGO`, even when the `DAI_FUGO` was the target that just received the cards —
+those cards go straight to the graveyard with the rest of their hand.
 
 ### 7.4 clearTrick(leader)
 
@@ -484,7 +561,7 @@ trickInverted = false
 suitLock = null
 isRevolution UNCHANGED
 trickLeaderId = leader
-If leader has finished -> advance to the nearest non-finished player to their left
+If leader has finished or dropped (§4.5, §7.7) -> advance to the nearest eligible player to their left
 activePlayerIndex = that player
 ```
 
@@ -501,7 +578,8 @@ APPLY
   └── Otherwise advance to the next eligible player
 ```
 
-"Eligible" means not finished and not in `passedPlayerIds`.
+"Eligible" means not finished, not in `droppedPlayerIds` (§4.5, §7.7), and not in
+`passedPlayerIds`.
 
 ### 7.6 Timeouts (driven by `TICK`)
 
@@ -520,7 +598,10 @@ The turn timer runs regardless of connection state. It is 60 seconds for turns a
 Joins and leaves queue in `pendingJoins` / `pendingLeaves` and apply only at a round
 boundary. A player who leaves mid-round is treated as finishing **last** for that
 round: they are removed from eligibility, the round continues, and they occupy the
-bottom of the finish order. Reseating and exchange for the next round use the
+bottom of the finish order via `droppedPlayerIds` (§2), their hand going to the
+graveyard. They are appended to that list, except that a miyako-ochi demotion (§4.5)
+always stays its last entry, so a leaver after a demotion sits directly above the
+demoted player. Reseating and exchange for the next round use the
 post-change roster.
 
 ---
@@ -609,9 +690,10 @@ A 7-pass therefore renders as:
 
 ## 9. Match Scoring
 
-Points awarded at round end: `N - finishPosition`, so the winner of a 5-player round
-scores 4 and last place scores 0. Standings accumulate across rounds and render in
-the lobby between rounds.
+Points awarded at round end: `N - finishPosition` over the final finish order of
+§4.1, so the winner of a 5-player round scores 4 and last place scores 0. A player
+demoted by miyako-ochi (§4.5) is last place and scores 0. Standings accumulate
+across rounds and render in the lobby between rounds.
 
 Endless by default. If `roundLimit` is set, the match ends at that round and emits
 `matchFinished`.
@@ -768,6 +850,7 @@ Sample mappings:
 | `rule.elevenBack` | Jack Reversal | 11バック |
 | `role.DAI_HINMIN` | Grand Pauper | 大貧民 |
 | `history.sevenPassRedacted` | {player} passed {count} card(s) to {target} | ... |
+| `history.miyakoOchi` | {player} won from Grand Pauper — {target} falls to last with {count} card(s) | 都落ち |
 
 Language toggle on the main menu, persisted to localStorage, no server involvement.
 
@@ -820,6 +903,14 @@ Language toggle on the main menu, persisted to localStorage, no server involveme
 34. Forced selection takes the strongest cards and never the 3 of Spades.
 35. Exchange timeout auto-gives the rich player's weakest cards.
 36. Round 1 skips exchange.
+
+### 12.6 Miyako-ochi (Section 4.5)
+37. Previous `DAI_HINMIN` takes 1st: the previous `DAI_FUGO` lands in `droppedPlayerIds`, their hand is empty, and the graveyard grew by exactly that hand.
+38. Non-triggers, each asserting the round continues untouched: round 1 (all roles null); the winner carried any role other than `DAI_HINMIN`; the previous `DAI_HINMIN` finishes 2nd rather than 1st; the previous `DAI_FUGO` already left the room (Section 7.7).
+39. Agari via 7-pass triggers it, including the case where the previous `DAI_FUGO` is the 7-pass target — the cards they just received go to the graveyard, and card conservation still holds at 54.
+40. At N = 3 the demotion ends the round immediately: final order is winner, the one remaining player, demoted player, and the demoted player scores 0.
+41. Post-demotion eligibility: the demoted player is never advanced to, is not counted by 5-skip, is not a 7-pass target, and `clearTrick` skips them as leader. `turnOrder` still has length N.
+42. Next round: the demoted player is `DAI_HINMIN`, dealer, and seat 0; the winner is `DAI_FUGO` at seat N-1; exchange counts follow Section 4.2 for the swapped pair. A mid-round leave after a demotion sits above the demoted player, not below.
 
 ---
 
