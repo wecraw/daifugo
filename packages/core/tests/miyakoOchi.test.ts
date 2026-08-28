@@ -220,8 +220,15 @@ describe("post-demotion eligibility (test 41, §4.5, §7.5)", () => {
       active: "p2",
     });
 
-    let passed = state;
-    for (const id of ["p2", "p3", "p4"]) passed = act(passed, { type: "PASS" }, id);
+    // The clear is measured against the trick leader, not a count of remaining
+    // eligible seats (§7.5): p1 is dropped and so is not one of them, and p4 is
+    // owed the turn in which they could beat the card still on the table.
+    const two = act(state, { type: "PASS" }, "p2");
+    const three = act(two, { type: "PASS" }, "p3");
+    expect(three.currentTrick).toHaveLength(1);
+    expect(activeId(three)).toBe("p4");
+
+    const passed = act(three, { type: "PASS" }, "p4");
 
     expect(passed.currentTrick).toEqual([]);
     expect(passed.trickLeaderId).toBe("p1");

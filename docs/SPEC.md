@@ -157,7 +157,8 @@ export interface GameState {
 
   players: Player[];                    // ordered by seatIndex
   hands: Record<string, Card[]>;
-  graveyard: Card[];                    // 10-discard sink, and miyako-ochi hands (§4.5)
+  graveyard: Card[];                    // out of play: the 10-discard sink, miyako-ochi
+                                        // hands (§4.5), and each trick as it clears (§7.4)
 
   dealerId: string;                     // previous round's last place
   turnOrder: string[];                  // ALL player ids in seat order. Never mutated mid-round.
@@ -190,6 +191,9 @@ export interface GameState {
 
   pendingJoins: Player[];               // applied at next round boundary
   pendingLeaves: string[];
+
+  /** Match standings: cumulative `N - finishPosition` per player (§9). */
+  points: Record<string, number>;
 
   history: HistoryEntry[];
 }
@@ -555,7 +559,7 @@ those cards go straight to the graveyard with the rest of their hand.
 ### 7.4 clearTrick(leader)
 
 ```text
-currentTrick = []
+currentTrick = []          -> its cards go to `graveyard`
 passedPlayerIds = []
 trickInverted = false
 suitLock = null
@@ -564,6 +568,11 @@ trickLeaderId = leader
 If leader has finished or dropped (§4.5, §7.7) -> advance to the nearest eligible player to their left
 activePlayerIndex = that player
 ```
+
+The cleared cards move to `graveyard` rather than simply vanishing. Card
+conservation is a sum over hands, trick, and graveyard (§12.3) and a played card
+never returns to a hand, so the graveyard is the only place an emptied trick can
+go.
 
 ### 7.5 PASS
 
@@ -574,12 +583,21 @@ VALIDATE
 
 APPLY
   ├── Append playerId to passedPlayerIds (locked out for the remainder of the trick)
-  ├── If every eligible player except one has passed -> clearTrick(trickLeaderId)
+  ├── If no eligible player other than `trickLeaderId` remains -> clearTrick(trickLeaderId)
   └── Otherwise advance to the next eligible player
 ```
 
 "Eligible" means not finished, not in `droppedPlayerIds` (§4.5, §7.7), and not in
 `passedPlayerIds`.
+
+The clear condition is measured **against the trick leader**, not as a raw count
+of remaining eligible seats. Normally the two agree: the leader is the one player
+nobody has out-played, so "everyone except one has passed" and "nobody but the
+leader is left" describe the same moment. They diverge when the leader is no
+longer eligible — they went out on that play, or a miyako-ochi demoted them
+(§4.5) while their cards still sat on the table. Counting seats would then clear
+the trick a pass early and rob the last eligible player of the turn in which they
+could have beaten the play in front of them.
 
 ### 7.6 Timeouts (driven by `TICK`)
 
@@ -693,7 +711,7 @@ A 7-pass therefore renders as:
 Points awarded at round end: `N - finishPosition` over the final finish order of
 §4.1, so the winner of a 5-player round scores 4 and last place scores 0. A player
 demoted by miyako-ochi (§4.5) is last place and scores 0. Standings accumulate
-across rounds and render in the lobby between rounds.
+across rounds in `GameState.points` (§2) and render in the lobby between rounds.
 
 Endless by default. If `roundLimit` is set, the match ends at that round and emits
 `matchFinished`.
