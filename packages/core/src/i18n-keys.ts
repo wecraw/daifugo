@@ -112,6 +112,32 @@ export const HISTORY_KEYS = [
 
 export type HistoryKey = (typeof HISTORY_KEYS)[number];
 
+/** The public rendering of a key that names private cards (§8.5, §11). */
+export type RedactedHistoryKey = Extract<HistoryKey, `${string}Redacted`>;
+
+/**
+ * A history key that has a `<key>Redacted` counterpart.
+ *
+ * Derived from `HistoryKey` rather than listed, so the pairing rule of §11 holds
+ * by construction: adding `history.fooRedacted` to the list above is what makes
+ * `history.foo` redactable, and nothing else has to be kept in step.
+ */
+export type RedactableHistoryKey = {
+  [K in HistoryKey]: `${K}Redacted` extends HistoryKey ? K : never;
+}[HistoryKey];
+
+const HISTORY_KEY_SET: ReadonlySet<string> = new Set<string>(HISTORY_KEYS);
+
+/** Whether an entry with this key can be rewritten for viewers outside `visibleTo`. */
+export function isRedactableHistoryKey(key: HistoryKey): key is RedactableHistoryKey {
+  return HISTORY_KEY_SET.has(`${key}Redacted`);
+}
+
+/** The counterpart key the sanitizer swaps in, derived by appending `Redacted` (§11). */
+export function redactedHistoryKey<K extends RedactableHistoryKey>(key: K): `${K}Redacted` {
+  return `${key}Redacted`;
+}
+
 /* -------------------------------------------------------------------------- */
 /* error.*                                                                    */
 /* -------------------------------------------------------------------------- */
