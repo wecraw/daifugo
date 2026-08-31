@@ -11,6 +11,7 @@ import {
   SERVER_TO_CLIENT_EVENTS,
   type ClientToServerEvent,
   type ClientToServerEvents,
+  type JoinedPayload,
   type ServerToClientEvent,
   type ServerToClientEvents,
 } from "../src/network.js";
@@ -20,6 +21,7 @@ describe("socket contracts (§8)", () => {
   it("enumerates the server-to-client events", () => {
     expect([...SERVER_TO_CLIENT_EVENTS].sort()).toEqual([
       "gameError",
+      "joined",
       "matchFinished",
       "roomState",
       "roundFinished",
@@ -49,6 +51,11 @@ describe("socket contracts (§8)", () => {
     >();
     expectTypeOf<ServerToClientEvent>().toEqualTypeOf<keyof ServerToClientEvents>();
     expectTypeOf<ClientToServerEvent>().toEqualTypeOf<keyof ClientToServerEvents>();
+  });
+
+  it("carries the issued resume token back to the client (§8.1)", () => {
+    expectTypeOf<Parameters<ServerToClientEvents["joined"]>[0]>().toEqualTypeOf<JoinedPayload>();
+    expectTypeOf<JoinedPayload["resumeToken"]>().toEqualTypeOf<string>();
   });
 
   it("broadcasts sanitized state, never raw state", () => {

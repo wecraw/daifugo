@@ -129,11 +129,15 @@ export function getPublicState(state: GameState, viewerId: string): PublicGameSt
     passedPlayerIds: [...state.passedPlayerIds],
     finishedPlayerIds: [...state.finishedPlayerIds],
     droppedPlayerIds: [...state.droppedPlayerIds],
+    // The graveyard is public (§8.5): a 10-discard and a miyako-ochi hand both
+    // land there exactly as they land on the table, face up.
     graveyard: [...state.graveyard],
     pendingJoins: state.pendingJoins.map((player) => ({ ...player })),
     pendingLeaves: [...state.pendingLeaves],
     points: { ...state.points },
     config: { ...state.config },
+    suitLock: state.suitLock === null ? null : [...state.suitLock],
+    pendingAction: state.pendingAction === null ? null : { ...state.pendingAction },
     hands,
     exchange: publicExchange(state),
     myHand,

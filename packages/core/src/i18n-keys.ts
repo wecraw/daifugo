@@ -91,8 +91,10 @@ export const HISTORY_KEYS = [
   "history.sevenPassRedacted",
   "history.eightGiri",
   "history.nineGiri",
+  // 10-Discard (§6): the discarded cards land in the public graveyard, exactly as
+  // they would land face-up on the table, so this entry names them to everyone and
+  // takes no `*Redacted` pair (§8.5).
   "history.tenDiscard",
-  "history.tenDiscardRedacted",
   "history.elevenBack",
   "history.elevenBackEnded",
   "history.kakumei",

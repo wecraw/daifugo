@@ -88,6 +88,24 @@ describe("getPublicState (§8.5)", () => {
     expect(view.hands.will).toEqual({ cardCount: 3 });
   });
 
+  it("shares no mutable container with the authoritative state", () => {
+    const state: GameState = {
+      ...tableOf(),
+      graveyard: cards("D-4"),
+      suitLock: ["HEARTS"],
+      pendingAction: { type: "RESOLVE_10_DISCARD", playerId: "will", count: 2 },
+    };
+    const view = getPublicState(state, "will");
+
+    view.graveyard.push(...cards("C-5"));
+    view.suitLock?.push("SPADES");
+    if (view.pendingAction !== null) view.pendingAction.count = 99;
+
+    expect(state.graveyard.map((c) => c.id)).toEqual(["D-4"]);
+    expect(state.suitLock).toEqual(["HEARTS"]);
+    expect(state.pendingAction?.count).toBe(2);
+  });
+
   it("does not mutate the state it sanitizes", () => {
     const state = tableOf();
     const before = JSON.parse(JSON.stringify(state));
@@ -173,14 +191,23 @@ describe("history redaction (§8.5, §11)", () => {
   it("derives the count when the entry carries no count param", () => {
     const entry = redactHistoryEntry(
       history(
-        "history.tenDiscard",
-        { player: "will", cards: "S-3 H-11" },
-        { privateCardParams: ["cards"], visibleTo: ["will"] },
+        "history.exchangeGave",
+        { player: "will", target: "alex", cards: "S-3 H-11" },
+        { privateCardParams: ["cards"], visibleTo: ["will", "alex"] },
       ),
       "sam",
     );
-    expect(entry?.key).toBe("history.tenDiscardRedacted");
-    expect(entry?.params).toEqual({ player: "will", count: 2 });
+    expect(entry?.key).toBe("history.exchangeGaveRedacted");
+    expect(entry?.params).toEqual({ player: "will", target: "alex", count: 2 });
+  });
+
+  it("leaves a 10-discard naming its cards intact for every viewer (§8.5)", () => {
+    const entry = history("history.tenDiscard", {
+      player: "will",
+      cards: "S-3 H-11",
+      count: 2,
+    });
+    expect(redactHistoryEntry(entry, "sam")).toBe(entry);
   });
 
   it("leaves public entries alone", () => {

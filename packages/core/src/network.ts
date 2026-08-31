@@ -30,7 +30,22 @@ export interface MatchStanding {
   points: number;
 }
 
+/**
+ * The seat the server issued or reclaimed for this socket (§8.1).
+ *
+ * `resumeToken` is minted on a first join and echoed back on a successful
+ * resume; the client stores it in localStorage and replays it on `joinRoom` to
+ * reclaim the seat. Without this event the token has no channel to reach the
+ * client and every reconnect would be a fresh join.
+ */
+export interface JoinedPayload {
+  roomId: string;
+  playerId: string;
+  resumeToken: string;
+}
+
 export interface ServerToClientEvents {
+  joined: (payload: JoinedPayload) => void;
   roomState: (state: PublicGameState) => void;
   gameError: (error: GameErrorPayload) => void;
   roundFinished: (results: RoundResult[]) => void;
@@ -54,6 +69,7 @@ export type ClientToServerEvent = keyof ClientToServerEvents;
 
 /** Event names as values, for the server's dispatch table. Kept in step by a test. */
 export const SERVER_TO_CLIENT_EVENTS = [
+  "joined",
   "roomState",
   "gameError",
   "roundFinished",
