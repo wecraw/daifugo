@@ -145,6 +145,70 @@ describe("a mid-round leave (§7.7)", () => {
     expect(activeId(left)).toBe("p1");
   });
 
+  it("sends a player who leaves after their agari to the bottom anyway (§7.7)", () => {
+    // p0 already went out; the round is still running for p1 and p2.
+    const won = table({
+      hands: { p0: [], p1: ["D-6"], p2: ["C-8"] },
+      finished: ["p0"],
+      active: "p1",
+    });
+    const left = leave(won, "p0");
+
+    // A mid-round leave finishes last whatever they had already earned, and
+    // `finishOrderOf` reads an id in both lists as dropped.
+    expect(left.droppedPlayerIds).toEqual(["p0"]);
+    expect(left.finishedPlayerIds).toEqual(["p0"]);
+    expect(left.status).toBe("IN_PROGRESS");
+    expect(countCards(left)).toBe(DECK_SIZE);
+
+    const ended = act(left, { type: "PLAY_CARDS", cardIds: ["D-6"] }, "p1");
+
+    expect(ended.status).toBe("ROUND_END");
+    expect(ended.points).toMatchObject({ p1: 2, p2: 1, p0: 0 });
+    expect(ended.players.find((player) => player.id === "p0")?.role).toEqual(DAI_HINMIN);
+  });
+
+  it("retargets an owed 7-pass when its recipient leaves (§7.2, §6)", () => {
+    const owing = act(
+      table({ hands: { p0: ["S-7", "H-4", "D-2"], p1: ["C-5"], p2: ["C-8"], p3: ["C-9"] } }),
+      { type: "PLAY_CARDS", cardIds: ["S-7"] },
+      "p0",
+    );
+    expect(owing.pendingAction).toMatchObject({ type: "RESOLVE_7_PASS", targetPlayerId: "p1" });
+
+    const left = leave(owing, "p1");
+
+    // The cards cannot follow p1 into a departed seat, so the transfer moves on to
+    // the nearest player still in the round to p0's left.
+    expect(left.pendingAction).toMatchObject({ type: "RESOLVE_7_PASS", targetPlayerId: "p2" });
+
+    const submitted = act(left, { type: "SUBMIT_7_PASS", cardIds: ["H-4"] }, "p0");
+
+    expect(handIds(submitted, "p2")).toEqual(["C-8", "H-4"]);
+    expect(handIds(submitted, "p1")).toEqual([]);
+    expect(countCards(submitted)).toBe(DECK_SIZE);
+  });
+
+  it("drops an owed 7-pass when its recipient was the last player to give to", () => {
+    const owing = act(
+      table({ hands: { p0: ["S-7", "H-4", "D-2"], p1: ["C-5"], p2: [] }, finished: ["p2"] }),
+      { type: "PLAY_CARDS", cardIds: ["S-7"] },
+      "p0",
+    );
+    expect(owing.pendingAction).toMatchObject({ type: "RESOLVE_7_PASS", targetPlayerId: "p1" });
+
+    const left = leave(owing, "p1");
+
+    // Nobody is left in the round to receive: the pipeline runs on exactly as it
+    // would have had Phase B never set the pending action, and p0 is the last
+    // player holding cards, so the round ends.
+    expect(left.pendingAction).toBeNull();
+    expect(left.status).toBe("ROUND_END");
+    expect(handIds(left, "p0")).toEqual(["H-4", "D-2"]);
+    expect(left.points).toMatchObject({ p2: 2, p0: 1, p1: 0 });
+    expect(countCards(left)).toBe(DECK_SIZE);
+  });
+
   it("dissolves the pair when a player leaves during the exchange (§4.3)", () => {
     const dealt = table({
       hands: { p0: ["S-4", "H-13"], p1: ["D-6"], p2: ["C-8", "C-9"] },
@@ -236,6 +300,14 @@ describe("a leave after a miyako-ochi demotion (test 42, §4.5)", () => {
     const left = leave(demoted, "p2");
 
     expect(left.droppedPlayerIds).toEqual(["p2", "p1"]);
+  });
+
+  it("does not enter the demoted player twice when they then leave", () => {
+    const left = leave(demoted, "p1");
+
+    expect(left.droppedPlayerIds).toEqual(["p1"]);
+    expect(left.pendingLeaves).toEqual(["p1"]);
+    expect(countCards(left)).toBe(DECK_SIZE);
   });
 
   it("carries that order into the finish order, the roles, and the points", () => {

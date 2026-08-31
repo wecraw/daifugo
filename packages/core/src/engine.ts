@@ -64,12 +64,15 @@ import {
   resolveSevenPass,
   resolveTenDiscard,
   sevenPassPending,
+  sevenPassTarget,
   shibariLock,
   spade3BeatsJoker,
   tenDiscardPending,
 } from "./rules/index.js";
 import {
   eligiblePlayerIds,
+  hasDropped,
+  hasFinished,
   inRoundPlayerIds,
   isInRound,
   nextEligibleIndex,
@@ -1172,12 +1175,23 @@ function transferHost(next: GameState, departingId: string): void {
  * left exactly as it was: they stop being eligible, they are not removed (§2).
  */
 function dropFromRound(next: GameState, playerId: string): ErrorCode | null {
-  if (!isInRound(playerId, seatingOf(next))) return null;
+  const before = seatingOf(next);
+  // Already at the bottom of the finish order: a miyako-ochi demotion (§4.5) or a
+  // second leave. Inserting again would duplicate them in the dropped block.
+  if (hasDropped(playerId, before)) return null;
+  const finished = hasFinished(playerId, before);
 
   const hand = next.hands[playerId] ?? [];
   next.graveyard = [...next.graveyard, ...hand];
   next.hands[playerId] = [];
   next.droppedPlayerIds = insertLeaver(next.droppedPlayerIds, playerId, next.pendingLeaves);
+
+  // Leaving after an agari still costs the place: §7.7 makes a mid-round leaver
+  // last, and `finishOrderOf` reads an id in both lists as dropped — the later and
+  // lower of the two facts. Nothing else moves: they were already out of
+  // eligibility, out of the in-round count, and neither the active player nor the
+  // owner or target of a pending action (a 7-pass never targets a finished seat).
+  if (finished) return null;
 
   if (next.status === "EXCHANGE") return withdrawFromRoundExchange(next, playerId);
 
@@ -1191,6 +1205,30 @@ function dropFromRound(next: GameState, playerId: string): ErrorCode | null {
     if (combo !== null) {
       resumePipeline(next, playerId, combo);
       return null;
+    }
+  }
+
+  // The recipient of an owed 7-pass leaving: the cards cannot follow them into a
+  // departed seat, so the transfer retargets to the nearest player still in the
+  // round to the left of the source — the same predicate that chose the target in
+  // the first place (§6). With nobody left to give to, the pending action is what
+  // Phase B would never have set, and the pipeline runs on without it (§7.2).
+  if (
+    pending !== null &&
+    pending.type === "RESOLVE_7_PASS" &&
+    pending.targetPlayerId === playerId
+  ) {
+    const source = pending.sourcePlayerId;
+    const retarget = sevenPassTarget(source, seatingOf(next));
+    if (retarget !== null) {
+      next.pendingAction = { ...pending, targetPlayerId: retarget };
+    } else {
+      const combo = pendingCombo(next);
+      next.pendingAction = null;
+      if (combo !== null) {
+        resumePipeline(next, source, combo);
+        return null;
+      }
     }
   }
 
