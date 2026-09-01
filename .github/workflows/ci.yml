@@ -16,4 +16,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      - run: npm run lint
+      # `core` is the gate (§13): the suite includes the fuzz run over its fixed
+      # seed set, and the coverage thresholds in packages/core/vitest.config.ts
+      # fail the build rather than merely reporting a number.
+      - run: npm run test:coverage
       - run: npm run test

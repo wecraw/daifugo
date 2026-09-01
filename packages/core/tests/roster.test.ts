@@ -229,6 +229,22 @@ describe("a mid-round leave (§7.7)", () => {
 /* The boundary: the next deal uses the post-change roster (§7.7)             */
 /* -------------------------------------------------------------------------- */
 
+describe("a leave from someone who has not been seated yet (§7.7)", () => {
+  it("cancels the arrival instead of dropping anyone from the round", () => {
+    const playing = table({ hands: { p0: ["S-4"], p1: ["H-4"], p2: ["D-4"] } });
+    const queued = join(playing, "p3");
+    expect(queued.pendingJoins.map((player) => player.id)).toEqual(["p3"]);
+
+    const cancelled = leave(queued, "p3");
+    expect(cancelled.pendingJoins).toEqual([]);
+    // Nothing else in the state knows about them: no seat, no pending leave to
+    // apply at the boundary, and no hand to bank.
+    expect(cancelled.pendingLeaves).toEqual([]);
+    expect(cancelled.droppedPlayerIds).toEqual([]);
+    expect(cancelled.turnOrder).toEqual(["p0", "p1", "p2"]);
+  });
+});
+
 describe("the round boundary (§7.7, §3.2, §4.2)", () => {
   // p2 and p3 are out; p0 plays their last card and p1 is left holding theirs, so
   // the finish order of the round just ended is p2, p3, p0, p1.
@@ -308,6 +324,18 @@ describe("a leave after a miyako-ochi demotion (test 42, §4.5)", () => {
     expect(left.droppedPlayerIds).toEqual(["p1"]);
     expect(left.pendingLeaves).toEqual(["p1"]);
     expect(countCards(left)).toBe(DECK_SIZE);
+  });
+
+  it("keeps them dead last even once they have left the room themselves", () => {
+    // The demoted player leaving does not turn their demotion into an ordinary
+    // mid-round leave: §4.5 puts them below everyone, and a leave that happens
+    // afterwards is still a leave (§7.7). Found by the fuzz run (§12.3 test 24),
+    // which reached it through a join, a demotion, and two departures.
+    const both = leave(leave(demoted, "p1"), "p2");
+
+    expect(both.droppedPlayerIds).toEqual(["p2", "p1"]);
+    expect(both.status).toBe("ROUND_END");
+    expect(both.points).toMatchObject({ p0: 3, p3: 2, p2: 1, p1: 0 });
   });
 
   it("carries that order into the finish order, the roles, and the points", () => {

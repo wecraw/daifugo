@@ -1182,7 +1182,7 @@ function dropFromRound(next: GameState, playerId: string): ErrorCode | null {
   const hand = next.hands[playerId] ?? [];
   next.graveyard = [...next.graveyard, ...hand];
   next.hands[playerId] = [];
-  next.droppedPlayerIds = insertLeaver(next.droppedPlayerIds, playerId, next.pendingLeaves);
+  next.droppedPlayerIds = insertLeaver(next.droppedPlayerIds, playerId, demotedThisRound(next));
 
   // Leaving after an agari still costs the place: §7.7 makes a mid-round leaver
   // last, and `finishOrderOf` reads an id in both lists as dropped — the later and
@@ -1270,21 +1270,42 @@ function withdrawFromRoundExchange(next: GameState, playerId: string): ErrorCode
 }
 
 /**
+ * The player miyako-ochi demoted in the round now running, or null (§4.5).
+ *
+ * Read from the history, which records the demotion as it happens, rather than
+ * inferred from the shape of `droppedPlayerIds`. The block itself cannot tell its
+ * two kinds of entry apart once the demoted player *also* leaves the room: they
+ * are then in `pendingLeaves` like any other leaver, and a later departure would
+ * be filed below them — which is the one placement §4.5 forbids.
+ *
+ * The scan stops at this round's `roundStarted` entry, so a demotion from an
+ * earlier round of the same match is not read as this one's.
+ */
+function demotedThisRound(state: GameState): string | null {
+  for (let index = state.history.length - 1; index >= 0; index--) {
+    const entry = state.history[index];
+    if (entry === undefined || entry.key === "history.roundStarted") return null;
+    if (entry.key === "history.miyakoOchi") return String(entry.params.target);
+  }
+  return null;
+}
+
+/**
  * Where a leaver sits in `droppedPlayerIds` (§4.5, §7.7).
  *
- * The block is ordered best-placed first and a miyako-ochi demotion is always its
- * last element — the rule is absolute in that direction — so a leaver goes in
- * before the first entry that is not itself a leaver, and simply on the end when
- * there is no demotion to stay behind.
+ * The block is ordered best-placed first, leavers in the order they left, and a
+ * miyako-ochi demotion is always its last element — the rule is absolute in that
+ * direction. So a leaver goes in immediately before the demotion, and simply on
+ * the end when there is no demotion to stay behind.
  */
 function insertLeaver(
   dropped: readonly string[],
   playerId: string,
-  leavers: readonly string[],
+  demoted: string | null,
 ): string[] {
-  const demoted = dropped.findIndex((id) => !leavers.includes(id));
-  if (demoted === -1) return [...dropped, playerId];
-  return [...dropped.slice(0, demoted), playerId, ...dropped.slice(demoted)];
+  const index = demoted === null ? -1 : dropped.indexOf(demoted);
+  if (index === -1) return [...dropped, playerId];
+  return [...dropped.slice(0, index), playerId, ...dropped.slice(index)];
 }
 
 /**

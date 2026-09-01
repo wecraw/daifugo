@@ -45,35 +45,83 @@ export function cardIds(state: GameState): string[] {
 }
 
 /**
- * Invariants 21-23 across one transition.
+ * Invariants 21-23 across one transition, as a list of human-readable failures.
+ *
+ * Separate from `assertInvariants` because the fuzz harness (§12.3 test 24) needs
+ * the same three checks without `expect`: a fuzz failure has to be *reported*
+ * with its seed and action log rather than thrown out of whichever action
+ * happened to break it, and shrinking replays a candidate log expecting the same
+ * failure text back.
  *
  * `turnOrder` is compared elementwise unless the action crossed a round boundary
  * — a deal is exactly when reseating is allowed to rewrite it (§3.2) — which is
  * detected by the round number changing rather than by trusting the action type.
  */
-export function assertInvariants(before: GameState, after: GameState): void {
+export function transitionErrors(before: GameState, after: GameState): string[] {
+  const errors: string[] = [];
+
   // 21. A room in `LOBBY` has not been dealt, so it holds no cards at all; every
   // state from the deal onward holds all 54, each exactly once.
   if (after.status !== "LOBBY") {
-    expect(countCards(after)).toBe(DECK_SIZE);
-    expect(new Set(cardIds(after)).size).toBe(DECK_SIZE);
+    const count = countCards(after);
+    if (count !== DECK_SIZE) {
+      errors.push(`invariant 21: hands + trick + graveyard is ${count}, not ${DECK_SIZE}`);
+    }
+    const ids = cardIds(after);
+    if (new Set(ids).size !== ids.length) {
+      errors.push(`invariant 21: a card id appears twice (${duplicates(ids).join(" ")})`);
+    }
   }
 
   // 22
-  expect(after.turnOrder).toHaveLength(after.players.length);
+  if (after.turnOrder.length !== after.players.length) {
+    errors.push(
+      `invariant 22: turnOrder has ${after.turnOrder.length} seats for ${after.players.length} players`,
+    );
+  }
   if (before.status === "LOBBY" && after.status === "LOBBY") {
     // The lobby is not a round: seats come and go as players arrive and leave.
   } else if (after.roundNumber === before.roundNumber) {
-    expect(after.turnOrder).toEqual(before.turnOrder);
+    if (after.turnOrder.join(",") !== before.turnOrder.join(",")) {
+      errors.push(
+        `invariant 22: turnOrder was rewritten mid-round, ${before.turnOrder.join(",")} -> ${after.turnOrder.join(",")}`,
+      );
+    }
   } else {
     // A deal is the one point reseating may rewrite `turnOrder` (§3.2), and the
     // one boundary at which a queued join or leave applies (§7.7). Anything else
     // appearing or disappearing is the bug this invariant is here to catch.
-    expect([...after.turnOrder].sort()).toEqual(rosterAfterChanges(before).sort());
+    const dealt = [...after.turnOrder].sort().join(",");
+    const entitled = rosterAfterChanges(before).sort().join(",");
+    if (dealt !== entitled) {
+      errors.push(`invariant 22: the deal seated ${dealt}, but the roster was ${entitled}`);
+    }
   }
 
   // 23
-  expect(after.stateVersion).toBeGreaterThan(before.stateVersion);
+  if (after.stateVersion <= before.stateVersion) {
+    errors.push(
+      `invariant 23: stateVersion did not increase (${before.stateVersion} -> ${after.stateVersion})`,
+    );
+  }
+
+  return errors;
+}
+
+/** The ids appearing more than once, for a readable conservation failure. */
+function duplicates(ids: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const twice = new Set<string>();
+  for (const id of ids) {
+    if (seen.has(id)) twice.add(id);
+    seen.add(id);
+  }
+  return [...twice];
+}
+
+/** Invariants 21-23 across one transition, as assertions (§12.3). */
+export function assertInvariants(before: GameState, after: GameState): void {
+  expect(transitionErrors(before, after)).toEqual([]);
 }
 
 /**

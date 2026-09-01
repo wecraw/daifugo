@@ -12,6 +12,7 @@
     "dev": "npm run build -w @daifugo/core && concurrently -k -n server,client -c blue,green \"npm run dev -w @daifugo/server\" \"npm run dev -w @daifugo/client\"",
     "build": "npm run build -w @daifugo/core && npm run build -w @daifugo/server && npm run build -w @daifugo/client",
     "test": "vitest run",
+    "test:coverage": "npm run test:coverage -w @daifugo/core",
     "typecheck": "tsc -b packages/core packages/server && tsc --noEmit -p packages/client/tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write ."
@@ -20,6 +21,7 @@
     "@eslint/js": "^9.17.0",
     "@typescript-eslint/eslint-plugin": "^8.19.0",
     "@typescript-eslint/parser": "^8.19.0",
+    "@vitest/coverage-v8": "^2.1.8",
     "concurrently": "^9.1.0",
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^9.1.0",
