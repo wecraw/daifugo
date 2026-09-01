@@ -19,3 +19,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Coverage output (§12.3 gate)
+coverage

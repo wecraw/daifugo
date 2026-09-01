@@ -1,0 +1,35 @@
+name: Nightly fuzz
+
+# CI fuzzes a fixed seed set, which is reproducible but finite: it can only ever
+# find the bugs those seeds happen to reach. This job walks off that set with
+# random seeds and deeper matches (§12.3 test 24). A failure prints the seed and
+# the shrunk action log; pin the seed into `EXTRA_SEEDS` in
+# packages/core/tests/fuzz.test.ts to turn it into a regression test.
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      seeds:
+        description: Seeds per player count
+        default: "400"
+      rounds:
+        description: Rounds per match
+        default: "6"
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run fuzz -w @daifugo/core
+        env:
+          FUZZ_RANDOM: "1"
+          FUZZ_SEEDS: ${{ inputs.seeds || '400' }}
+          FUZZ_ROUNDS: ${{ inputs.rounds || '6' }}
+          FUZZ_STATS: "1"

@@ -8,7 +8,7 @@
 import { describe, expect, it } from "vitest";
 import { DECK_SIZE, openingLeaderId } from "../src/deck.js";
 import { createGameState } from "../src/engine.js";
-import type { Player } from "../src/types.js";
+import type { ClientAction, Player } from "../src/types.js";
 import { activeId, handIds, table } from "./fixtures.js";
 import { act, assertInvariants, countCards, reject } from "./invariants.js";
 
@@ -427,6 +427,14 @@ describe("match end at the round limit (§9)", () => {
     const out = act(state, { type: "PLAY_CARDS", cardIds: ["S-4"] }, "p0");
     expect(out.status).toBe("MATCH_END");
     expect(out.points).toEqual({ p0: 2, p1: 6, p2: 2 });
+  });
+});
+
+describe("an action the union does not contain (§2, §8.0)", () => {
+  it("is refused rather than falling through the reducer", () => {
+    const state = table({ hands: { p0: ["S-4"], p1: ["H-4"], p2: ["D-4"] } });
+    const unknown = { type: "RESIGN" } as unknown as ClientAction;
+    expect(reject(state, unknown, "p0")).toBe("INVALID_ACTION");
   });
 });
 

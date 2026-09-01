@@ -11,7 +11,9 @@
   "scripts": {
     "build": "tsc -b",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "fuzz": "vitest run tests/fuzz.test.ts"
   },
   "devDependencies": {
     "typescript": "^5.7.2",

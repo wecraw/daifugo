@@ -125,6 +125,51 @@ describe("the turn timer (§7.6)", () => {
   });
 });
 
+/**
+ * The `TICK` fallback for a seat that should not be active (§7.6).
+ *
+ * Reachable only from a state that is already wrong — an active seat belonging to
+ * a player who has finished, been demoted (§4.5) or left (§7.7) — but `TICK` has
+ * to stay total: a sweeper that could not move such a room would spin on it every
+ * five seconds forever (§14). Each branch advances the round rather than the
+ * player.
+ */
+describe("a turn timer on a seat nobody can play from (§7.6, §14)", () => {
+  it("hands the lead on when no trick is standing", () => {
+    const state = armed({
+      hands: { p0: [], p1: ["H-4"], p2: ["D-4"], p3: ["C-4"] },
+      finished: ["p0"],
+      active: "p0",
+    });
+    const next = tick(state, DEADLINE);
+    expect(activeId(next)).toBe("p1");
+    expect(next.status).toBe("IN_PROGRESS");
+  });
+
+  it("moves the turn on exactly as a pass would when a trick is standing", () => {
+    const state = armed({
+      hands: { p0: [], p1: ["H-4"], p2: ["D-4"], p3: ["C-4"] },
+      finished: ["p0"],
+      active: "p0",
+      trick: [{ playedBy: "p1", cards: ["H-5"] }],
+    });
+    const next = tick(state, DEADLINE);
+    expect(activeId(next)).toBe("p1");
+    expect(next.currentTrick).toHaveLength(1);
+  });
+
+  it("ends the round when only one player is still holding cards", () => {
+    const state = armed({
+      hands: { p0: [], p1: ["H-4"], p2: [], p3: [] },
+      finished: ["p0", "p2", "p3"],
+      active: "p0",
+    });
+    const next = tick(state, DEADLINE);
+    expect(next.status).toBe("ROUND_END");
+    expect(next.deadline).toBeNull();
+  });
+});
+
 describe("the exchange timer (§4.4, §7.6)", () => {
   const dealt = table({
     hands: { p0: ["S-4", "H-13"], p1: ["D-6"], p2: ["C-8", "C-9"] },
