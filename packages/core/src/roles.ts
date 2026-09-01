@@ -19,8 +19,9 @@
 import { SPADE_3_ID } from "./deck.js";
 import { takeFromHand } from "./hand.js";
 import type { ErrorCode } from "./i18n-keys.js";
+import type { MatchStanding, RoundResult } from "./network.js";
 import { sortByStrength } from "./strength.js";
-import type { Card, ExchangeState, Result, Role } from "./types.js";
+import type { Card, ExchangeState, GameState, Result, Role } from "./types.js";
 import { err, ok } from "./types.js";
 
 /** §4.4: 60 seconds on entry to `EXCHANGE`, the same as a turn (§7.6). */
@@ -348,6 +349,50 @@ export function roundPoints(finishOrder: readonly string[]): Record<string, numb
     points[playerId] = count - (index + 1);
   });
   return points;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Round and match result payloads (§8)                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The `roundFinished` payload (§8): each player and their role, in the round's
+ * final finish order (§4.1), best-placed first.
+ *
+ * Derived from the very finish order and role table `endRound` writes onto
+ * `Player.role` — `finishOrderOf` then `assignRoles` — rather than read back from
+ * the players, so the emitted payload cannot drift from the stored roles and this
+ * stays a pure function of the finish-order fields alone. Any `ROUND_END` or
+ * `MATCH_END` state (or one caught mid-sweep) yields a total order over the table.
+ */
+export function roundResults(
+  state: Pick<GameState, "finishedPlayerIds" | "turnOrder" | "droppedPlayerIds">,
+): RoundResult[] {
+  const finishOrder = finishOrderOf(
+    state.finishedPlayerIds,
+    state.turnOrder,
+    state.droppedPlayerIds,
+  );
+  const roles = assignRoles(finishOrder);
+  return finishOrder.flatMap((playerId) => {
+    const role = roles[playerId];
+    return role === undefined ? [] : [{ playerId, role }];
+  });
+}
+
+/**
+ * The `matchFinished` / lobby-standings payload (§8, §9): cumulative points per
+ * player, highest first.
+ *
+ * Reads `GameState.points`, which `endRound` accumulates as `N - finishPosition`
+ * each round. The order is a total function of the state — points descending,
+ * then player id — so two servers serialising one state agree, and the lobby
+ * renders the same table between rounds that `matchFinished` emits at the end.
+ */
+export function matchStandings(state: Pick<GameState, "points">): MatchStanding[] {
+  return Object.entries(state.points)
+    .map(([playerId, points]): MatchStanding => ({ playerId, points }))
+    .sort((a, b) => b.points - a.points || (a.playerId < b.playerId ? -1 : 1));
 }
 
 /**

@@ -17,12 +17,15 @@ import {
   finishOrderOf,
   forcedSelection,
   isExchangeComplete,
+  matchStandings,
   needsExchange,
+  roundResults,
   submitExchange,
   weakestSelection,
 } from "../src/roles.js";
 import type { Card, ExchangeState, Role } from "../src/types.js";
-import { cards } from "./fixtures.js";
+import { cards, table } from "./fixtures.js";
+import { act } from "./invariants.js";
 
 /** `p0..p{n-1}` in finish order, best first. */
 function finishers(count: number): string[] {
@@ -350,5 +353,98 @@ describe("application (§4.3)", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value["poor"]?.map((c) => c.id)).toEqual(["D-9", "C-10", "S-3"]);
+  });
+});
+
+describe("roundResults, the roundFinished payload (§8, §4.1)", () => {
+  it("lists players in finish order, best first, with the §4.1 roles at N = 3", () => {
+    // p1 went out first, then p0; p2 is left holding cards, so last place.
+    const results = roundResults({
+      finishedPlayerIds: ["p1", "p0"],
+      turnOrder: ["p0", "p1", "p2"],
+      droppedPlayerIds: [],
+    });
+    expect(results).toEqual([
+      { playerId: "p1", role: { kind: "DAI_FUGO" } },
+      { playerId: "p0", role: { kind: "HEIMIN", rank: 1 } },
+      { playerId: "p2", role: { kind: "DAI_HINMIN" } },
+    ]);
+  });
+
+  it("pins a dropped player to the bottom as DAI_HINMIN (§4.5, §7.7)", () => {
+    // p3 was demoted / left: dead last, whatever their hand held.
+    const results = roundResults({
+      finishedPlayerIds: ["p0"],
+      turnOrder: ["p0", "p1", "p2", "p3"],
+      droppedPlayerIds: ["p3"],
+    });
+    expect(results.map((r) => r.playerId)).toEqual(["p0", "p1", "p2", "p3"]);
+    expect(results.map((r) => r.role.kind)).toEqual([
+      "DAI_FUGO",
+      "FUGO",
+      "HINMIN",
+      "DAI_HINMIN",
+    ]);
+  });
+
+  it("totals the whole roster even before anyone has gone out", () => {
+    const results = roundResults({
+      finishedPlayerIds: [],
+      turnOrder: ["p0", "p1", "p2"],
+      droppedPlayerIds: [],
+    });
+    expect(results.map((r) => r.playerId)).toEqual(["p0", "p1", "p2"]);
+  });
+
+  it("matches the roles the engine stored on Player.role at round end (no drift)", () => {
+    // p1 already out first; p0 plays their last card and goes out second, which
+    // leaves only p2 and ends the round.
+    const state = table({
+      hands: { p0: ["S-4"], p1: [], p2: ["H-9"] },
+      active: "p0",
+      finished: ["p1"],
+      points: { p0: 5, p1: 1, p2: 3 },
+    });
+    const ended = act(state, { type: "PLAY_CARDS", cardIds: ["S-4"] }, "p0");
+    expect(ended.status).toBe("ROUND_END");
+
+    const results = roundResults(ended);
+    expect(results).toEqual([
+      { playerId: "p1", role: { kind: "DAI_FUGO" } },
+      { playerId: "p0", role: { kind: "HEIMIN", rank: 1 } },
+      { playerId: "p2", role: { kind: "DAI_HINMIN" } },
+    ]);
+    // The derived payload agrees with what endRound wrote onto each Player.
+    for (const { playerId, role } of results) {
+      expect(ended.players.find((p) => p.id === playerId)?.role).toEqual(role);
+    }
+  });
+});
+
+describe("matchStandings, the matchFinished payload (§8, §9)", () => {
+  it("sorts by points descending, breaking ties by player id", () => {
+    expect(matchStandings({ points: { p0: 6, p1: 3, p2: 3, p3: 0 } })).toEqual([
+      { playerId: "p0", points: 6 },
+      { playerId: "p1", points: 3 },
+      { playerId: "p2", points: 3 },
+      { playerId: "p3", points: 0 },
+    ]);
+  });
+
+  it("reflects the points the engine accumulated across the round", () => {
+    const state = table({
+      hands: { p0: ["S-4"], p1: [], p2: ["H-9"] },
+      active: "p0",
+      finished: ["p1"],
+      points: { p0: 5, p1: 1, p2: 3 },
+    });
+    const ended = act(state, { type: "PLAY_CARDS", cardIds: ["S-4"] }, "p0");
+
+    // p1 +2 (1st), p0 +1 (2nd), p2 +0 (last): 3, 6, 3 -> p0, then p1/p2 tie by id.
+    expect(matchStandings(ended)).toEqual([
+      { playerId: "p0", points: 6 },
+      { playerId: "p1", points: 3 },
+      { playerId: "p2", points: 3 },
+    ]);
   });
 });
