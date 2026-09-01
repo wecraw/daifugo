@@ -152,10 +152,32 @@ export interface GameState {
   history: HistoryEntry[];
 }
 
-export interface PublicGameState extends Omit<GameState, "hands" | "history"> {
+/**
+ * The exchange as one viewer may see it (§4.3, §8.5).
+ *
+ * `required` and `partner` are public — who owes how many cards to whom is on the
+ * table. The selections are not: `forced` names the poor side's automatically
+ * chosen cards and `submitted` the rich side's chosen cards, both of which are
+ * still in a hand until the phase applies. §2 does not omit `exchange` from
+ * `PublicGameState`, but §12.4 test 30 deep-scans the payload for another
+ * player's card ids, and these two fields carry them, so they are counted here
+ * the same way hands are. The viewer's own selections come back as
+ * `myForcedCards` / `mySubmittedCards`.
+ */
+export interface PublicExchangeState extends Omit<ExchangeState, "forced" | "submitted"> {
+  forced: Record<string, { cardCount: number }>;
+  submitted: Record<string, { cardCount: number }>;
+}
+
+export interface PublicGameState extends Omit<GameState, "hands" | "history" | "exchange"> {
   hands: Record<string, { cardCount: number }>;
+  exchange: PublicExchangeState | null;
   myHand: Card[];
   myPlayerId: string;
+  /** The viewer's own forced selection (§4.3), read-only. Empty when not forced. */
+  myForcedCards: string[];
+  /** What the viewer submitted this exchange, so a reconnect can render it (§8.1). */
+  mySubmittedCards: string[];
   history: HistoryEntry[]; // already redacted for this viewer
 }
 

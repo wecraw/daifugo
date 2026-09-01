@@ -851,17 +851,15 @@ function submitTenDiscard(
   const next = draft(state);
   next.hands[playerId] = discard.value.remaining;
   next.graveyard = [...state.graveyard, ...discard.value.discarded];
+  // Public: the discarded cards go to the graveyard, which every seat can see
+  // (§8.5), so the entry names them for everyone and needs no redacted pair.
   log(
     next,
-    history(
-      "history.tenDiscard",
-      {
-        player: playerId,
-        cards: discard.value.discarded.map((card) => card.id).join(" "),
-        count: discard.value.discarded.length,
-      },
-      { privateCardParams: ["cards"], visibleTo: [playerId] },
-    ),
+    history("history.tenDiscard", {
+      player: playerId,
+      cards: discard.value.discarded.map((card) => card.id).join(" "),
+      count: discard.value.discarded.length,
+    }),
   );
 
   resumePipeline(next, playerId, combo);

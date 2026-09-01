@@ -9,6 +9,8 @@ import {
   RULE_KEYS,
   errorKey,
   history,
+  isRedactableHistoryKey,
+  redactedHistoryKey,
   ruleKey,
 } from "../src/i18n-keys.js";
 
@@ -117,6 +119,20 @@ describe("history entry builder", () => {
       if (key.endsWith("Redacted")) {
         expect(HISTORY_KEYS).toContain(key.slice(0, -"Redacted".length));
       }
+    }
+  });
+
+  // The sanitizer derives the public key mechanically (§8.5, §11), so the
+  // derivation and the list must agree in both directions.
+  it("derives the redacted counterpart by appending Redacted", () => {
+    expect(redactedHistoryKey("history.sevenPass")).toBe("history.sevenPassRedacted");
+    expect(isRedactableHistoryKey("history.sevenPass")).toBe(true);
+    expect(isRedactableHistoryKey("history.passed")).toBe(false);
+  });
+
+  it("marks a key redactable exactly when its counterpart is listed", () => {
+    for (const key of HISTORY_KEYS) {
+      expect(isRedactableHistoryKey(key)).toBe(HISTORY_KEYS.includes(`${key}Redacted` as never));
     }
   });
 });

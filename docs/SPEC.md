@@ -158,7 +158,9 @@ export interface GameState {
   players: Player[];                    // ordered by seatIndex
   hands: Record<string, Card[]>;
   graveyard: Card[];                    // out of play: the 10-discard sink, miyako-ochi
-                                        // hands (§4.5), and each trick as it clears (§7.4)
+                                        // hands (§4.5), and each trick as it clears (§7.4).
+                                        // PUBLIC — it is the table's discard pile and
+                                        // serializes verbatim to every seat (§8.5)
 
   dealerId: string;                     // previous round's last place
   turnOrder: string[];                  // ALL player ids in seat order. Never mutated mid-round.
@@ -356,8 +358,10 @@ winner's own action.
 4. If `trickLeaderId` is the demoted player, leave it set; `clearTrick` already
    advances past an ineligible leader (§7.4).
 5. Emit `history.miyakoOchi { player, target, count }`, where `count` is the number
-   of cards that went to the graveyard. Public: no card ids leave the hand, so the
-   entry needs no `*Redacted` counterpart.
+   of cards that went to the graveyard. The entry names no card, only a count, so it
+   needs no `*Redacted` counterpart. The cards themselves do become public: they are
+   in the graveyard now, which every seat sees (§8.5), exactly as a demoted player's
+   hand goes face-up onto the discard pile at a real table.
 ```
 
 Phase C then continues: the drop can leave one non-finished, non-dropped player, in
@@ -475,7 +479,7 @@ combo's card count: a pair of 5s skips 2, a triple of 7s passes up to 3.
 | **7-Pass** | Resolved rank is 7. | `C` = combo count, `k = min(C, cards remaining in hand)`. Sets `RESOLVE_7_PASS`. Target is the nearest **non-finished** player to the left, regardless of whether they have passed or would be skipped. |
 | **8-Giri** | Resolved rank is 8. | Trick clears immediately, lead stays with the player. |
 | **9-Giri** | Resolved rank is 9 and count is **two or more**. | Same as 8-Giri. A single 9 does nothing. |
-| **10-Discard** | Resolved rank is 10. | `D` = combo count, `k = min(D, cards remaining)`. Sets `RESOLVE_10_DISCARD`. Selected cards go to `graveyard`. |
+| **10-Discard** | Resolved rank is 10. | `D` = combo count, `k = min(D, cards remaining)`. Sets `RESOLVE_10_DISCARD`. Selected cards go to `graveyard`, which is public: unlike a 7-pass, a 10-discard is played onto the table, so `history.tenDiscard` names the discarded cards to every seat and has no `*Redacted` counterpart (§8.5). |
 | **11-Back** | Resolved rank is 11. | `J` = combo count. Odd toggles `trickInverted`. Even is a no-op. Resets on trick clear. |
 | **Revolution** | **Four or more cards of the same rank** played simultaneously. | Toggles `isRevolution` for the rest of the round. |
 | **Shibari** | Consecutive plays in a trick share an identical suit multiset. | Sets `suitLock` to that exact multiset. Subsequent plays must match it exactly. Overlap is not a partial lock. Mixed sets lock too: hearts+spades followed by hearts+spades locks to {H,S}. Pure jokers satisfy any lock and maintain an existing one. |
@@ -628,6 +632,7 @@ post-change roster.
 
 ```ts
 export interface ServerToClientEvents {
+  joined: (payload: { roomId: string; playerId: string; resumeToken: string }) => void;
   roomState: (state: PublicGameState) => void;
   gameError: (error: { code: ErrorCode; params?: Record<string, unknown> }) => void;
   roundFinished: (results: { playerId: string; role: Role }[]) => void;
@@ -674,7 +679,11 @@ N-of-a-kind is the only combo shape (Section 5.3), so shape rejection is just
 
 ### 8.1 Identity and reconnect
 Socket id is not player id. On first join the server issues a `resumeToken` which
-the client stores in localStorage and replays on reconnect to reclaim its seat.
+the client stores in localStorage and replays on reconnect to reclaim its seat. The
+token reaches the client on `joined`, emitted to that socket alone before the first
+`roomState`; a successful resume echoes the same token back, so the client can store
+the payload unconditionally. Without this event the token would have no channel and
+every reconnect would be a fresh join.
 
 ### 8.2 Host
 The first player to join a room is host, recorded as `hostId`. `updateRules`,
@@ -703,6 +712,18 @@ whose `privateCardParams` name a card is rewritten to a count for viewers outsid
 A 7-pass therefore renders as:
 * Sender and recipient: "Will passed 3♠ to Alex"
 * Everyone else: "Will passed 1 card to Alex"
+
+**The graveyard is public.** It is the discard pile on the table, and it serializes
+verbatim to every seat: a 10-discard, a cleared trick, and a miyako-ochi hand alike.
+Only cards still *in a hand* are private, which is what makes a 7-pass private and a
+10-discard not — the 7-pass cards travel hand-to-hand and stay hidden, while the
+discarded 10s land on the table for everyone to see. So `history.tenDiscard` names
+its cards to every viewer and has no `*Redacted` counterpart, and nothing that
+reaches `graveyard` is redacted afterwards.
+
+The view shares no mutable container with the authoritative state: `Card` objects
+are immutable and shared, but every array and object the caller could mutate —
+`graveyard`, `suitLock`, `pendingAction`, and the rest — is copied.
 
 ---
 
@@ -858,6 +879,10 @@ for a `count` param. The redacted variant therefore takes `{count}` where the
 original takes card ids; all other params are identical. A test asserts that every
 `*Redacted` key has a non-redacted counterpart, so the derivation can never go stale.
 
+A key names cards publicly, with no pair, when the cards it names are public by the
+time it is emitted: `history.tenDiscard` names the discarded cards because they are
+already in the public graveyard (§8.5).
+
 Sample mappings:
 
 | Key | en | ja |
@@ -912,7 +937,8 @@ Language toggle on the main menu, persisted to localStorage, no server involveme
 27. Host transfer on disconnect.
 28. Turn timeout fires for a disconnected player before the 30 second grace expires.
 29. Mid-round leave records the player as last place and the round continues.
-30. Redaction: a third party's `roomState` never contains another player's card ids.
+30. Redaction: a third party's `roomState` never contains another player's card ids — a 10-discard's card ids in the public `graveyard` and in `history.tenDiscard` are not a leak, they left the hand for the table (§8.5).
+30a. `joined` carries the issued `resumeToken` to the joining socket before the first `roomState`.
 
 ### 12.5 Deal and exchange
 31. Deal order starts at the dealer; the previous winner receives the fewest cards.
