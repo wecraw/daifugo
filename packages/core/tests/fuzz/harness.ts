@@ -321,9 +321,9 @@ export function runFuzzMatch(options: FuzzMatchOptions): FuzzResult {
   let joinId = 0;
   let demotedThisRound: string[] = [];
 
-  const fail = (reason: string): FuzzResult => ({
+  const fail = (reason: string, signature: string = reason): FuzzResult => ({
     ok: false,
-    failure: shrinkFailure(options, log, reason),
+    failure: shrinkFailure(options, log, reason, signature),
     stats,
   });
 
@@ -345,7 +345,9 @@ export function runFuzzMatch(options: FuzzMatchOptions): FuzzResult {
     const applied = applyStep(apply, state, step);
     log.push(step);
     clock = step.now;
-    if (!applied.ok) return fail(`step ${log.length - 1} was refused with ${applied.error}`);
+    if (!applied.ok) {
+      return fail(refusalReason(log.length - 1, applied.error), refusalSignature(applied.error));
+    }
 
     const next = applied.value;
     const demoted = demotedBetween(state, next);
@@ -452,6 +454,15 @@ function record(
 
 export interface ReplayFailure {
   index: number;
+  /**
+   * What went wrong, free of where it went wrong.
+   *
+   * A refusal reads as `step 40 was refused with ...` for a human, and the step
+   * number moves every time shrinking deletes an earlier step. Shrinking has to
+   * ask whether the *same* failure survived a deletion, so it compares this —
+   * the error code or the invariant text — and leaves the numbering to `reason`.
+   */
+  signature: string;
   reason: string;
 }
 
@@ -473,12 +484,21 @@ export function replayFuzzLog(
 
   for (const [index, step] of steps.entries()) {
     const applied = applyStep(apply, state, step);
-    if (!applied.ok) return { index, reason: `step ${index} was refused with ${applied.error}` };
+    if (!applied.ok) {
+      return {
+        index,
+        signature: refusalSignature(applied.error),
+        reason: refusalReason(index, applied.error),
+      };
+    }
 
     const next = applied.value;
     demotedThisRound = [...demotedThisRound, ...demotedBetween(state, next)];
     const failures = transitionFailures(state, next, demotedThisRound);
-    if (failures.length > 0) return { index, reason: failures.join("; ") };
+    if (failures.length > 0) {
+      const reason = failures.join("; ");
+      return { index, signature: reason, reason };
+    }
     if (next.roundNumber !== state.roundNumber) demotedThisRound = [];
     state = next;
   }
@@ -499,13 +519,13 @@ export function replayFuzzLog(
 export function shrinkFuzzLog(
   steps: readonly FuzzStep[],
   options: Pick<FuzzMatchOptions, "playerCount" | "apply">,
-  reason: string,
+  signature: string,
 ): FuzzStep[] {
   const original = replayFuzzLog(steps, options);
   // The failure has to reproduce before it can be shrunk. It always does — the
   // driver just produced it from the same steps — but a harness that quietly
   // shrank a *different* failure would be worse than one that shrank nothing.
-  if (original === null || original.reason !== reason) return [...steps];
+  if (original === null || original.signature !== signature) return [...steps];
 
   let best = steps.slice(0, original.index + 1);
   let removedSomething = true;
@@ -517,7 +537,7 @@ export function shrinkFuzzLog(
       budget--;
       const candidate = [...best.slice(0, index), ...best.slice(index + 1)];
       const replayed = replayFuzzLog(candidate, options);
-      if (replayed === null || replayed.reason !== reason) continue;
+      if (replayed === null || replayed.signature !== signature) continue;
       best = candidate.slice(0, replayed.index + 1);
       removedSomething = true;
     }
@@ -529,15 +549,32 @@ function shrinkFailure(
   options: FuzzMatchOptions,
   steps: readonly FuzzStep[],
   reason: string,
+  signature: string,
 ): FuzzFailure {
-  const minimal = shrinkFuzzLog(steps, options, reason);
+  const minimal = shrinkFuzzLog(steps, options, signature);
+  // A refusal names its step, and shrinking renumbers it, so the reported reason
+  // is the one the minimal log actually produces. A failure the replay cannot
+  // reproduce at all — a deadlock, or a state offering no action — never came
+  // from a step in the first place, and keeps the driver's wording.
+  const replayed = replayFuzzLog(minimal, options);
+  const reported = replayed !== null && replayed.signature === signature ? replayed.reason : reason;
   return {
     seed: options.seed,
     playerCount: options.playerCount,
-    reason,
+    reason: reported,
     steps: minimal,
-    report: reportOf(options, minimal, reason),
+    report: reportOf(options, minimal, reported),
   };
+}
+
+/** The refusal wording a reader sees, with the step it happened at. */
+function refusalReason(index: number, error: string): string {
+  return `step ${index} was refused with ${error}`;
+}
+
+/** The same refusal without the index: what shrinking matches on. */
+function refusalSignature(error: string): string {
+  return `refused with ${error}`;
 }
 
 /** The printable failure: seed, reason, and a log that can be pasted into a test. */

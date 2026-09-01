@@ -24,7 +24,14 @@
  */
 import { describe, expect, it } from "vitest";
 import type { ClientActionType } from "../src/types.js";
-import { runFuzzMatch, type ApplyFn, type FuzzStats } from "./fuzz/harness.js";
+import {
+  replayFuzzLog,
+  runFuzzMatch,
+  shrinkFuzzLog,
+  type ApplyFn,
+  type FuzzStep,
+  type FuzzStats,
+} from "./fuzz/harness.js";
 import { applyAction } from "../src/engine.js";
 
 /** §0: every table size the game supports. */
@@ -226,4 +233,67 @@ describe("a deliberately introduced bug is caught (§12.3 acceptance)", () => {
     const report = firstFailure(keepsTheDemotedHand);
     expect(report).toContain("is out of the round but still holds");
   }, 120_000);
+});
+
+/* -------------------------------------------------------------------------- */
+/* Shrinking a refusal                                                        */
+/* -------------------------------------------------------------------------- */
+
+describe("a refused step shrinks to the step that was refused (§12.3)", () => {
+  /**
+   * A reducer that refuses `START_GAME` whatever the state.
+   *
+   * The refusal — a generated action the reducer rejects — is the regression the
+   * harness is meant to minimize, and it is the one failure whose wording moves
+   * as the log shrinks: deleting an earlier step renumbers "step 7 was refused"
+   * into "step 6 was refused". Matching on that wording would reject every valid
+   * deletion and report the whole log, so the shrink matches on the error code.
+   */
+  const refusesStartGame: ApplyFn = (state, action, playerId) =>
+    action.type === "START_GAME"
+      ? { ok: false, error: "NOT_HOST" }
+      : applyAction(state, action, playerId);
+
+  /** Host round-limit writes in the lobby: legal, unrelated, and removable. */
+  const padding = (count: number): FuzzStep[] =>
+    Array.from({ length: count }, (_, index) => ({
+      kind: "ACTION" as const,
+      playerId: "p0",
+      action: { type: "SET_ROUND_LIMIT" as const, limit: index + 2 },
+      now: 1_700_000_000_000 + index * 1_000,
+    }));
+
+  const options = { playerCount: 3, apply: refusesStartGame };
+  const steps: FuzzStep[] = [
+    ...padding(7),
+    {
+      kind: "ACTION",
+      playerId: "p0",
+      action: { type: "START_GAME", seed: "shrink" },
+      now: 1_700_000_010_000,
+    },
+  ];
+
+  it("drops every step the refusal does not depend on", () => {
+    const failure = replayFuzzLog(steps, options);
+    expect(failure?.index).toBe(7);
+    expect(failure?.reason).toBe("step 7 was refused with NOT_HOST");
+
+    const minimal = shrinkFuzzLog(steps, options, failure!.signature);
+    expect(minimal).toHaveLength(1);
+    expect(minimal[0]).toEqual(steps[7]);
+  });
+
+  it("reports the shrunk log's own numbering", () => {
+    const failure = replayFuzzLog(steps, options);
+    const minimal = shrinkFuzzLog(steps, options, failure!.signature);
+    // The index in the text has to point into the log printed beside it.
+    expect(replayFuzzLog(minimal, options)?.reason).toBe("step 0 was refused with NOT_HOST");
+  });
+
+  it("keeps a log whose failure it cannot reproduce", () => {
+    // A signature that never occurs: shrinking a different failure would be
+    // worse than shrinking nothing, so nothing is what it does.
+    expect(shrinkFuzzLog(steps, options, "refused with WRONG_STATUS")).toEqual(steps);
+  });
 });
