@@ -1,20 +1,22 @@
-import Fastify from "fastify";
-import { Server } from "socket.io";
+/**
+ * Server entrypoint (§8, §14): Fastify HTTP + Socket.IO on :4000, backed by
+ * Firestore.
+ *
+ * State lives in Firestore, one doc per room, so this process holds no
+ * authoritative game state and Cloud Run can run many interchangeable instances
+ * and scale to zero (§14). `/healthz` is what Cloud Run probes. The wiring itself
+ * lives in `buildServer`; this file only chooses the deployed edges — Firestore
+ * and the wall clock — and starts listening.
+ */
+import { buildServer } from "./app.js";
+import { createFirestore, FirestoreRoomRepository } from "./firestore.js";
 
 const PORT = Number(process.env.PORT ?? 4000);
 
-const app = Fastify({ logger: true });
-
-app.get("/healthz", async () => ({ ok: true }));
+const { app } = buildServer({
+  repo: new FirestoreRoomRepository(createFirestore()),
+  logger: true,
+});
 
 const address = await app.listen({ port: PORT, host: "0.0.0.0" });
-
-const io = new Server(app.server, {
-  cors: { origin: "*" },
-});
-
-io.on("connection", (socket) => {
-  app.log.info({ socketId: socket.id }, "socket connected");
-});
-
 app.log.info(`daifugo server listening at ${address}`);
