@@ -14,6 +14,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # The Firestore emulator (§14) runs on the JVM; ubuntu-latest ships one, so
+      # only the firebase CLI is needed, and it comes in as a dev dependency.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
@@ -22,3 +28,6 @@ jobs:
       # fail the build rather than merely reporting a number.
       - run: npm run test:coverage
       - run: npm run test
+      # The server suite again, this time under the Firestore emulator, so the
+      # emulator-gated repository tests (§12.4) actually run (§14).
+      - run: npm run test:emulator

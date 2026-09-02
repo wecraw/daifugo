@@ -22,3 +22,8 @@ dist-ssr
 
 # Coverage output (§12.3 gate)
 coverage
+
+# Firebase / Firestore emulator (§14)
+.firebase
+firebase-debug.log
+firestore-debug.log

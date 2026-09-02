@@ -1,0 +1,13 @@
+rules_version = '2';
+
+// The server holds the only credentials that reach Firestore; clients never talk
+// to it directly (§14, §8.4). These rules therefore deny all client access —
+// every read and write goes through the authoritative server's Admin SDK, which
+// bypasses rules. The emulator still requires a rules file, so this is it.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
