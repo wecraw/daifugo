@@ -117,7 +117,7 @@ export URL="$(gcloud run services describe "$SERVICE" --region "$REGION" --forma
 npm run smoke -- "$URL"
 ```
 
-`scripts/smoke.mjs` checks `/healthz`, creates and joins a room (a Firestore
+`scripts/smoke.mjs` checks `/health`, creates and joins a room (a Firestore
 write and read performed by the service's own service account), and then holds a
 WebSocket open for 60 seconds with no traffic on it. That last one is the check
 worth running: gen2 plus WebSocket-only transport either survives an idle minute

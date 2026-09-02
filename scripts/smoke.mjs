@@ -4,7 +4,7 @@
  *
  *   npm run smoke -- https://daifugo-xxxxxxxx.us-west1.run.app
  *
- * 1. `/healthz` returns 200 through the Cloud Run URL — the image boots, listens
+ * 1. `/health` returns 200 through the Cloud Run URL — the image boots, listens
  *    on $PORT, and the revision is serving.
  * 2. `POST /rooms` then `joinRoom` — a write and a read through the room
  *    document, performed by the service's own service account with no local
@@ -44,8 +44,8 @@ function step(name) {
 }
 
 async function checkHealth() {
-  const s = step("GET /healthz");
-  const response = await fetch(`${base}/healthz`);
+  const s = step("GET /health");
+  const response = await fetch(`${base}/health`);
   const body = await response.text();
   if (response.status !== 200) s.fail(`expected 200, got ${response.status}: ${body}`);
   s.ok(`200 ${body}`);
