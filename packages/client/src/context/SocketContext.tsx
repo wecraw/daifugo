@@ -130,7 +130,8 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
   const pendingJoin = useRef<{ roomId: string; playerName: string } | null>(null);
   // Whether the current join attempt has been seated. A room-lifecycle error
   // before that is a failed join — including a replayed one after a reconnect —
-  // and drops the stored seat; the same code once seated is just an error to show.
+  // and drops the stored seat *for that room*; the same code once seated is just
+  // an error to show.
   const seated = useRef(false);
   const connectRef = useRef(connect ?? defaultConnect);
 
@@ -181,9 +182,21 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
         payload.code === "ROOM_FULL" ||
         payload.code === "NAME_TAKEN";
       if (joinFailed && !seated.current) {
+        const failedRoomId = pendingJoin.current?.roomId;
         pendingJoin.current = null;
-        writeStoredSession(null);
-        setStoredSession(null);
+        // Only the seat for the room we just failed to enter is dead. A mistyped
+        // code for some other room must not cost the seat this browser still
+        // holds, because that token is the only way back into it (§8.1).
+        const stored = readStoredSession();
+        if (stored !== null && stored.roomId === failedRoomId) {
+          writeStoredSession(null);
+          setStoredSession(null);
+        }
+        // A join replayed after a drop can fail once the room is gone; without
+        // clearing the last state the app keeps rendering an obsolete roster
+        // instead of falling back to the menu.
+        setRoom(null);
+        setRoomId(null);
         setPlayerId(null);
         setStatus("idle");
         socket.disconnect();

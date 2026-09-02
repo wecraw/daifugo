@@ -135,6 +135,52 @@ describe("SocketContext", () => {
     expect(socket.connected).toBe(false);
   });
 
+  it("falls back to the menu when a replayed join fails after a drop", async () => {
+    const socket = new FakeSocket();
+    render(<App connect={() => socket.asSocket()} />);
+    await joinAs(socket, "Will");
+
+    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok-1" }));
+    act(() => socket.fire("roomState", publicState()));
+    expect(await screen.findByRole("heading", { name: "Room ABC234" })).toBeInTheDocument();
+
+    act(() => socket.disconnect());
+    act(() => socket.connect());
+    // The room went away while we were gone: the seat cannot be reclaimed.
+    act(() => socket.fire("gameError", { code: "ROOM_NOT_FOUND" }));
+
+    expect(await screen.findByRole("button", { name: "Create room" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Room ABC234" })).not.toBeInTheDocument();
+    expect(readStoredSession()).toBeNull();
+  });
+
+  it("keeps a stored seat for another room when a join elsewhere fails", async () => {
+    localStorage.setItem(
+      SESSION_STORAGE_KEY,
+      JSON.stringify({ roomId: "ABC234", playerName: "Will", resumeToken: "tok-old" }),
+    );
+    const socket = new FakeSocket();
+    render(<App connect={() => socket.asSocket()} />);
+
+    // The name is already prefilled from the stored session.
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Room code"), "ZZZ999");
+    await user.click(screen.getByRole("button", { name: "Join room" }));
+    await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(1));
+    // No token was replayed for the room we mistyped, so none of it was at stake.
+    expect(socket.sentOf("joinRoom")[0]).toEqual(["ZZZ999", "Will", undefined]);
+
+    act(() => socket.fire("gameError", { code: "ROOM_NOT_FOUND" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Room not found");
+    expect(readStoredSession()).toEqual({
+      roomId: "ABC234",
+      playerName: "Will",
+      resumeToken: "tok-old",
+    });
+    expect(screen.getByRole("button", { name: "Rejoin ABC234" })).toBeInTheDocument();
+  });
+
   it("keeps the seat when an error arrives after being seated", async () => {
     const socket = new FakeSocket();
     render(<App connect={() => socket.asSocket()} />);
