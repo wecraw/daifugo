@@ -29,7 +29,7 @@ These match the defaults baked into `cloudbuild.yaml`. Changing `REGION`,
 ### 1. APIs and Firestore
 
 ```bash
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com firestore.googleapis.com --project "$PROJECT_ID"
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com firestore.googleapis.com secretmanager.googleapis.com --project "$PROJECT_ID"
 ```
 
 ```bash
@@ -38,6 +38,17 @@ gcloud firestore databases create --location "$REGION" --type firestore-native -
 
 No index configuration to apply: the boot re-arm is a single-field query on
 `deadline`, which the automatic index covers (§14).
+
+`secretmanager.googleapis.com` is in that list for step 6, not for anything the
+running service does. Connecting a GitHub repository to Cloud Build stores the
+GitHub installation token in Secret Manager, so with the API off the connection
+cannot complete — and it fails in a genuinely confusing way rather than an
+obvious one: the GitHub side of the handshake succeeds, GitHub installs the app
+on the repository, and the Cloud Build console then lists the repo as connected
+while its settings page 500s, because there is a connection record pointing at a
+secret that was never written. `gcloud builds connections list` shows nothing,
+and `triggers create github` rejects with a bare `INVALID_ARGUMENT` naming no
+field. Enable it up front and none of that happens.
 
 ### 2. Artifact Registry
 
