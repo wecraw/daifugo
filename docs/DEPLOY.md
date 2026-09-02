@@ -98,12 +98,28 @@ Cloud Build reads the build config from the commit that fires the build, so
 `cloudbuild.yaml` must already be on `main` before this trigger points at it.
 
 ```bash
-gcloud builds triggers create github --name daifugo-deploy-main --repo-owner wecraw --repo-name daifugo --branch-pattern '^main$' --build-config cloudbuild.yaml --project "$PROJECT_ID"
+gcloud builds triggers create github --name daifugo-deploy-main --repo-owner wecraw --repo-name daifugo --branch-pattern '^main$' --build-config cloudbuild.yaml --service-account "projects/$PROJECT_ID/serviceAccounts/$BUILD_SA" --project "$PROJECT_ID"
 ```
+
+`--service-account` is not optional ceremony. Step 4 grants the deploy roles to
+one specific principal — the Compute Engine default service account — but a
+trigger created without this flag runs as whatever Cloud Build considers the
+project's default build identity, and which account that is depends on the
+project's age and on organization policy: older projects, and projects where
+`cloudbuild.useBuildServiceAccount` still applies, get the legacy
+`<project-number>@cloudbuild.gserviceaccount.com` instead. That account was never
+granted anything in step 4, so every triggered build would reach Push or Deploy
+as an ungranted principal and fail on a permission error that reads like a
+misconfigured registry. Naming the account here makes the trigger use the one
+that actually holds the roles. (Creating a trigger that impersonates an account
+requires `roles/iam.serviceAccountUser` on it for *your* user, not just for the
+build.)
 
 If the GitHub repository has not been connected to Cloud Build before, connect it
 first in the console (Cloud Build → Triggers → Connect repository); the CLI
-cannot complete the OAuth handshake.
+cannot complete the OAuth handshake. Until that connection exists this command
+fails with a bare `INVALID_ARGUMENT` that names no field — that error means "no
+GitHub connection", not "bad flag".
 
 ## Verifying a deploy
 
