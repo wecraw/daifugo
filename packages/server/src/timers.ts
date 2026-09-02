@@ -5,7 +5,7 @@
  *
  * - **Deadlines.** A `state.deadline` (a turn or the exchange) is armed as a
  *   `setTimeout` that injects a `TICK`. It dies with the process, so the server
- *   re-arms every room with a live deadline on boot (#22, §14) — that is what
+ *   re-arms every room with a live deadline on boot (§14) — that is what
  *   carries an in-flight match across a redeploy or a crash. A re-armed timer
  *   racing a live one is harmless: the `stateVersion` CAS plus the
  *   no-op-on-early-`TICK` rule mean at most one transition lands per deadline.
