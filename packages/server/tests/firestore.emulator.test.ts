@@ -5,8 +5,8 @@
  * Java: run it via `npm run test:emulator` (or in CI) which starts the emulator
  * first. When it does run it exercises the real `FirestoreRoomRepository` — the
  * `create`/`get` round trip, the `stateVersion` compare-and-set that makes two
- * instances safe, and the denormalized `status`/`deadline` fields the sweeper
- * (#22) will index.
+ * concurrent writes safe, and the denormalized `status`/`deadline` fields the boot
+ * re-arm (#22) will query.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { applyAction, createGameState, type GameState, type Player } from "@daifugo/core";

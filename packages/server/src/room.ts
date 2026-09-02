@@ -7,9 +7,10 @@
  * match transitions emit `roundFinished` / `matchFinished` once, tracked by the
  * last status seen for each room.
  *
- * Transport is WebSocket-only (§14), which removes any need for session affinity:
- * a socket carries its own `resumeToken`, and the seat behind it is resolved from
- * Firestore, not from which instance it happens to land on.
+ * Transport is WebSocket-only (§14). Broadcast uses Socket.IO's in-process adapter:
+ * the service runs as a single instance, so every socket in a room is here. A socket
+ * carries its own `resumeToken` and the seat behind it is resolved from Firestore,
+ * so a reconnect after a redeploy still lands on the right seat.
  */
 import {
   getPublicState,

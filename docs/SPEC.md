@@ -939,6 +939,9 @@ Language toggle on the main menu, persisted to localStorage, no server involveme
 29. Mid-round leave records the player as last place and the round continues.
 30. Redaction: a third party's `roomState` never contains another player's card ids — a 10-discard's card ids in the public `graveyard` and in `history.tenDiscard` are not a leak, they left the hand for the table (§8.5).
 30a. `joined` carries the issued `resumeToken` to the joining socket before the first `roomState`.
+30b. Boot re-arm: a room with a deadline already in the past is ticked shortly
+    after the server starts, and a room whose deadline is still in the future is
+    armed rather than fired (§14).
 
 ### 12.5 Deal and exchange
 31. Deal order starts at the dealer; the previous winner receives the fewest cards.
@@ -975,6 +978,40 @@ Build order: `core` types and strength, then combo and evaluator, then the rules
 directory, then engine, then the full core test matrix. Do not start client work
 until 12.1 through 12.3 pass.
 
+### 13.1 Deploy
+
+One environment. A push to `main` triggers Cloud Build, which builds the image and
+patches the single Cloud Run service. The client is built into the same image and
+served as static assets by the server (§14), so there is nothing else to deploy.
+
+The service is pinned to `min-instances=1 max-instances=1`, with `gen2` and
+`--no-cpu-throttling`. Deploys go through `gcloud run services update` — a patch,
+so the instance bounds and runtime flags are not clobbered by a deploy that forgets
+to restate them. After any change to the deploy config, confirm they survived:
+
+```bash
+gcloud run services describe daifugo --region "$REGION" --format=yaml | grep -E 'executionEnvironment|cpu-throttling|maxScale|minScale'
+```
+
+### 13.2 Rollback
+
+Cloud Run keeps every revision. Roll back by shifting all traffic to the last good
+one — no rebuild:
+
+```bash
+gcloud run services update-traffic daifugo --region "$REGION" --to-revisions "$GOOD_REVISION=100"
+```
+
+List revisions newest-first to find `$GOOD_REVISION`:
+
+```bash
+gcloud run revisions list --service daifugo --region "$REGION" --sort-by "~createTime"
+```
+
+A rollback restarts the process, so in-flight rooms survive on Firestore state and
+their deadlines are re-armed on boot (§14). Players reconnect with the `resumeToken`
+already in localStorage (§8.1).
+
 ---
 
 ## 14. Infrastructure Addendum
@@ -982,22 +1019,63 @@ until 12.1 through 12.3 pass.
 Decided after the original spec was written. Supersedes any in-memory assumption
 in Section 8.
 
-* **State lives in Firestore**, one doc per room, not in process memory. Instances
-  are interchangeable and Cloud Run scales to zero.
+**Scale target: one Cloud Run instance.** This is a private game for the author and
+under a dozen friends — a handful of concurrent rooms, never more. `min-instances=1`
+and `max-instances=1` are set deliberately, and every design decision below follows
+from that rather than from a scaling story the traffic will never justify. There is
+no cross-instance broadcast, no Pub/Sub adapter, no session-affinity problem, and no
+cross-instance timer contention, because there is only ever one instance.
+
+* **State lives in Firestore**, one doc per room, not in process memory. This is not
+  for scale-out — it is so a redeploy or a crash does not destroy an in-flight match.
 * **Concurrency** is a Firestore transaction with a compare-and-set on
-  `stateVersion`. A stale action fails the transaction and retries against fresh
-  state.
-* **Cross-instance broadcast** uses `@socket.io/gcp-pubsub-adapter`. Transport is
-  WebSocket-only, which removes any need for session affinity.
-* **Timers are two-layer.** A per-instance `setTimeout` armed off `state.deadline`
-  is the low-latency fast path. A ~5s Firestore poll (the deadline sweeper) is the
-  correctness backstop, because the fast-path timer dies with the instance that
-  armed it — during a scale-in, a redeploy, or when every player disconnects. Both
-  paths inject the same `TICK`, and the `stateVersion` CAS plus the no-op-on-early-
-  `TICK` rule means at most one transition lands per deadline.
-* **Cloud Run flags that must not drift**: `--execution-environment=gen2` and
-  `--no-cpu-throttling` (required so an instance running the sweeper with no open
-  sockets still gets CPU).
+  `stateVersion`. Two actions from the same room arriving close together serialize
+  correctly, and a stale one retries against fresh state. This is worth keeping even
+  at one instance: Node interleaves the two awaits regardless.
+* **Broadcast is in-process.** Socket.IO's default in-memory adapter is sufficient;
+  every socket in a room is connected to the same instance. Do not add
+  `@socket.io/gcp-pubsub-adapter`.
+* **Transport is WebSocket-only.** Not for affinity — long-polling across a
+  cold-started instance is simply worse, and there is no fallback case worth
+  supporting for a known set of modern browsers.
+* **Timers are a `setTimeout` plus a re-arm on boot.** A per-instance `setTimeout`
+  armed off `state.deadline` drives every turn and exchange deadline. It dies with
+  the process, so on startup the server queries rooms with a non-null `deadline` and
+  re-arms them, which is what carries an in-flight match across a redeploy or a
+  crash. `status` and `deadline` are denormalized onto the room doc as top-level
+  fields so that startup query does not have to deserialize every room. No polling
+  interval and no composite index are needed: a single-field query on `deadline` uses
+  the automatic index.
+
+  Re-arming is safe to run unconditionally because a `TICK` arriving before its
+  deadline is a no-op (Section 7.6) and the commit is a `stateVersion` CAS, so a
+  re-armed timer racing a live one lands at most one transition.
+* **Cloud Run flags that must not drift**: `--execution-environment=gen2` (faster
+  networking for long-lived Socket.IO connections) and `--no-cpu-throttling`
+  (required so the instance keeps its armed `setTimeout` running while no request is
+  in flight — without it, a turn timer silently stops firing between actions).
+* **The client is served as static assets off the same Cloud Run service.** One
+  origin, so there is no CORS allowlist and no separate static host to deploy, and
+  the client's socket connects to its own origin rather than a configured URL.
 * **Redaction stays server-side** per Section 8.5, despite the private-game threat
   model, because the client needs equivalent display logic either way and one
   chokepoint is easier to keep correct than N components.
+
+### 14.1 What was deliberately not built
+
+Recorded so it is not re-proposed. Each of these is correct engineering for a
+service with real traffic and pure cost here:
+
+* **Pub/Sub fanout for cross-instance broadcast** — needs more than one instance.
+* **A polling deadline sweeper** — needs a timer to be lost while the process is
+  alive, which the fast path plus boot re-arm does not leave room for at one
+  instance.
+* **Separate dev and prod environments** — local runs against the Firestore emulator
+  cover the dev case; a second Cloud Run service and trigger is ceremony.
+* **Cloud Storage + Cloud CDN for the client** — the asset payload is small and the
+  audience is a dozen people.
+* **Session affinity** — no second instance to be affine to.
+
+If this ever needs to scale out, the seams are intact: state is already external and
+the CAS is already the write path, so the change is adding an adapter and lifting
+`max-instances`. Do not pay for that now.

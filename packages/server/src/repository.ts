@@ -3,8 +3,8 @@
  * `GameState` plus the small amount of server metadata the pure engine never
  * sees.
  *
- * State lives here, not in process memory, so instances are interchangeable and
- * Cloud Run can scale to zero (§14). Every mutation goes through {@link
+ * State lives here, not in process memory, so a redeploy or a crash does not
+ * destroy an in-flight match (§14). Every mutation goes through {@link
  * RoomRepository.mutate}, a read-modify-write that compare-and-sets on
  * `stateVersion` — a stale action loses the CAS and retries against fresh state.
  * `stateVersion` already increments on every applied action (#8), so no new
@@ -23,19 +23,19 @@ import type { GameState, GameStatus } from "@daifugo/core";
  *
  * - `tokens` maps each issued `resumeToken` to the player id it reclaims (§8.1).
  *   It lives in the doc, not in an instance, so a reconnect landing on a
- *   different instance still resolves against a repository read (§12.4 test 25).
+ *   restarted process still resolves against a repository read (§12.4 test 25).
  * - `status`, `deadline`, and `stateVersion` are denormalized copies of the same
- *   fields inside `state`, lifted to the top level so the deadline sweeper (#22)
- *   can index and query them without deserializing every room (§14).
+ *   fields inside `state`, lifted to the top level so the boot re-arm (#22) can
+ *   query rooms with a live deadline without deserializing every room (§14).
  */
 export interface RoomDoc {
   roomId: string;
   state: GameState;
   /** resumeToken -> playerId (§8.1). Persisted so reconnect is instance-agnostic. */
   tokens: Record<string, string>;
-  /** Denormalized from `state.status` for the sweeper's index (§14). */
+  /** Denormalized from `state.status`; queryable without reading `state` (§14). */
   status: GameStatus;
-  /** Denormalized from `state.deadline` for the sweeper's index (§14). */
+  /** Denormalized from `state.deadline`; what the boot re-arm queries on (§14). */
   deadline: number | null;
   /** Denormalized from `state.stateVersion`; the compare-and-set key. */
   stateVersion: number;

@@ -11,8 +11,8 @@
  * (whose `stateVersion` the engine has already incremented, #8), and the write
  * commits only if the room has not changed underneath. A stale action loses and
  * Firestore retries the transaction against fresh state. The denormalized
- * `status` and `deadline` fields ride along on every write so the sweeper (#22)
- * can index them.
+ * `status` and `deadline` fields ride along on every write so the boot re-arm
+ * (#22) can find rooms with a live deadline without deserializing every room.
  *
  * The emulator is wired in through `FIRESTORE_EMULATOR_HOST`, which the client
  * library honours automatically; `FIRESTORE_PROJECT_ID` is still required, so

@@ -3,8 +3,8 @@
  * Firestore.
  *
  * State lives in Firestore, one doc per room, so this process holds no
- * authoritative game state and Cloud Run can run many interchangeable instances
- * and scale to zero (§14). `/healthz` is what Cloud Run probes. The wiring itself
+ * authoritative game state and a redeploy or a crash does not destroy an in-flight
+ * match (§14). `/healthz` is what Cloud Run probes. The wiring itself
  * lives in `buildServer`; this file only chooses the deployed edges — Firestore
  * and the wall clock — and starts listening.
  */
