@@ -32,8 +32,10 @@ npm run build                   # build core, server, then client
 
 ## State and configuration (§14)
 
-Room state lives in **Firestore**, one document per room, so server instances are
-interchangeable and Cloud Run can scale to zero. `npm run dev` wraps the stack in
+Room state lives in **Firestore**, one document per room, so a redeploy or a crash
+does not destroy an in-flight match. The service runs as a **single Cloud Run
+instance** — this is a private game for a dozen people, and §14 records the
+scale-out machinery deliberately left unbuilt. `npm run dev` wraps the stack in
 the Firestore emulator automatically (via `firebase-tools`, a dev dependency — no
 global install needed).
 

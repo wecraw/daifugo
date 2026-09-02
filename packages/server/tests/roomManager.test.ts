@@ -6,7 +6,7 @@
  * `RoomRepository` — so these tests exercise the real thing against an in-memory
  * repository and a manual clock. Test 25 goes further and drives the reconnect
  * from a *second* manager instance sharing the one repository, which is exactly
- * the "different instance" the spec calls out: it can only resolve the seat from
+ * the restarted process the spec calls out: it can only resolve the seat from
  * a repository read, never from in-process state (§8.1, §14).
  */
 import { beforeEach, describe, expect, it } from "vitest";
@@ -66,7 +66,7 @@ describe("RoomManager acceptance (§12.4)", () => {
     expect(doc.state.players.filter((p) => p.id === host.playerId)).toHaveLength(1);
   });
 
-  it("resolves a reconnect on a different instance from the repository, not memory (test 25)", async () => {
+  it("resolves a reconnect on a restarted process from the repository, not memory (test 25)", async () => {
     // Instance A seats the host and issues the token.
     const roomId = await manager.createRoom();
     const host = await seatPlayer(manager, roomId, "Will");
@@ -203,7 +203,7 @@ describe("RoomManager acceptance (§12.4)", () => {
 /* Two instances on one repository behave as one room (§14 acceptance)        */
 /* -------------------------------------------------------------------------- */
 
-describe("interchangeable instances (§14)", () => {
+describe("concurrent writes under the CAS (§14)", () => {
   it("applies actions from either instance under the stateVersion CAS", async () => {
     const repo = new InMemoryRoomRepository();
     const instanceA = new RoomManager({ repo, scheduler: new ManualScheduler() });

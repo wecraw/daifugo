@@ -120,7 +120,7 @@ export class RoomManager {
    * (§8.1).
    *
    * The whole decision runs inside the repository's compare-and-set transaction
-   * against a fresh read, so a reconnect landing on a different instance resolves
+   * against a fresh read, so a reconnect landing on a restarted process resolves
    * purely from the stored token map — never from in-process state (§12.4 test
    * 25). A fresh join mints a new player id and token; the first player to seat
    * becomes host (§8.2).
@@ -330,7 +330,7 @@ export class RoomManager {
 
   /**
    * Inject a `TICK` (§7.6). Called by the armed deadline timer and, in
-   * production, by the sweeper (#22). Idempotent before the deadline: the engine
+   * production, by the boot re-arm (#22). Idempotent before the deadline: the engine
    * returns the same state and nothing is written.
    */
   tick(roomId: string, now: number = this.scheduler.now()): Promise<Result<GameState, ErrorCode>> {

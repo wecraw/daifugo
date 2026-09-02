@@ -4,11 +4,11 @@
  * Two things run on a clock here:
  *
  * - **Deadlines.** A `state.deadline` (a turn or the exchange) is armed as a
- *   `setTimeout` that injects a `TICK`. This is the low-latency fast path of the
- *   two-layer timer scheme (§14); the ~5s Firestore sweeper (#22) is the
- *   correctness backstop for when the instance that armed this dies. Both inject
- *   the same `TICK`, and the `stateVersion` CAS plus the no-op-on-early-`TICK`
- *   rule mean at most one transition lands per deadline.
+ *   `setTimeout` that injects a `TICK`. It dies with the process, so the server
+ *   re-arms every room with a live deadline on boot (#22, §14) — that is what
+ *   carries an in-flight match across a redeploy or a crash. A re-armed timer
+ *   racing a live one is harmless: the `stateVersion` CAS plus the
+ *   no-op-on-early-`TICK` rule mean at most one transition lands per deadline.
  * - **Disconnect grace.** A 30s timer per disconnected player, governing seat
  *   removal only (§8.3). Turn timers keep running for a disconnected player, so
  *   they auto-pass on schedule and the table never stalls; the grace timer is the

@@ -20,8 +20,8 @@ These are load-bearing. Violating one breaks something far from where you change
   Finished and departed players stay in it; eligibility is derived, not removed.
 - **`stateVersion` strictly increases**, and is the compare-and-set key for the
   Firestore transaction. Never write state without bumping it.
-- **A `TICK` arriving before `deadline` is a no-op.** This is what makes a duplicate
-  sweep from a second instance safe (§14).
+- **A `TICK` arriving before `deadline` is a no-op.** This is what makes re-arming a
+  room's deadline on boot safe when a live timer is already armed for it (§14).
 - **No bare strings enter `GameState`.** History and banners are i18n keys with
   params (§11). Retrofitting the history log later is painful. `HistoryEntry.key` is
   typed as `HistoryKey`, and entries are built only via the `history()` builder in
