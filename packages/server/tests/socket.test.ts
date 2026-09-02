@@ -157,6 +157,48 @@ describe("Socket.IO contract (§8, §12.4)", () => {
     expect(resumed.state.players).toHaveLength(2);
   });
 
+  it("keeps a seat connected while a second socket still holds it", async () => {
+    const roomId = await createRoom();
+    const first = await join(roomId, "Will");
+    await join(roomId, "Alex");
+
+    // A replacement connection arrives before the original times out — two tabs
+    // sharing one stored token look exactly the same from here.
+    const second = await join(roomId, "Will", first.joined.resumeToken);
+    expect(second.joined.playerId).toBe(first.joined.playerId);
+
+    first.socket.disconnect();
+
+    // The seat must stay connected: the second socket is still live, so no
+    // seat-removal grace may start (§8.3). Polled rather than asserted once, so a
+    // disconnect handled a beat late still fails the test.
+    for (let i = 0; i < 30; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      const doc = await server.manager.get(roomId);
+      const seat = doc?.state.players.find((p) => p.id === first.joined.playerId);
+      expect(seat?.isConnected).toBe(true);
+    }
+  });
+
+  it("releases the previous seat when a socket joins a second time", async () => {
+    const roomId = await createRoom();
+    const first = await join(roomId, "Will");
+    await join(roomId, "Alex");
+
+    // The same socket joins again without a token, so it takes a fresh seat. The
+    // seat it used to hold must not stay connected behind it.
+    const joinedP = once(first.socket, "joined");
+    first.socket.emit("joinRoom", roomId, "Will again");
+    const [rejoined] = await joinedP;
+    expect(rejoined.playerId).not.toBe(first.joined.playerId);
+
+    const doc = await server.manager.get(roomId);
+    const abandoned = doc?.state.players.find((p) => p.id === first.joined.playerId);
+    const current = doc?.state.players.find((p) => p.id === rejoined.playerId);
+    expect(abandoned?.isConnected).toBe(false);
+    expect(current?.isConnected).toBe(true);
+  });
+
   it("answers the health probe", async () => {
     const response = await server.app.inject({ method: "GET", url: "/healthz" });
     expect(response.json()).toEqual({ ok: true });

@@ -10,6 +10,11 @@
  * Transport is WebSocket-only (§14), which removes any need for session affinity:
  * a socket carries its own `resumeToken`, and the seat behind it is resolved from
  * Firestore, not from which instance it happens to land on.
+ *
+ * A seat can be held by more than one socket at a time — a replacement connection
+ * established before the old one times out, or two tabs sharing the same stored
+ * token — so the hub counts the sockets behind each seat and only reports the
+ * player disconnected (§8.3) when the last of them closes.
  */
 import {
   getPublicState,
@@ -44,6 +49,13 @@ export type DaifugoSocket = Socket<
  */
 export class RoomHub {
   private readonly lastStatus = new Map<string, GameStatus>();
+  /**
+   * `roomId:playerId` -> the ids of the sockets currently holding that seat on
+   * this instance. A seat is only reported disconnected once this set empties, so
+   * a second tab or an overlapping reconnect never starts the 30s seat-removal
+   * grace out from under a live socket (§8.3).
+   */
+  private readonly seatSockets = new Map<string, Set<string>>();
   private manager!: RoomManager;
 
   constructor(private readonly io: DaifugoServer) {}
@@ -133,7 +145,10 @@ export class RoomHub {
 
     socket.on("disconnect", () => {
       const { roomId, playerId } = socket.data;
-      if (roomId !== null && playerId !== null) void this.manager.disconnect(roomId, playerId);
+      socket.data = { roomId: null, playerId: null, resumeToken: null };
+      if (roomId !== null && playerId !== null) {
+        void this.releaseSeat(socket.id, roomId, playerId);
+      }
     });
   }
 
@@ -148,14 +163,33 @@ export class RoomHub {
     playerName: string,
     resumeToken?: string,
   ): Promise<void> {
+    // A socket that joins twice would otherwise leave its previous seat bound to
+    // nothing: the eventual `disconnect` only names the newest identity, so the
+    // old seat would stay connected forever and repeated joins could fill a room
+    // with ghosts. The previous membership is remembered here and released below,
+    // once the new join is known to have succeeded.
+    const previous = { roomId: socket.data.roomId, playerId: socket.data.playerId };
+
     const result = await this.manager.join(roomId, playerName, resumeToken);
     if (!result.ok) {
+      // The failed join changes nothing: the socket keeps the seat it had.
       socket.emit("gameError", { code: result.error });
       return;
     }
 
     const { playerId, resumeToken: token } = result.value;
+
+    if (
+      previous.roomId !== null &&
+      previous.playerId !== null &&
+      !(previous.roomId === roomId && previous.playerId === playerId)
+    ) {
+      await socket.leave(previous.roomId);
+      await this.releaseSeat(socket.id, previous.roomId, previous.playerId);
+    }
+
     socket.data = { roomId, playerId, resumeToken: token };
+    this.holdSeat(socket.id, roomId, playerId);
     await socket.join(roomId);
 
     // §8.1: `joined` reaches this socket alone, before its first `roomState`, so
@@ -164,6 +198,30 @@ export class RoomHub {
 
     const doc = await this.manager.get(roomId);
     if (doc !== null) socket.emit("roomState", getPublicState(doc.state, playerId));
+  }
+
+  /** Record that `socketId` now holds a seat on this instance. */
+  private holdSeat(socketId: string, roomId: string, playerId: string): void {
+    const key = seatKey(roomId, playerId);
+    const holders = this.seatSockets.get(key);
+    if (holders === undefined) this.seatSockets.set(key, new Set([socketId]));
+    else holders.add(socketId);
+  }
+
+  /**
+   * Drop one socket's hold on a seat, reporting the player disconnected (§8.3)
+   * only when it was the last socket behind that seat. Another live socket — a
+   * second tab, or a replacement connection that arrived before this one closed —
+   * keeps the seat connected and its grace timer unarmed.
+   */
+  private async releaseSeat(socketId: string, roomId: string, playerId: string): Promise<void> {
+    const key = seatKey(roomId, playerId);
+    const holders = this.seatSockets.get(key);
+    if (holders === undefined) return;
+    holders.delete(socketId);
+    if (holders.size > 0) return;
+    this.seatSockets.delete(key);
+    await this.manager.disconnect(roomId, playerId);
   }
 
   /**
@@ -184,4 +242,9 @@ export class RoomHub {
       socket.emit("gameError", { code: result.error });
     }
   }
+}
+
+/** Key for one seat's live sockets on this instance. */
+function seatKey(roomId: string, playerId: string): string {
+  return `${roomId}:${playerId}`;
 }
