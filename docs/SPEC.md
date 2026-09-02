@@ -1027,37 +1027,13 @@ from a scaling story the traffic will never justify. There is no cross-instance
 broadcast, no Pub/Sub adapter, no session-affinity problem, and no cross-instance
 timer contention, because in steady state there is never more than one instance.
 
-**The exception is a rollout, and it is not merely theoretical.** `max-instances`
-is a property of a *revision*, not of the service. A deploy creates a new revision
-and points traffic at it, but the old revision keeps serving the requests already
-in flight — and a WebSocket is in flight for its entire life. So for a bounded
-window after every deploy, two instances run at once: players connected before the
-deploy stay on the old revision, while anyone joining or reconnecting lands on the
-new one.
-
-What that does and does not break follows from which guarantee is doing the work:
-
-* **Room state stays correct.** Both revisions write through the same Firestore
-  `stateVersion` CAS, so concurrent actions from the two sides serialize exactly as
-  two actions on one instance would. Nothing is lost or double-applied.
-* **Timers stay correct.** Both revisions may arm a deadline for the same room, but
-  a `TICK` before its deadline is a no-op (§7.6) and the commit is a CAS, so the
-  pair lands at most one transition — the same property that makes boot re-arm safe.
-* **Broadcast splits.** This is the real breakage. Each revision has its own
-  in-memory Socket.IO adapter, so a `RoomHub.broadcast` reaches only the sockets on
-  its own side. Players on the old revision keep a correct-but-frozen view: their
-  own actions commit, and they stop seeing anyone else's.
-
-The window closes on its own — it is bounded by Cloud Run's request timeout, which
-is also the maximum socket lifetime, and the client reconnects with its
-`resumeToken` (§8.1) onto the new revision. So the failure is transient and
-self-healing rather than corrupting, which is why it is recorded here rather than
-paid for now. The fix, when it is worth making, is to drain: close the sockets on
-`SIGTERM` so clients reconnect immediately instead of waiting out the timeout. It
-is emphatically **not** the Pub/Sub adapter — cross-revision fanout would buy a
-few seconds of a deploy at the cost of the architecture §14.1 exists to refuse.
-
-Deploy while nobody is mid-match and none of this is reachable.
+One caveat, since the flag does not quite mean what its name suggests:
+`max-instances` is per *revision*, so a deploy briefly overlaps two instances —
+the old revision keeps serving sockets already open on it. State and timers are
+unaffected (both sides commit through the same CAS, and an early `TICK` is a
+no-op), but the in-memory Socket.IO adapters do not see each other, so anyone
+connected across the deploy sees a frozen table until they reconnect. Don't
+deploy mid-match and it never comes up.
 
 `min-instances=0` is the companion cost decision, not an architectural one: with
 nobody connected the service scales to zero, and the first player of a session pays
@@ -1115,10 +1091,8 @@ Firestore and the boot re-arm restores pending deadlines on startup.
 Recorded so it is not re-proposed. Each of these is correct engineering for a
 service with real traffic and pure cost here:
 
-* **Pub/Sub fanout for cross-instance broadcast** — the only window with two
-  instances is a rollout, and it is transient and self-healing (see the rollout
-  exception above). Draining sockets on `SIGTERM` addresses that window directly;
-  a broadcast adapter would be a permanent tax on a temporary problem.
+* **Pub/Sub fanout for cross-instance broadcast** — needs more than one instance,
+  and the deploy overlap above is not a reason to buy one.
 * **A polling deadline sweeper** — needs a timer to be lost while the process is
   alive, which the fast path plus boot re-arm does not leave room for at one
   instance.

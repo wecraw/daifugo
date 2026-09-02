@@ -21,14 +21,8 @@
 #       broadcast is the in-memory adapter, each room's deadline is a single
 #       armed setTimeout in this process, and there is no session affinity to
 #       need. Raising this silently breaks all three.
-#
-#       Read as "one instance per REVISION", which is what the flag actually
-#       means. The Deploy step below starts a new revision while the old one goes
-#       on serving the WebSockets already open on it, so a deploy overlaps two
-#       instances until those sockets drain. State and timers survive that (CAS
-#       and the no-op TICK cover both); broadcast does not, and players connected
-#       across the deploy see a frozen view until they reconnect. Bounded by the
-#       request timeout and self-healing — the full account is in §14.
+#       Per REVISION, so a deploy overlaps two instances until the old one's
+#       sockets drain; don't deploy mid-match (§14).
 #   --min-instances=0
 #       Scale to zero when nobody is connected. This is a cost decision, not an
 #       architectural one — it is safe only because the boot re-arm (§14) already
