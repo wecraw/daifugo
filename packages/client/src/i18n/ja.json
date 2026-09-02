@@ -1,1 +1,138 @@
-{}
+{
+  "rule.spade3BeatsJoker": "スペードの3返し",
+  "rule.fiveSkip": "5飛ばし",
+  "rule.sevenPass": "7渡し",
+  "rule.eightGiri": "8切り",
+  "rule.nineGiriMinPair": "9切り（2枚以上）",
+  "rule.tenDiscard": "10捨て",
+  "rule.elevenBack": "11バック",
+  "rule.kakumei": "革命",
+  "rule.shibari": "縛り",
+
+  "role.DAI_FUGO": "大富豪",
+  "role.FUGO": "富豪",
+  "role.HEIMIN": "平民",
+  "role.HINMIN": "貧民",
+  "role.DAI_HINMIN": "大貧民",
+
+  "history.gameStarted": "対戦開始",
+  "history.roundStarted": "第{round}ラウンド開始",
+  "history.roundEnded": "第{round}ラウンド終了",
+  "history.matchEnded": "第{round}ラウンドで対戦終了",
+  "history.roleAssigned": "{player} は {role}",
+  "history.miyakoOchi": "都落ち：{player} が大貧民から勝利、{target} は{count}枚を残して最下位へ",
+  "history.dealt": "{dealer} が配りました",
+
+  "history.exchangeStarted": "第{round}ラウンドのカード交換",
+  "history.exchangeCompleted": "カード交換が完了しました",
+  "history.exchangeGave": "{player} が {cards} を {target} に渡しました",
+  "history.exchangeGaveRedacted": "{player} が{count}枚を {target} に渡しました",
+  "history.exchangeAutoGave": "{player} が自動で{count}枚を {target} に渡しました",
+
+  "history.played": "{player} が {cards} を出しました",
+  "history.passed": "{player} がパスしました",
+  "history.trickCleared": "場が流れました — {leader} の親",
+  "history.allPassed": "全員パス — {leader} の親",
+  "history.leadPassed": "親が {leader} に移りました",
+  "history.agari": "{player} が{position}位で上がりました",
+
+  "history.spade3BeatsJoker": "{player} がスペードの3でジョーカーを返しました",
+  "history.fiveSkip": "{player} が{count}人を飛ばしました",
+  "history.fiveSkipCleared": "{player} が飛ばしを解除しました",
+  "history.sevenPass": "{player} が {cards} を {target} に渡しました",
+  "history.sevenPassRedacted": "{player} が{count}枚を {target} に渡しました",
+  "history.eightGiri": "{player} の8切り",
+  "history.nineGiri": "{player} の9切り",
+  "history.tenDiscard": "{player} が {cards} を捨てました",
+  "history.elevenBack": "{player} の11バック",
+  "history.elevenBackEnded": "11バックが終了しました",
+  "history.kakumei": "革命！{player} が強さを逆転させました",
+  "history.kakumeiEnded": "革命返し — {player} が元に戻しました",
+  "history.shibariLocked": "{player} が {suits} で縛りました",
+
+  "history.turnTimeout": "{player} が時間切れになりました",
+  "history.autoPlayed": "{player} が自動で {cards} を出しました",
+  "history.autoPassed": "{player} が自動でパスしました",
+
+  "history.playerJoined": "{player} が参加しました",
+  "history.playerLeft": "{player} が退出しました",
+  "history.hostTransferred": "{player} がホストになりました",
+
+  "error.NOT_HOST": "ホストのみが操作できます",
+  "error.NOT_YOUR_TURN": "あなたの番ではありません",
+  "error.WRONG_STATUS": "今はできません",
+  "error.GAME_ALREADY_STARTED": "ゲームはすでに始まっています",
+  "error.NOT_ENOUGH_PLAYERS": "人数が足りません",
+  "error.TOO_MANY_PLAYERS": "人数が多すぎます",
+  "error.PLAYER_NOT_FOUND": "プレイヤーが見つかりません",
+  "error.INVALID_ROUND_LIMIT": "ラウンド数の指定が不正です",
+
+  "error.PENDING_ACTION_BLOCKS": "先に保留中の操作を解決してください",
+  "error.NO_PENDING_ACTION": "解決する操作がありません",
+  "error.WRONG_PENDING_ACTION": "保留中の操作が違います",
+
+  "error.EMPTY_SELECTION": "カードを選んでください",
+  "error.DUPLICATE_CARD_IDS": "同じカードが重複しています",
+  "error.CARD_NOT_IN_HAND": "そのカードは手札にありません",
+  "error.WRONG_CARD_COUNT": "枚数が違います",
+
+  "error.MIXED_RANKS": "同じ数字のカードで揃えてください",
+  "error.JOKER_MUST_BE_BOUND": "ジョーカーの見立てを決めてください",
+
+  "error.INVALID_BINDING": "ジョーカーの見立てが不正です",
+  "error.DUPLICATE_BINDING": "2枚のジョーカーを同じカードには見立てられません",
+  "error.NO_LEGAL_BINDING": "有効なジョーカーの見立てがありません",
+
+  "error.COMBO_COUNT_MISMATCH": "{count}枚で出してください",
+  "error.TOO_WEAK": "場より弱いです",
+  "error.SUIT_LOCK_MISMATCH": "縛りのスートに従ってください",
+
+  "error.CANNOT_PASS_AS_LEADER": "親はパスできません",
+  "error.ALREADY_PASSED": "すでにパスしています",
+
+  "error.NOT_IN_EXCHANGE": "交換中ではありません",
+  "error.NOT_EXCHANGE_PARTICIPANT": "このラウンドの交換対象ではありません",
+  "error.EXCHANGE_FORCED": "渡すカードは自動で決まっています",
+  "error.EXCHANGE_ALREADY_SUBMITTED": "すでに交換しました",
+
+  "error.ROOM_NOT_FOUND": "ルームが見つかりません",
+  "error.ROOM_FULL": "ルームが満員です",
+  "error.NAME_TAKEN": "その名前は使われています",
+  "error.INVALID_ACTION": "その操作はできません",
+
+  "ui.app.title": "大富豪",
+  "ui.app.tagline": "3〜8人、横画面専用",
+
+  "ui.orientation.rotateTitle": "端末を横向きにしてください",
+  "ui.orientation.rotateBody": "大富豪は横画面でプレイします。",
+
+  "ui.menu.nameLabel": "名前",
+  "ui.menu.namePlaceholder": "名前",
+  "ui.menu.createRoom": "ルームを作る",
+  "ui.menu.creating": "作成中…",
+  "ui.menu.joinRoom": "ルームに参加",
+  "ui.menu.joining": "参加中…",
+  "ui.menu.roomCodeLabel": "ルームコード",
+  "ui.menu.roomCodePlaceholder": "ABC234",
+  "ui.menu.rejoin": "{code} に戻る",
+  "ui.menu.forget": "ルームを忘れる",
+  "ui.menu.nameRequired": "先に名前を入力してください",
+  "ui.menu.roomCodeRequired": "ルームコードを入力してください",
+  "ui.menu.createFailed": "ルームを作成できませんでした",
+
+  "ui.language.label": "言語",
+  "ui.language.en": "English",
+  "ui.language.ja": "日本語",
+
+  "ui.connection.connecting": "接続中…",
+  "ui.connection.connected": "接続済み",
+  "ui.connection.reconnecting": "再接続中…",
+  "ui.connection.offline": "オフライン",
+
+  "ui.room.code": "ルーム {code}",
+  "ui.room.players": "{count}人",
+  "ui.room.waiting": "テーブルを待っています…",
+  "ui.room.leave": "退出する",
+
+  "ui.error.dismiss": "閉じる"
+}

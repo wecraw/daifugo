@@ -1,0 +1,206 @@
+/*
+ * Shell styling only. The 844x390 landscape table of §10.1 arrives with the table
+ * components; what is here is the frame they will sit in — a fixed viewport that
+ * never scrolls, and the portrait blocker.
+ */
+:root {
+  --felt: #0f5132;
+  --felt-dark: #0a3b25;
+  --ink: #f5f3ee;
+  --accent: #e8b64c;
+  --danger: #b3261e;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--felt-dark);
+  color: var(--ink);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Hiragino Kaku Gothic ProN",
+    "Noto Sans JP",
+    sans-serif;
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: radial-gradient(ellipse at center, var(--felt), var(--felt-dark));
+}
+
+/* Portrait blocker (§0). */
+.rotate-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 100%;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.rotate-prompt__icon {
+  font-size: 3rem;
+  animation: rotate-hint 2.4s ease-in-out infinite;
+}
+
+@keyframes rotate-hint {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0deg);
+  }
+  80% {
+    transform: rotate(90deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotate-prompt__icon {
+    animation: none;
+  }
+}
+
+.main-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  height: 100%;
+  padding: 1rem;
+}
+
+.main-menu__header {
+  text-align: center;
+}
+
+.main-menu__header h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  letter-spacing: 0.08em;
+}
+
+.main-menu__header p {
+  margin: 0.25rem 0 0.5rem;
+  opacity: 0.7;
+  font-size: 0.8rem;
+}
+
+.main-menu__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.field input {
+  width: 10rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid rgba(245, 243, 238, 0.35);
+  border-radius: 0.4rem;
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  font: inherit;
+}
+
+button {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid rgba(245, 243, 238, 0.35);
+  border-radius: 0.4rem;
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.language-toggle {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.language-toggle__option[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.main-menu__actions,
+.main-menu__resume {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.main-menu__notice {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.8rem;
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--danger);
+  font-size: 0.8rem;
+}
+
+.room-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.room-shell__header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.room-shell__header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.room-shell__status {
+  opacity: 0.7;
+  font-size: 0.75rem;
+}
+
+.room-shell__players {
+  margin: 0;
+  padding-left: 1.1rem;
+}

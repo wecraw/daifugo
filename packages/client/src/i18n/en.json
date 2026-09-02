@@ -1,1 +1,138 @@
-{}
+{
+  "rule.spade3BeatsJoker": "Spade 3 Beats Joker",
+  "rule.fiveSkip": "Five Skip",
+  "rule.sevenPass": "Seven Pass",
+  "rule.eightGiri": "Eight Cutter",
+  "rule.nineGiriMinPair": "Nine Cutter (pair or more)",
+  "rule.tenDiscard": "Ten Discard",
+  "rule.elevenBack": "Jack Reversal",
+  "rule.kakumei": "Revolution",
+  "rule.shibari": "Suit Lock",
+
+  "role.DAI_FUGO": "Grand Millionaire",
+  "role.FUGO": "Millionaire",
+  "role.HEIMIN": "Commoner",
+  "role.HINMIN": "Pauper",
+  "role.DAI_HINMIN": "Grand Pauper",
+
+  "history.gameStarted": "Match started",
+  "history.roundStarted": "Round {round} started",
+  "history.roundEnded": "Round {round} ended",
+  "history.matchEnded": "Match ended after round {round}",
+  "history.roleAssigned": "{player} is {role}",
+  "history.miyakoOchi": "{player} won from Grand Pauper — {target} falls to last with {count} card(s)",
+  "history.dealt": "{dealer} dealt",
+
+  "history.exchangeStarted": "Exchange for round {round}",
+  "history.exchangeCompleted": "Exchange complete",
+  "history.exchangeGave": "{player} gave {cards} to {target}",
+  "history.exchangeGaveRedacted": "{player} gave {count} card(s) to {target}",
+  "history.exchangeAutoGave": "{player} automatically gave {count} card(s) to {target}",
+
+  "history.played": "{player} played {cards}",
+  "history.passed": "{player} passed",
+  "history.trickCleared": "Trick cleared — {leader} leads",
+  "history.allPassed": "Everyone passed — {leader} leads",
+  "history.leadPassed": "The lead passes to {leader}",
+  "history.agari": "{player} went out in position {position}",
+
+  "history.spade3BeatsJoker": "{player} beat the joker with the 3 of Spades",
+  "history.fiveSkip": "{player} skipped {count} player(s)",
+  "history.fiveSkipCleared": "{player} cleared the skip",
+  "history.sevenPass": "{player} passed {cards} to {target}",
+  "history.sevenPassRedacted": "{player} passed {count} card(s) to {target}",
+  "history.eightGiri": "{player} cut the trick with an 8",
+  "history.nineGiri": "{player} cut the trick with 9s",
+  "history.tenDiscard": "{player} discarded {cards}",
+  "history.elevenBack": "{player} reversed the trick with a Jack",
+  "history.elevenBackEnded": "The Jack reversal ended",
+  "history.kakumei": "Revolution! {player} turned the order upside down",
+  "history.kakumeiEnded": "Counter-revolution — {player} restored the order",
+  "history.shibariLocked": "{player} locked the suit to {suits}",
+
+  "history.turnTimeout": "{player} ran out of time",
+  "history.autoPlayed": "{player} was played out automatically: {cards}",
+  "history.autoPassed": "{player} passed automatically",
+
+  "history.playerJoined": "{player} joined",
+  "history.playerLeft": "{player} left",
+  "history.hostTransferred": "{player} is now the host",
+
+  "error.NOT_HOST": "Only the host can do that",
+  "error.NOT_YOUR_TURN": "Not your turn",
+  "error.WRONG_STATUS": "Not available right now",
+  "error.GAME_ALREADY_STARTED": "The game has already started",
+  "error.NOT_ENOUGH_PLAYERS": "Not enough players",
+  "error.TOO_MANY_PLAYERS": "Too many players",
+  "error.PLAYER_NOT_FOUND": "Player not found",
+  "error.INVALID_ROUND_LIMIT": "Invalid round limit",
+
+  "error.PENDING_ACTION_BLOCKS": "Resolve the pending action first",
+  "error.NO_PENDING_ACTION": "Nothing to resolve",
+  "error.WRONG_PENDING_ACTION": "That is not the pending action",
+
+  "error.EMPTY_SELECTION": "Select a card",
+  "error.DUPLICATE_CARD_IDS": "The same card was selected twice",
+  "error.CARD_NOT_IN_HAND": "That card is not in your hand",
+  "error.WRONG_CARD_COUNT": "Wrong number of cards",
+
+  "error.MIXED_RANKS": "Cards must share a rank",
+  "error.JOKER_MUST_BE_BOUND": "Choose what the joker stands for",
+
+  "error.INVALID_BINDING": "Invalid joker binding",
+  "error.DUPLICATE_BINDING": "Two jokers cannot stand for the same card",
+  "error.NO_LEGAL_BINDING": "No legal joker binding",
+
+  "error.COMBO_COUNT_MISMATCH": "Must play {count} card(s)",
+  "error.TOO_WEAK": "Not high enough",
+  "error.SUIT_LOCK_MISMATCH": "Must follow the locked suits",
+
+  "error.CANNOT_PASS_AS_LEADER": "You lead — you must play",
+  "error.ALREADY_PASSED": "You already passed this trick",
+
+  "error.NOT_IN_EXCHANGE": "No exchange is running",
+  "error.NOT_EXCHANGE_PARTICIPANT": "You are not exchanging this round",
+  "error.EXCHANGE_FORCED": "Your cards are chosen for you",
+  "error.EXCHANGE_ALREADY_SUBMITTED": "You already exchanged",
+
+  "error.ROOM_NOT_FOUND": "Room not found",
+  "error.ROOM_FULL": "That room is full",
+  "error.NAME_TAKEN": "That name is taken",
+  "error.INVALID_ACTION": "That action is not allowed",
+
+  "ui.app.title": "Daifugo",
+  "ui.app.tagline": "3 to 8 players, landscape only",
+
+  "ui.orientation.rotateTitle": "Rotate your device",
+  "ui.orientation.rotateBody": "Daifugo is played in landscape.",
+
+  "ui.menu.nameLabel": "Your name",
+  "ui.menu.namePlaceholder": "Name",
+  "ui.menu.createRoom": "Create room",
+  "ui.menu.creating": "Creating…",
+  "ui.menu.joinRoom": "Join room",
+  "ui.menu.joining": "Joining…",
+  "ui.menu.roomCodeLabel": "Room code",
+  "ui.menu.roomCodePlaceholder": "ABC234",
+  "ui.menu.rejoin": "Rejoin {code}",
+  "ui.menu.forget": "Forget that room",
+  "ui.menu.nameRequired": "Enter a name first",
+  "ui.menu.roomCodeRequired": "Enter a room code",
+  "ui.menu.createFailed": "Could not create a room",
+
+  "ui.language.label": "Language",
+  "ui.language.en": "English",
+  "ui.language.ja": "日本語",
+
+  "ui.connection.connecting": "Connecting…",
+  "ui.connection.connected": "Connected",
+  "ui.connection.reconnecting": "Reconnecting…",
+  "ui.connection.offline": "Offline",
+
+  "ui.room.code": "Room {code}",
+  "ui.room.players": "{count} player(s)",
+  "ui.room.waiting": "Waiting for the table…",
+  "ui.room.leave": "Leave room",
+
+  "ui.error.dismiss": "Dismiss"
+}

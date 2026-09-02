@@ -1,4 +1,294 @@
-import { createContext } from "react";
-import type { Socket } from "socket.io-client";
+/**
+ * The socket layer (§8, §14): one typed Socket.IO connection, the seat behind it,
+ * and the latest `PublicGameState`.
+ *
+ * **Same origin, no configuration.** The client is served as static assets off the
+ * same Cloud Run service as the server (§14), so `io()` is called with no URL and
+ * connects back to the page's own origin. There is no `VITE_SERVER_URL` and no
+ * per-environment build. In dev, Vite proxies `/socket.io` and `/rooms` to :4000,
+ * so the same-origin code path is what runs locally too.
+ *
+ * **Transport is WebSocket-only** (§14): long-polling across a cold-started
+ * instance is strictly worse and there is no fallback case worth supporting.
+ *
+ * **Identity is the resume token, not the socket id** (§8.1). The server issues one
+ * on `joined`, emitted to this socket alone before its first `roomState`; a
+ * successful resume echoes the same token back, so the payload is stored
+ * unconditionally. It is replayed on every `joinRoom` — after a transport drop and
+ * after a page reload alike — which is what reclaims the seat instead of taking a
+ * new one.
+ */
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { ReactNode } from "react";
+import { io, type Socket } from "socket.io-client";
+import type {
+  ClientToServerEvents,
+  GameErrorPayload,
+  PublicGameState,
+  ServerToClientEvents,
+} from "@daifugo/core";
 
-export const SocketContext = createContext<Socket | null>(null);
+export type DaifugoClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
+
+/** What the client sends: everything but `joinRoom`, which the provider owns. */
+export type RoomAction = Exclude<keyof ClientToServerEvents, "joinRoom">;
+
+export type ConnectionStatus = "idle" | "connecting" | "connected" | "reconnecting";
+
+export const SESSION_STORAGE_KEY = "daifugo.session";
+
+/**
+ * The seat this browser holds, persisted across reloads. `resumeToken` is the
+ * whole point (§8.1); the room and name ride along so a reload can replay the
+ * join without asking again.
+ */
+export interface StoredSession {
+  roomId: string;
+  playerName: string;
+  resumeToken: string;
+}
+
+export function readStoredSession(): StoredSession | null {
+  try {
+    const raw = globalThis.localStorage?.getItem(SESSION_STORAGE_KEY);
+    if (raw === null || raw === undefined) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) return null;
+    const { roomId, playerName, resumeToken } = parsed as Record<string, unknown>;
+    if (typeof roomId !== "string" || typeof playerName !== "string") return null;
+    if (typeof resumeToken !== "string") return null;
+    return { roomId, playerName, resumeToken };
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredSession(session: StoredSession | null): void {
+  try {
+    if (session === null) globalThis.localStorage?.removeItem(SESSION_STORAGE_KEY);
+    else globalThis.localStorage?.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  } catch {
+    // A browser refusing storage costs a reconnect, not a crash.
+  }
+}
+
+export interface SocketContextValue {
+  status: ConnectionStatus;
+  /** The last state the server sent, already redacted for this seat (§8.5). */
+  room: PublicGameState | null;
+  playerId: string | null;
+  roomId: string | null;
+  /** The last `gameError`, for the sender only (§8.4). */
+  error: GameErrorPayload | null;
+  /** A seat this browser can reclaim without re-entering a name. */
+  storedSession: StoredSession | null;
+  /** `POST /rooms` (§8: the code must exist before anyone can join it), then join. */
+  createRoom: (playerName: string) => Promise<string>;
+  joinRoom: (roomId: string, playerName: string) => void;
+  leaveRoom: () => void;
+  clearError: () => void;
+  /** Typed passthrough for every other client-to-server event. */
+  send: <E extends RoomAction>(event: E, ...args: Parameters<ClientToServerEvents[E]>) => void;
+}
+
+const SocketContext = createContext<SocketContextValue | null>(null);
+
+export interface SocketProviderProps {
+  children: ReactNode;
+  /** Overridden in tests. Production connects to the page's own origin (§14). */
+  connect?: () => DaifugoClientSocket;
+  /** Overridden in tests. */
+  fetchImpl?: typeof fetch;
+}
+
+function defaultConnect(): DaifugoClientSocket {
+  return io({ transports: ["websocket"], autoConnect: false });
+}
+
+export function SocketProvider({ children, connect, fetchImpl }: SocketProviderProps) {
+  const [status, setStatus] = useState<ConnectionStatus>("idle");
+  const [room, setRoom] = useState<PublicGameState | null>(null);
+  const [playerId, setPlayerId] = useState<string | null>(null);
+  const [roomId, setRoomId] = useState<string | null>(null);
+  const [error, setError] = useState<GameErrorPayload | null>(null);
+  const [storedSession, setStoredSession] = useState<StoredSession | null>(() =>
+    readStoredSession(),
+  );
+
+  const socketRef = useRef<DaifugoClientSocket | null>(null);
+  // The join to replay on `connect`, whether that is the first connect or a
+  // reconnect after a drop. Held in a ref so the socket handlers, registered once,
+  // always see the current intent.
+  const pendingJoin = useRef<{ roomId: string; playerName: string } | null>(null);
+  // Whether the current join attempt has been seated. A room-lifecycle error
+  // before that is a failed join — including a replayed one after a reconnect —
+  // and drops the stored seat; the same code once seated is just an error to show.
+  const seated = useRef(false);
+  const connectRef = useRef(connect ?? defaultConnect);
+
+  useEffect(() => {
+    const socket = connectRef.current();
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      const join = pendingJoin.current;
+      if (join === null) {
+        setStatus("connected");
+        return;
+      }
+      // Replay the token if we hold one for this room; the server mints a fresh
+      // seat when there is none, and echoes the same token back on a resume.
+      const stored = readStoredSession();
+      const token = stored?.roomId === join.roomId ? stored.resumeToken : undefined;
+      seated.current = false;
+      socket.emit("joinRoom", join.roomId, join.playerName, token);
+    });
+
+    socket.on("joined", (payload) => {
+      const join = pendingJoin.current;
+      const session: StoredSession = {
+        roomId: payload.roomId,
+        playerName: join?.playerName ?? "",
+        resumeToken: payload.resumeToken,
+      };
+      writeStoredSession(session);
+      setStoredSession(session);
+      seated.current = true;
+      setPlayerId(payload.playerId);
+      setRoomId(payload.roomId);
+      setStatus("connected");
+    });
+
+    socket.on("roomState", (state) => {
+      setRoom(state);
+      setStatus("connected");
+    });
+
+    socket.on("gameError", (payload) => {
+      setError(payload);
+      // A join that cannot succeed must not be retried on every reconnect: drop
+      // the seat and fall back to the menu.
+      const joinFailed =
+        payload.code === "ROOM_NOT_FOUND" ||
+        payload.code === "ROOM_FULL" ||
+        payload.code === "NAME_TAKEN";
+      if (joinFailed && !seated.current) {
+        pendingJoin.current = null;
+        writeStoredSession(null);
+        setStoredSession(null);
+        setPlayerId(null);
+        setStatus("idle");
+        socket.disconnect();
+      }
+    });
+
+    socket.on("disconnect", () => {
+      // Socket.IO reconnects on its own; the seat survives because the token is
+      // replayed on the next `connect` (§8.1, §8.3).
+      setStatus(pendingJoin.current === null ? "idle" : "reconnecting");
+    });
+
+    return () => {
+      socket.removeAllListeners();
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, []);
+
+  const joinRoom = useCallback((nextRoomId: string, playerName: string) => {
+    const socket = socketRef.current;
+    if (socket === null) return;
+    pendingJoin.current = { roomId: nextRoomId, playerName };
+    seated.current = false;
+    setRoomId(nextRoomId);
+    setError(null);
+    setStatus("connecting");
+    if (socket.connected) {
+      const stored = readStoredSession();
+      const token = stored?.roomId === nextRoomId ? stored.resumeToken : undefined;
+      socket.emit("joinRoom", nextRoomId, playerName, token);
+    } else {
+      socket.connect();
+    }
+  }, []);
+
+  const createRoom = useCallback(
+    async (playerName: string): Promise<string> => {
+      const doFetch = fetchImpl ?? globalThis.fetch.bind(globalThis);
+      const response = await doFetch("/rooms", { method: "POST" });
+      if (!response.ok) throw new Error(`POST /rooms failed: ${response.status}`);
+      const body = (await response.json()) as { roomId: string };
+      joinRoom(body.roomId, playerName);
+      return body.roomId;
+    },
+    [fetchImpl, joinRoom],
+  );
+
+  const leaveRoom = useCallback(() => {
+    pendingJoin.current = null;
+    seated.current = false;
+    writeStoredSession(null);
+    setStoredSession(null);
+    setRoom(null);
+    setPlayerId(null);
+    setRoomId(null);
+    setError(null);
+    setStatus("idle");
+    socketRef.current?.disconnect();
+  }, []);
+
+  const send = useCallback<SocketContextValue["send"]>((event, ...args) => {
+    const socket = socketRef.current;
+    if (socket === null) return;
+    // socket.io-client's overloads do not narrow through a generic event name;
+    // the contract itself is enforced by `RoomAction` and `Parameters<>` above.
+    (socket.emit as (name: string, ...rest: unknown[]) => void)(event, ...args);
+  }, []);
+
+  const clearError = useCallback(() => setError(null), []);
+
+  const value = useMemo<SocketContextValue>(
+    () => ({
+      status,
+      room,
+      playerId,
+      roomId,
+      error,
+      storedSession,
+      createRoom,
+      joinRoom,
+      leaveRoom,
+      clearError,
+      send,
+    }),
+    [
+      status,
+      room,
+      playerId,
+      roomId,
+      error,
+      storedSession,
+      createRoom,
+      joinRoom,
+      leaveRoom,
+      clearError,
+      send,
+    ],
+  );
+
+  return <SocketContext.Provider value={value}>{children}</SocketContext.Provider>;
+}
+
+export function useSocket(): SocketContextValue {
+  const value = useContext(SocketContext);
+  if (value === null) throw new Error("useSocket must be used inside a SocketProvider");
+  return value;
+}

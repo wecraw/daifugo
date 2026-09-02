@@ -29,6 +29,14 @@ export default [
     },
   },
   {
+    // Client tests run in Vitest's jsdom: a browser inside a Node process, so
+    // both sets of globals are legitimate here.
+    files: ["packages/client/tests/**/*.{ts,tsx}"],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+    },
+  },
+  {
     files: ["**/*.ts", "**/*.tsx"],
     languageOptions: {
       parser: tsparser,

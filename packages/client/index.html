@@ -2,8 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>daifugo</title>
+    <!-- Landscape only (§0): the table is a fixed viewport that never zooms or
+         scrolls, and portrait gets the rotate prompt from OrientationGate. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0a3b25" />
+    <title>Daifugo</title>
   </head>
   <body>
     <div id="root"></div>
