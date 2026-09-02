@@ -56,7 +56,12 @@ export function buildServer(options: BuildServerOptions): BuiltServer {
   });
   hub.attach(manager);
 
-  app.get("/healthz", async () => ({ ok: true }));
+  // Deliberately NOT `/healthz`: Google Front End intercepts that exact path in
+  // front of Cloud Run and answers it with its own 404, so the request never
+  // reaches this process. Measured on the deployed service — `/`, `/health`,
+  // `/readyz` and even `/healthz/` all arrive normally; only the bare `/healthz`
+  // is swallowed. Renaming it back would silently break every external check.
+  app.get("/health", async () => ({ ok: true }));
 
   // Room creation is an HTTP call, not a socket event: the code has to exist
   // before anyone can `joinRoom` it (§8.1). The first joiner becomes host (§8.2).

@@ -4,7 +4,8 @@
  *
  * State lives in Firestore, one doc per room, so this process holds no
  * authoritative game state and a redeploy or a crash does not destroy an in-flight
- * match (§14). `/healthz` is what Cloud Run probes. The wiring itself
+ * match (§14). `/health` is the external health check (not
+ * `/healthz` — see `app.ts`). The wiring itself
  * lives in `buildServer`; this file only chooses the deployed edges — Firestore
  * and the wall clock — re-arms the deadlines the dead process left behind (§14),
  * and starts listening.

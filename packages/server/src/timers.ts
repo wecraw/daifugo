@@ -9,6 +9,13 @@
  *   carries an in-flight match across a redeploy or a crash. A re-armed timer
  *   racing a live one is harmless: the `stateVersion` CAS plus the
  *   no-op-on-early-`TICK` rule mean at most one transition lands per deadline.
+ *
+ *   A timer can also fire *late*, and that is designed for rather than avoided:
+ *   Cloud Run throttles CPU while no request is in flight, so with nobody
+ *   connected anywhere a pending timer stalls until the next connect. The `TICK`
+ *   carries the deadline that expired rather than the wall clock at firing, so a
+ *   late one lands exactly the transition a punctual one would have. This is why
+ *   the service does not pay for always-allocated CPU (§14).
  * - **Disconnect grace.** A 30s timer per disconnected player, governing seat
  *   removal only (§8.3). Turn timers keep running for a disconnected player, so
  *   they auto-pass on schedule and the table never stalls; the grace timer is the

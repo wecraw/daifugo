@@ -158,7 +158,7 @@ describe("Socket.IO contract (§8, §12.4)", () => {
   });
 
   it("answers the health probe", async () => {
-    const response = await server.app.inject({ method: "GET", url: "/healthz" });
+    const response = await server.app.inject({ method: "GET", url: "/health" });
     expect(response.json()).toEqual({ ok: true });
   });
 });

@@ -984,13 +984,14 @@ One environment. A push to `main` triggers Cloud Build, which builds the image a
 patches the single Cloud Run service. The client is built into the same image and
 served as static assets by the server (§14), so there is nothing else to deploy.
 
-The service is pinned to `min-instances=1 max-instances=1`, with `gen2` and
-`--no-cpu-throttling`. Deploys go through `gcloud run services update` — a patch,
-so the instance bounds and runtime flags are not clobbered by a deploy that forgets
-to restate them. After any change to the deploy config, confirm they survived:
+The service is pinned to `max-instances=1` with `gen2`, and scales to zero
+(`min-instances=0`) when nobody is connected. Deploys go through `gcloud run
+services update` — a patch, so the instance bounds and runtime flags are not
+clobbered by a deploy that forgets to restate them. After any change to the deploy
+config, confirm they survived:
 
 ```bash
-gcloud run services describe daifugo --region "$REGION" --format=yaml | grep -E 'executionEnvironment|cpu-throttling|maxScale|minScale'
+gcloud run services describe daifugo --region "$REGION" --format=yaml | grep -E 'execution-environment|cpu-throttling|maxScale|minScale'
 ```
 
 ### 13.2 Rollback
@@ -1020,11 +1021,48 @@ Decided after the original spec was written. Supersedes any in-memory assumption
 in Section 8.
 
 **Scale target: one Cloud Run instance.** This is a private game for the author and
-under a dozen friends — a handful of concurrent rooms, never more. `min-instances=1`
-and `max-instances=1` are set deliberately, and every design decision below follows
-from that rather than from a scaling story the traffic will never justify. There is
-no cross-instance broadcast, no Pub/Sub adapter, no session-affinity problem, and no
-cross-instance timer contention, because there is only ever one instance.
+under a dozen friends — a handful of concurrent rooms, never more. `max-instances=1`
+is set deliberately, and every design decision below follows from that rather than
+from a scaling story the traffic will never justify. There is no cross-instance
+broadcast, no Pub/Sub adapter, no session-affinity problem, and no cross-instance
+timer contention, because in steady state there is never more than one instance.
+
+**The exception is a rollout, and it is not merely theoretical.** `max-instances`
+is a property of a *revision*, not of the service. A deploy creates a new revision
+and points traffic at it, but the old revision keeps serving the requests already
+in flight — and a WebSocket is in flight for its entire life. So for a bounded
+window after every deploy, two instances run at once: players connected before the
+deploy stay on the old revision, while anyone joining or reconnecting lands on the
+new one.
+
+What that does and does not break follows from which guarantee is doing the work:
+
+* **Room state stays correct.** Both revisions write through the same Firestore
+  `stateVersion` CAS, so concurrent actions from the two sides serialize exactly as
+  two actions on one instance would. Nothing is lost or double-applied.
+* **Timers stay correct.** Both revisions may arm a deadline for the same room, but
+  a `TICK` before its deadline is a no-op (§7.6) and the commit is a CAS, so the
+  pair lands at most one transition — the same property that makes boot re-arm safe.
+* **Broadcast splits.** This is the real breakage. Each revision has its own
+  in-memory Socket.IO adapter, so a `RoomHub.broadcast` reaches only the sockets on
+  its own side. Players on the old revision keep a correct-but-frozen view: their
+  own actions commit, and they stop seeing anyone else's.
+
+The window closes on its own — it is bounded by Cloud Run's request timeout, which
+is also the maximum socket lifetime, and the client reconnects with its
+`resumeToken` (§8.1) onto the new revision. So the failure is transient and
+self-healing rather than corrupting, which is why it is recorded here rather than
+paid for now. The fix, when it is worth making, is to drain: close the sockets on
+`SIGTERM` so clients reconnect immediately instead of waiting out the timeout. It
+is emphatically **not** the Pub/Sub adapter — cross-revision fanout would buy a
+few seconds of a deploy at the cost of the architecture §14.1 exists to refuse.
+
+Deploy while nobody is mid-match and none of this is reachable.
+
+`min-instances=0` is the companion cost decision, not an architectural one: with
+nobody connected the service scales to zero, and the first player of a session pays
+a cold start. Nothing depends on an instance existing between sessions — state is in
+Firestore and the boot re-arm restores pending deadlines on startup.
 
 * **State lives in Firestore**, one doc per room, not in process memory. This is not
   for scale-out — it is so a redeploy or a crash does not destroy an in-flight match.
@@ -1041,9 +1079,9 @@ cross-instance timer contention, because there is only ever one instance.
 * **Timers are a `setTimeout` plus a re-arm on boot.** A per-instance `setTimeout`
   armed off `state.deadline` drives every turn and exchange deadline. It dies with
   the process, so on startup the server queries rooms with a non-null `deadline` and
-  re-arms them, which is what carries an in-flight match across a redeploy or a
-  crash. `status` and `deadline` are denormalized onto the room doc as top-level
-  fields so that startup query does not have to deserialize every room. No polling
+  re-arms them, which is what carries an in-flight match across a redeploy, a crash,
+  or a scale-to-zero. `status` and `deadline` are denormalized onto the room doc as
+  top-level fields so that startup query does not have to deserialize every room. No polling
   interval and no composite index are needed: a single-field query on `deadline` uses
   the automatic index.
 
@@ -1051,9 +1089,20 @@ cross-instance timer contention, because there is only ever one instance.
   deadline is a no-op (Section 7.6) and the commit is a `stateVersion` CAS, so a
   re-armed timer racing a live one lands at most one transition.
 * **Cloud Run flags that must not drift**: `--execution-environment=gen2` (faster
-  networking for long-lived Socket.IO connections) and `--no-cpu-throttling`
-  (required so the instance keeps its armed `setTimeout` running while no request is
-  in flight — without it, a turn timer silently stops firing between actions).
+  networking for long-lived Socket.IO connections, and a faster cold start),
+  `--max-instances=1`, and `--no-session-affinity`.
+
+  **CPU throttling stays at its default (on).** An earlier draft of this section
+  called `--no-cpu-throttling` required. It is not. CPU is throttled only while an
+  instance has no request in flight, and an open WebSocket counts as an in-flight
+  request for its whole life — so any instance with a connected player has full CPU,
+  and every armed deadline fires on time. The only throttled window is one with zero
+  sockets open service-wide, and nobody is waiting on a timer then. On the next
+  connect CPU returns and the stalled `setTimeout` fires late, which is harmless
+  because the `TICK` carries the deadline that expired rather than the wall clock at
+  firing (§7.6), and because `join` re-arms the room's deadline on every reconnect.
+  The flag would cost roughly the entire hosting budget for a case that self-heals
+  on the next connect.
 * **The client is served as static assets off the same Cloud Run service.** One
   origin, so there is no CORS allowlist and no separate static host to deploy, and
   the client's socket connects to its own origin rather than a configured URL.
@@ -1066,10 +1115,16 @@ cross-instance timer contention, because there is only ever one instance.
 Recorded so it is not re-proposed. Each of these is correct engineering for a
 service with real traffic and pure cost here:
 
-* **Pub/Sub fanout for cross-instance broadcast** — needs more than one instance.
+* **Pub/Sub fanout for cross-instance broadcast** — the only window with two
+  instances is a rollout, and it is transient and self-healing (see the rollout
+  exception above). Draining sockets on `SIGTERM` addresses that window directly;
+  a broadcast adapter would be a permanent tax on a temporary problem.
 * **A polling deadline sweeper** — needs a timer to be lost while the process is
   alive, which the fast path plus boot re-arm does not leave room for at one
   instance.
+* **Always-allocated CPU (`--no-cpu-throttling`)** — a real cost for a failure mode
+  that only exists while nobody is connected at all, and that the late-`TICK`
+  semantics resolve on the next connect. See the flags bullet above.
 * **Separate dev and prod environments** — local runs against the Firestore emulator
   cover the dev case; a second Cloud Run service and trigger is ceremony.
 * **Cloud Storage + Cloud CDN for the client** — the asset payload is small and the
