@@ -12,7 +12,7 @@
  * commits only if the room has not changed underneath. A stale action loses and
  * Firestore retries the transaction against fresh state. The denormalized
  * `status` and `deadline` fields ride along on every write so the boot re-arm
- * (#22) can find rooms with a live deadline without deserializing every room.
+ * (§14) can find rooms with a live deadline without deserializing every room.
  *
  * The emulator is wired in through `FIRESTORE_EMULATOR_HOST`, which the client
  * library honours automatically; `FIRESTORE_PROJECT_ID` is still required, so
@@ -21,6 +21,7 @@
 import { Firestore, type Settings } from "@google-cloud/firestore";
 import {
   ConcurrencyError,
+  type ArmedRoom,
   MAX_CAS_ATTEMPTS,
   RoomExistsError,
   RoomNotFoundError,
@@ -31,6 +32,38 @@ import {
 
 /** Default collection holding one document per room. */
 export const ROOMS_COLLECTION = "rooms";
+
+/** The denormalized top-level field the boot re-arm queries on (§14). */
+export const DEADLINE_FIELD = "deadline";
+
+/**
+ * The minimum of Firestore's `Query` the boot re-arm query needs, so
+ * {@link armedRoomsQuery} can be built and asserted against a recording double
+ * in a unit test rather than a live Firestore.
+ */
+export interface ArmedQuerySource<Q extends ArmedQuerySource<Q>> {
+  where(field: string, op: ">", value: number): Q;
+  select(...fields: string[]): Q;
+}
+
+/**
+ * The boot re-arm query (§14): every room whose `deadline` is still set.
+ *
+ * Single-field, so the automatic index covers it — no `firestore.indexes.json`,
+ * no composite index, no `FAILED_PRECONDITION` to handle.
+ *
+ * `> 0` rather than `!= null` is what expresses "non-null" here: a Firestore
+ * range filter only matches values of the compared type, so nulls (and missing
+ * fields) drop out, and a `deadline` is epoch ms and therefore always positive
+ * when it is set at all.
+ *
+ * `select` projects to the one field the re-arm reads, so a restart never pulls a
+ * whole serialized `GameState` over the wire; the room id comes from the document
+ * id.
+ */
+export function armedRoomsQuery<Q extends ArmedQuerySource<Q>>(source: ArmedQuerySource<Q>): Q {
+  return source.where(DEADLINE_FIELD, ">", 0).select(DEADLINE_FIELD);
+}
 
 /**
  * Construct a Firestore client, requiring an explicit project id (§14).
@@ -77,6 +110,14 @@ export class FirestoreRoomRepository implements RoomRepository {
     const snapshot = await this.collection.doc(roomId).get();
     const data = snapshot.data();
     return data === undefined ? null : (data as RoomDoc);
+  }
+
+  async listArmed(): Promise<ArmedRoom[]> {
+    const snapshot = await armedRoomsQuery(this.collection).get();
+    return snapshot.docs.map((doc) => ({
+      roomId: doc.id,
+      deadline: doc.get(DEADLINE_FIELD) as number,
+    }));
   }
 
   async mutate(roomId: string, mutate: RoomMutator): Promise<RoomDoc> {

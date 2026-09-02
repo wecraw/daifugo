@@ -10,10 +10,21 @@
  * a repository read, never from in-process state (§8.1, §14).
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import { isOk, type ErrorCode } from "@daifugo/core";
+import { TURN_DURATION_MS, isOk, type ErrorCode, type GameState } from "@daifugo/core";
 import { RoomManager, type JoinOutcome } from "../src/roomManager.js";
 import { InMemoryRoomRepository, type RoomDoc } from "../src/repository.js";
-import { DISCONNECT_GRACE_MS, ManualScheduler, graceKey } from "../src/timers.js";
+import { DISCONNECT_GRACE_MS, ManualScheduler, deadlineKey, graceKey } from "../src/timers.js";
+
+/** §12.3 invariant 21, asserted after every server-driven transition too. */
+function totalCards(state: GameState): number {
+  const inHands = Object.values(state.hands).reduce((sum, hand) => sum + hand.length, 0);
+  const inTrick = state.currentTrick.reduce((sum, play) => sum + play.combo.cards.length, 0);
+  return inHands + inTrick + state.graveyard.length;
+}
+
+function activePlayerId(state: GameState): string {
+  return state.turnOrder[state.activePlayerIndex]!;
+}
 
 function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: ErrorCode }): T {
   if (!result.ok) throw new Error(`expected ok, got error ${result.error}`);
@@ -174,6 +185,108 @@ describe("RoomManager acceptance (§12.4)", () => {
     expect(doc.state.hostId).toBe(heir.playerId);
     expect(doc.state.players.some((p) => p.id === host.playerId)).toBe(false);
     expect(doc.state.players).toHaveLength(2);
+  });
+
+  /* ---------------------------------------------------------------------- */
+  /* Test 28: the turn timeout fires for a disconnected player               */
+  /* ---------------------------------------------------------------------- */
+
+  it("times out the turn of a disconnected player before their grace expires (test 28)", async () => {
+    const roomId = await manager.createRoom();
+    const host = await seatPlayer(manager, roomId, "Will");
+    await seatPlayer(manager, roomId, "Alex");
+    await seatPlayer(manager, roomId, "Sam");
+    expect((await manager.startGame(roomId, host.playerId)).ok).toBe(true);
+
+    const dealt = await docOf(roomId);
+    const deadline = dealt.state.deadline!;
+    expect(deadline).toBe(scheduler.now() + TURN_DURATION_MS);
+    const dropped = activePlayerId(dealt.state);
+    const dealtVersion = dealt.state.stateVersion;
+
+    // They drop 40s into their own turn: the turn deadline (60s in) therefore
+    // falls *before* the 30s seat-removal grace (70s in), which is the ordering
+    // §8.3 is about — turn timers run regardless of connection state.
+    await scheduler.advance(40_000);
+    await manager.disconnect(roomId, dropped);
+    const graceExpiry = scheduler.now() + DISCONNECT_GRACE_MS;
+    expect(graceExpiry).toBeGreaterThan(deadline);
+
+    // A tick arriving before the deadline is a no-op (§7.6): nothing is written.
+    const beforeTimeout = await docOf(roomId);
+    await manager.tick(roomId, deadline - 1);
+    expect((await docOf(roomId)).stateVersion).toBe(beforeTimeout.stateVersion);
+
+    await scheduler.advance(deadline - scheduler.now());
+    const timedOut = await docOf(roomId);
+
+    // The auto-action landed and the clock rolled forward off the deadline that
+    // expired, not off the wall clock (§7.6).
+    expect(timedOut.state.stateVersion).toBeGreaterThan(beforeTimeout.state.stateVersion);
+    expect(timedOut.state.stateVersion).toBeGreaterThan(dealtVersion);
+    expect(timedOut.state.deadline).toBe(deadline + TURN_DURATION_MS);
+    expect(timedOut.deadline).toBe(timedOut.state.deadline);
+    expect(scheduler.has(deadlineKey(roomId))).toBe(true);
+    expect(totalCards(timedOut.state)).toBe(54);
+
+    // The seat is untouched: the grace governs removal only, and it has not
+    // expired yet (§8.3).
+    expect(timedOut.state.players.some((p) => p.id === dropped)).toBe(true);
+    expect(timedOut.state.players.find((p) => p.id === dropped)!.isConnected).toBe(false);
+    expect(timedOut.state.droppedPlayerIds).toEqual([]);
+    expect(scheduler.has(graceKey(roomId, dropped))).toBe(true);
+    expect(timedOut.state.status).toBe("IN_PROGRESS");
+  });
+
+  /* ---------------------------------------------------------------------- */
+  /* Test 29: mid-round leave is last place and the round continues          */
+  /* ---------------------------------------------------------------------- */
+
+  it("records a mid-round leaver as last place and continues the round (test 29)", async () => {
+    const roomId = await manager.createRoom();
+    const host = await seatPlayer(manager, roomId, "Will");
+    await seatPlayer(manager, roomId, "Alex");
+    await seatPlayer(manager, roomId, "Sam");
+    await seatPlayer(manager, roomId, "Rin");
+    expect((await manager.startGame(roomId, host.playerId)).ok).toBe(true);
+
+    const dealt = await docOf(roomId);
+    // The player on turn is the interesting one to lose: the round has to move
+    // on without them rather than wait on a seat that will never act.
+    const leaver = activePlayerId(dealt.state);
+    const handSize = dealt.state.hands[leaver]!.length;
+    const graveyardBefore = dealt.state.graveyard.length;
+
+    await manager.disconnect(roomId, leaver);
+    await scheduler.advance(DISCONNECT_GRACE_MS);
+    const doc = await docOf(roomId);
+
+    // Bottom of the finish order (§7.7), hand to the graveyard, conservation held.
+    expect(doc.state.droppedPlayerIds).toEqual([leaver]);
+    expect(doc.state.finishedPlayerIds).not.toContain(leaver);
+    expect(doc.state.pendingLeaves).toContain(leaver);
+    expect(doc.state.hands[leaver] ?? []).toHaveLength(0);
+    expect(doc.state.graveyard).toHaveLength(graveyardBefore + handSize);
+    expect(totalCards(doc.state)).toBe(54);
+
+    // The round continues with the remaining three: turnOrder is not mutated
+    // mid-round (§2), the turn moved off the departed seat, and the room is
+    // still armed on a live deadline.
+    expect(doc.state.status).toBe("IN_PROGRESS");
+    expect(doc.state.turnOrder).toEqual(dealt.state.turnOrder);
+    expect(doc.state.turnOrder).toHaveLength(4);
+    expect(activePlayerId(doc.state)).not.toBe(leaver);
+    expect(doc.state.deadline).not.toBeNull();
+    expect(scheduler.has(deadlineKey(roomId))).toBe(true);
+
+    // And it keeps going: the next turn still times out on schedule, never
+    // stalling on the seat that left.
+    const beforeTick = doc.state.stateVersion;
+    await scheduler.advance(TURN_DURATION_MS);
+    const ticked = await docOf(roomId);
+    expect(ticked.state.stateVersion).toBeGreaterThan(beforeTick);
+    expect(activePlayerId(ticked.state)).not.toBe(leaver);
+    expect(totalCards(ticked.state)).toBe(54);
   });
 
   it("keeps the host if they reconnect within the grace window (test 27)", async () => {

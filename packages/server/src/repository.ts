@@ -25,7 +25,7 @@ import type { GameState, GameStatus } from "@daifugo/core";
  *   It lives in the doc, not in an instance, so a reconnect landing on a
  *   restarted process still resolves against a repository read (§12.4 test 25).
  * - `status`, `deadline`, and `stateVersion` are denormalized copies of the same
- *   fields inside `state`, lifted to the top level so the boot re-arm (#22) can
+ *   fields inside `state`, lifted to the top level so the boot re-arm (§14) can
  *   query rooms with a live deadline without deserializing every room (§14).
  */
 export interface RoomDoc {
@@ -53,6 +53,20 @@ export function withState(doc: RoomDoc, state: GameState, now: number): RoomDoc 
     stateVersion: state.stateVersion,
     updatedAt: now,
   };
+}
+
+/**
+ * One room the boot re-arm has to put a timer back on (§14): a room whose stored
+ * `deadline` is still set, meaning a turn or exchange was in flight when the
+ * previous process died.
+ *
+ * Only the two fields the re-arm needs, because the whole point of denormalizing
+ * `deadline` onto the doc is that startup does not deserialize every `state`.
+ */
+export interface ArmedRoom {
+  roomId: string;
+  /** The stored, non-null deadline, epoch ms. */
+  deadline: number;
 }
 
 /** Thrown when a room code does not resolve. The socket layer maps it to `ROOM_NOT_FOUND`. */
@@ -97,6 +111,13 @@ export interface RoomRepository {
    * gone.
    */
   mutate(roomId: string, mutate: RoomMutator): Promise<RoomDoc>;
+  /**
+   * Every room with a live (non-null) deadline, for the boot re-arm (§14).
+   *
+   * Reads the denormalized top-level `deadline`, never `state`, so a restart
+   * scans room metadata rather than deserializing every match.
+   */
+  listArmed(): Promise<ArmedRoom[]>;
 }
 
 /** How many times a losing CAS is retried before giving up. */
@@ -173,6 +194,14 @@ export class InMemoryRoomRepository implements RoomRepository {
       // Lost the CAS: someone wrote a newer version. Re-read and retry.
     }
     throw new ConcurrencyError(roomId);
+  }
+
+  async listArmed(): Promise<ArmedRoom[]> {
+    const armed: ArmedRoom[] = [];
+    for (const doc of this.rooms.values()) {
+      if (doc.deadline !== null) armed.push({ roomId: doc.roomId, deadline: doc.deadline });
+    }
+    return armed;
   }
 
   /** Test/diagnostic helper: how many rooms are stored. */

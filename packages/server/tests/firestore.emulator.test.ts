@@ -6,7 +6,7 @@
  * first. When it does run it exercises the real `FirestoreRoomRepository` — the
  * `create`/`get` round trip, the `stateVersion` compare-and-set that makes two
  * concurrent writes safe, and the denormalized `status`/`deadline` fields the boot
- * re-arm (#22) will query.
+ * re-arm (§14) queries.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { applyAction, createGameState, type GameState, type Player } from "@daifugo/core";
@@ -143,5 +143,18 @@ describe.skipIf(!emulatorOn)("FirestoreRoomRepository against the emulator (§14
     expect(stored.history.length).toBe(state.history.length);
     expect(stored.history[0]!.key).toBe(state.history[0]!.key);
     expect(read!.status).toBe("IN_PROGRESS");
+  });
+
+  it("lists exactly the rooms with a live deadline, for the boot re-arm (§14)", async () => {
+    // A fresh collection so the rooms written by the tests above cannot show up.
+    const armedRepo = new FirestoreRoomRepository(db, `rooms-armed-${Date.now()}`);
+    await armedRepo.create(seedDoc("ARMED1")); // LOBBY: deadline null
+    await armedRepo.create(seedDoc("ARMED2"));
+    await armedRepo.mutate("ARMED2", (d) => withState(d, bump(d.state), 5));
+
+    // The query is a single-field filter on the automatic index — if it needed a
+    // composite index this would fail with FAILED_PRECONDITION.
+    const armed = await armedRepo.listArmed();
+    expect(armed).toEqual([{ roomId: "ARMED2", deadline: 123 }]);
   });
 });

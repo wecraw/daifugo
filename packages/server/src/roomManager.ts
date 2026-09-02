@@ -330,7 +330,7 @@ export class RoomManager {
 
   /**
    * Inject a `TICK` (§7.6). Called by the armed deadline timer and, in
-   * production, by the boot re-arm (#22). Idempotent before the deadline: the engine
+   * production, by the boot re-arm (§14). Idempotent before the deadline: the engine
    * returns the same state and nothing is written.
    */
   tick(roomId: string, now: number = this.scheduler.now()): Promise<Result<GameState, ErrorCode>> {
@@ -399,6 +399,30 @@ export class RoomManager {
   }
 
   /* ---------------------------------------------------------------------- */
+  /* Boot re-arm (§14)                                                      */
+  /* ---------------------------------------------------------------------- */
+
+  /**
+   * Re-arm every room that had a deadline pending when the previous process died
+   * (§14). Called once at startup: the fast-path `setTimeout` dies with the
+   * process, so without this a redeploy or a crash strands an in-flight turn and
+   * the table hangs forever.
+   *
+   * Unconditional by design. A re-armed timer racing a live one is harmless — a
+   * `TICK` before its deadline is a no-op (§7.6) and the commit is a
+   * `stateVersion` CAS, so at most one transition lands per deadline — and a
+   * deadline already in the past arms with a non-positive delay, which both
+   * schedulers fire promptly rather than skip.
+   *
+   * Returns how many rooms were armed, for the boot log.
+   */
+  async rearmAll(): Promise<number> {
+    const armed = await this.repo.listArmed();
+    for (const room of armed) this.armDeadline(room.roomId, room.deadline);
+    return armed.length;
+  }
+
+  /* ---------------------------------------------------------------------- */
   /* Reads                                                                  */
   /* ---------------------------------------------------------------------- */
 
@@ -416,15 +440,25 @@ export class RoomManager {
    * (§14). A state with no deadline (LOBBY, ROUND_END, MATCH_END) clears it.
    */
   private arm(doc: RoomDoc): void {
-    const key = deadlineKey(doc.roomId);
-    if (doc.state.deadline === null) {
+    this.armDeadline(doc.roomId, doc.state.deadline);
+  }
+
+  /**
+   * Arm (or, for a null deadline, clear) one room's deadline timer.
+   *
+   * The `TICK` it injects carries the deadline that expired, not the wall clock
+   * at firing: the engine measures the next deadline off the one that expired
+   * (§7.6), so a timer that fires late — a re-armed one for a deadline already in
+   * the past, say — lands the same transition a punctual one would have.
+   */
+  private armDeadline(roomId: string, deadline: number | null): void {
+    const key = deadlineKey(roomId);
+    if (deadline === null) {
       this.scheduler.clear(key);
       return;
     }
-    const delay = doc.state.deadline - this.scheduler.now();
-    const firesAt = doc.state.deadline;
-    this.scheduler.set(key, delay, async () => {
-      await this.tick(doc.roomId, firesAt);
+    this.scheduler.set(key, deadline - this.scheduler.now(), async () => {
+      await this.tick(roomId, deadline);
     });
   }
 
