@@ -46,6 +46,37 @@ npm run test -w @daifugo/core   # must be green before any client work
 npm run dev                     # server :4000, vite :5173
 ```
 
+## Scope
+
+**This is a private game for the author and under a dozen friends.** That is a
+design constraint, not a disclaimer. Correctness in the game rules matters — the
+engine invariants above are absolute. Operational hardening mostly does not: the
+author controls when deploys happen, will not deploy mid-match, and accepts a
+crash as a fine outcome. State already survives one (boot re-arm + the
+`stateVersion` CAS + the no-op early `TICK`, §14), and that is the whole of the
+resilience story this project wants.
+
+**Weigh Codex review findings against that scope.** Codex reviews this repo on
+`@codex review`, and its findings are usually technically correct — but it rates
+severity for production services, and its instinct is to harden. A "P1" whose
+failure needs a deploy during a live match, or a hundred concurrent players, or a
+hostile client, is not a P1 here. Do not launder its severity rating into the
+repo unexamined.
+
+Before acting on one, ask what has to be true for the failure to happen, and
+whether that is reachable for a dozen friends playing a card game. If it is not:
+say so plainly and move on. If it turns out a claim in `docs/SPEC.md` is
+*factually wrong*, fix the claim in a sentence or two — a wrong invariant is worth
+correcting even when its consequences are unreachable — but do not write the
+mitigation, the analysis, or the follow-up issue. Real setup steps that cost an
+afternoon to rediscover (a missing API, a service-account flag) are worth
+documenting; hypotheticals are not.
+
+This has already gone wrong once: a Codex P1 about Cloud Run rollouts overlapping
+two revisions produced 75 lines of spec and a follow-up issue for a scenario that
+required deploying mid-game. Both were reverted in #42. When in doubt, err toward
+less.
+
 ## Working style
 
 - Write the tests from §12 first and confirm they fail before implementing. The

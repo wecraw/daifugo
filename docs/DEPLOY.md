@@ -39,16 +39,11 @@ gcloud firestore databases create --location "$REGION" --type firestore-native -
 No index configuration to apply: the boot re-arm is a single-field query on
 `deadline`, which the automatic index covers (§14).
 
-`secretmanager.googleapis.com` is in that list for step 6, not for anything the
-running service does. Connecting a GitHub repository to Cloud Build stores the
-GitHub installation token in Secret Manager, so with the API off the connection
-cannot complete — and it fails in a genuinely confusing way rather than an
-obvious one: the GitHub side of the handshake succeeds, GitHub installs the app
-on the repository, and the Cloud Build console then lists the repo as connected
-while its settings page 500s, because there is a connection record pointing at a
-secret that was never written. `gcloud builds connections list` shows nothing,
-and `triggers create github` rejects with a bare `INVALID_ARGUMENT` naming no
-field. Enable it up front and none of that happens.
+`secretmanager.googleapis.com` is there for step 6, not for the running service:
+Cloud Build stores the GitHub token in it. Leave it off and the connection half
+completes — GitHub installs the app, the console lists the repo as connected, and
+its settings page 500s. Worth enabling up front; the symptoms point nowhere near
+the cause.
 
 ### 2. Artifact Registry
 
@@ -112,25 +107,15 @@ Cloud Build reads the build config from the commit that fires the build, so
 gcloud builds triggers create github --name daifugo-deploy-main --repo-owner wecraw --repo-name daifugo --branch-pattern '^main$' --build-config cloudbuild.yaml --service-account "projects/$PROJECT_ID/serviceAccounts/$BUILD_SA" --project "$PROJECT_ID"
 ```
 
-`--service-account` is not optional ceremony. Step 4 grants the deploy roles to
-one specific principal — the Compute Engine default service account — but a
-trigger created without this flag runs as whatever Cloud Build considers the
-project's default build identity, and which account that is depends on the
-project's age and on organization policy: older projects, and projects where
-`cloudbuild.useBuildServiceAccount` still applies, get the legacy
-`<project-number>@cloudbuild.gserviceaccount.com` instead. That account was never
-granted anything in step 4, so every triggered build would reach Push or Deploy
-as an ungranted principal and fail on a permission error that reads like a
-misconfigured registry. Naming the account here makes the trigger use the one
-that actually holds the roles. (Creating a trigger that impersonates an account
-requires `roles/iam.serviceAccountUser` on it for *your* user, not just for the
-build.)
+`--service-account` matters: without it the trigger may run as the legacy
+`<project-number>@cloudbuild.gserviceaccount.com`, which step 4 never granted
+anything, and every build fails on a permission error that reads like a broken
+registry.
 
-If the GitHub repository has not been connected to Cloud Build before, connect it
-first in the console (Cloud Build → Triggers → Connect repository); the CLI
-cannot complete the OAuth handshake. Until that connection exists this command
-fails with a bare `INVALID_ARGUMENT` that names no field — that error means "no
-GitHub connection", not "bad flag".
+If the repository has not been connected to Cloud Build before, connect it first
+in the console (Cloud Build → Triggers → Connect repository); the CLI cannot do
+the OAuth handshake. Until it exists this command fails with a bare
+`INVALID_ARGUMENT` naming no field — that means "no GitHub connection".
 
 ## Verifying a deploy
 
