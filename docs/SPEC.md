@@ -991,7 +991,7 @@ clobbered by a deploy that forgets to restate them. After any change to the depl
 config, confirm they survived:
 
 ```bash
-gcloud run services describe daifugo --region "$REGION" --format=yaml | grep -E 'executionEnvironment|cpu-throttling|maxScale|minScale'
+gcloud run services describe daifugo --region "$REGION" --format=yaml | grep -E 'execution-environment|cpu-throttling|maxScale|minScale'
 ```
 
 ### 13.2 Rollback

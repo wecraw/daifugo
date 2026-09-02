@@ -128,14 +128,32 @@ Then confirm the flags that must not drift are still set — after a _second_
 deploy, which is what proves the update patch does not drop them:
 
 ```bash
-gcloud run services describe "$SERVICE" --region "$REGION" --format yaml | grep -E 'executionEnvironment|cpu-throttling|maxScale|minScale'
+gcloud run services describe "$SERVICE" --region "$REGION" --format yaml | grep -E 'execution-environment|cpu-throttling|maxScale|minScale'
 ```
 
-Expected: `gen2`, `autoscaling.knative.dev/maxScale: '1'`, and
-`minScale: '0'`. There should be **no** `run.googleapis.com/cpu-throttling`
-annotation — its absence is throttling left at the default, which is what we
-want; see the long note in `cloudbuild.yaml` before adding
-`--no-cpu-throttling` back.
+The annotations are kebab-case (`run.googleapis.com/execution-environment`), so
+grepping for `executionEnvironment` matches nothing and looks like a clean pass.
+Expect exactly two lines plus the service-level default:
+
+```text
+    run.googleapis.com/maxScale: '20'          # service-level default, not the cap
+        autoscaling.knative.dev/maxScale: '1'  # the cap that applies
+        run.googleapis.com/execution-environment: gen2
+```
+
+Two absences matter as much as those lines. There should be **no** `minScale`
+annotation — that is `min-instances=0`. And there should be **no**
+`run.googleapis.com/cpu-throttling` annotation — that is throttling left at the
+default, which is what we want; read the long note in `cloudbuild.yaml` before
+adding `--no-cpu-throttling` back.
+
+Also confirm the patch preserved what it never restates — `cloudbuild.yaml` does
+not pass `--service-account`, so this line surviving is the evidence that
+`services update` really is a patch:
+
+```bash
+gcloud run services describe "$SERVICE" --region "$REGION" --format 'value(spec.template.spec.serviceAccountName)'
+```
 
 ## Rolling back
 
