@@ -1,0 +1,19 @@
+# Everything the image builds for itself, plus everything it has no use for.
+# `packages/*/dist` in particular must not be copied in: a stale local build
+# would shadow the one the build stage produces.
+node_modules
+**/node_modules
+dist
+**/dist
+*.tsbuildinfo
+coverage
+
+.git
+.github
+.firebase
+*.log
+
+docs
+README.md
+CLAUDE.md
+scripts

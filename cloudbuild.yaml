@@ -1,0 +1,127 @@
+# Cloud Build config: build the image and patch the one Cloud Run service (§13.1).
+#
+# Source of truth for the deploy pipeline. A 2nd-gen Cloud Build trigger on
+# `main` points at this file by name. The build config is read from the commit
+# that fires the build, so this file has to exist on `main` before the trigger is
+# created. One-time provisioning of the registry, the trigger and the service
+# account lives in docs/DEPLOY.md.
+#
+# ONE ENVIRONMENT (§14.1). No dev/prod split, no per-environment substitutions,
+# no second trigger: local runs against the Firestore emulator cover the dev
+# case. Every substitution below therefore has a default, and `$PROJECT_ID` is
+# both the Artifact Registry project and the Firestore project.
+#
+# Runtime settings that must not drift are restated as explicit flags on the
+# Deploy step. `gcloud run services update` is a patch — it changes only what it
+# is given — but a flag that is never passed is a flag that silently reverts to
+# whatever a console click last left behind, so each one is declared here:
+#
+#   --max-instances=1
+#       AT MOST ONE INSTANCE (§14). Everything downstream assumes it: Socket.IO
+#       broadcast is the in-memory adapter, each room's deadline is a single
+#       armed setTimeout in this process, and there is no session affinity to
+#       need. Raising this silently breaks all three.
+#   --min-instances=0
+#       Scale to zero when nobody is connected. This is a cost decision, not an
+#       architectural one — it is safe only because the boot re-arm (§14) already
+#       restores every pending deadline on startup, which is the same path a
+#       redeploy takes.
+#   --execution-environment=gen2
+#       microVM environment — faster networking for long-lived WebSockets, and a
+#       faster cold start, which matters now that there is one.
+#   --no-session-affinity
+#       One instance to be affine to, and the transport is WebSocket-only.
+#       Declared to keep it off.
+#
+# CPU THROTTLING IS LEFT ON (the default) — do not add --no-cpu-throttling
+# without reading this.
+#
+# The flag looks required and is not. CPU is throttled only while an instance has
+# NO request in flight, and an open WebSocket counts as an in-flight request for
+# its entire life. So any instance with a connected player already has full CPU,
+# and every armed turn or exchange deadline fires on time, throttled or not.
+#
+# The only throttled window is one where zero sockets are open across the whole
+# service — and in that window there is nobody waiting on a timer. When someone
+# does connect, CPU is restored and the frozen setTimeout fires late, which is
+# harmless by construction: `armDeadline` injects the TICK carrying the deadline
+# that EXPIRED rather than the wall clock at firing, so a late tick lands exactly
+# the transition a punctual one would have (§7.6). `join` re-arms the room's
+# deadline on every reconnect, and a deadline already past arms with a
+# non-positive delay, so it fires immediately. If the instance was torn down
+# instead of merely idled, boot re-arm covers the same ground. All three paths
+# are covered by packages/server/tests/bootRearm.test.ts.
+#
+# The flag also costs real money: Cloud Run bills always-allocated CPU for an
+# instance's entire lifetime, not per request. Measured on the author's
+# crossrace-server, minScale=1 with nothing else changed, it took the bill from
+# ~$8/mo to ~$1.65/day. For a private game with a dozen players that is the whole
+# hosting budget spent on a case that self-heals on the next connect.
+#
+# Cloud Run's request timeout is left at its default. A WebSocket counts as an
+# in-flight request for its whole life, so that timeout is also the maximum
+# socket lifetime; the client reconnects with its `resumeToken` (§8.1) and the
+# room survives on Firestore state either way. Revisit when the client lands
+# (#36) if the reconnect churn is visible.
+#
+# No Firestore index step: the boot re-arm is a single-field query on `deadline`
+# and the automatic index covers it (§14), so there is no firestore.indexes.json
+# to apply. No Pub/Sub topic and no Pub/Sub IAM: the adapter was cut with the
+# second instance (§14.1).
+
+images:
+  - $_AR_HOSTNAME/$PROJECT_ID/$_AR_REPOSITORY/$_SERVICE_NAME:$COMMIT_SHA
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  # `_TRIGGER_ID` is supplied by the trigger and is absent on a manual
+  # `gcloud builds submit`; loose substitution lets the bootstrap build run
+  # without a special-cased second config.
+  substitutionOption: ALLOW_LOOSE
+
+substitutions:
+  _AR_HOSTNAME: us-west1-docker.pkg.dev
+  _AR_REPOSITORY: daifugo
+  _DEPLOY_REGION: us-west1
+  _SERVICE_NAME: daifugo
+
+steps:
+  # Context is the repo root: the image builds `core` alongside `server`, and
+  # core is a workspace sibling rather than a published package.
+  - id: Build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - $_AR_HOSTNAME/$PROJECT_ID/$_AR_REPOSITORY/$_SERVICE_NAME:$COMMIT_SHA
+      - -f
+      - Dockerfile
+      - .
+
+  - id: Push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - $_AR_HOSTNAME/$PROJECT_ID/$_AR_REPOSITORY/$_SERVICE_NAME:$COMMIT_SHA
+
+  - id: Deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - services
+      - update
+      - $_SERVICE_NAME
+      - --platform=managed
+      - --region=$_DEPLOY_REGION
+      - --image=$_AR_HOSTNAME/$PROJECT_ID/$_AR_REPOSITORY/$_SERVICE_NAME:$COMMIT_SHA
+      - --labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID,gcb-trigger-id=$_TRIGGER_ID
+      - --execution-environment=gen2
+      - --min-instances=0
+      - --max-instances=1
+      - --no-session-affinity
+      # The server refuses to auto-detect the Firestore project, so a
+      # misconfigured deploy fails loudly at boot instead of writing somewhere
+      # unexpected (§14). One project, so it is this build's own.
+      - --set-env-vars=FIRESTORE_PROJECT_ID=$PROJECT_ID
+      - --quiet

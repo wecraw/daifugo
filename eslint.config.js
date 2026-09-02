@@ -16,6 +16,13 @@ export default [
     },
   },
   {
+    // Deploy tooling: Node scripts outside the workspaces (docs/DEPLOY.md).
+    files: ["scripts/**/*.{js,mjs}"],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
     files: ["packages/client/**/*.{ts,tsx}"],
     languageOptions: {
       globals: globals.browser,

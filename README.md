@@ -28,6 +28,7 @@ npm run emulator                # Firestore emulator alone (on :8080)
 npm run typecheck               # project-referenced tsc across all packages
 npm run lint                    # eslint
 npm run build                   # build core, server, then client
+npm run smoke -- <url>          # deploy smoke check against a running service
 ```
 
 ## State and configuration (§14)
@@ -42,3 +43,11 @@ global install needed).
 Any **deployed** runtime must set `FIRESTORE_PROJECT_ID` explicitly — the server
 refuses to auto-detect it (§14). Point at the emulator by also setting
 `FIRESTORE_EMULATOR_HOST` (both are set for you under `npm run dev`).
+
+## Deploy (§13.1)
+
+A push to `main` builds the image and patches a single Cloud Run service, capped
+at one instance, on `gen2`, scaling to zero when nobody is playing. The pipeline is
+[`cloudbuild.yaml`](cloudbuild.yaml) plus the root [`Dockerfile`](Dockerfile);
+one-time provisioning, verification and rollback are in
+[`docs/DEPLOY.md`](docs/DEPLOY.md).
