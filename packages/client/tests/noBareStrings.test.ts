@@ -6,14 +6,22 @@
  *
  * Decorative glyphs (the rotate arrow) carry no letters or digits and are not
  * language, so they are allowed; anything with a word in it is not.
+ *
+ * @vitest-environment node
+ *
+ * This one reads the sources off disk rather than rendering them, and the node
+ * environment is what makes `import.meta.url` a `file:` URL — under jsdom it is
+ * an `http:` one. Resolving from this file rather than from `process.cwd()` is
+ * what makes the suite run the same from the package and from the workspace
+ * root, which is how CI runs it.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
-// Vitest runs with the client package as its root.
-const SRC = resolve(process.cwd(), "src");
+const SRC = fileURLToPath(new URL("../src", import.meta.url));
 
 /** Attributes whose value the user reads. `className` and friends are not. */
 const VISIBLE_ATTRIBUTES = new Set(["aria-label", "placeholder", "title", "alt", "aria-valuetext"]);

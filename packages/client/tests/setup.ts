@@ -23,11 +23,17 @@ export function setOrientation(portrait: boolean): void {
   });
 }
 
+// The source-scanning suite runs in the node environment (it reads files rather
+// than rendering them), where there is no DOM to reset.
+const hasDom = typeof document !== "undefined";
+
 beforeEach(() => {
+  if (!hasDom) return;
   localStorage.clear();
   setOrientation(false);
 });
 
 afterEach(() => {
+  if (!hasDom) return;
   cleanup();
 });
