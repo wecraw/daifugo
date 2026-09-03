@@ -10,7 +10,7 @@
 | Bots / AI | Out of scope. |
 | Player count | 3 to 8. |
 | Orientation | Landscape only. Portrait shows a rotate prompt. |
-| House rules | All nine ON by default. Toggles hidden behind a host-only advanced panel. |
+| House rules | All nine ON by default. Toggles hidden behind an advanced panel every seat can read and only the host can change. |
 | Match structure | Endless by default. Host may set a round limit or first-to-N. |
 | Accessibility | Out of scope for v1. |
 | Languages | English and Japanese, toggled from the main menu, persisted to localStorage. |
@@ -216,6 +216,7 @@ export type ClientAction =
   | { type: 'EXCHANGE_CARDS'; cardIds: string[] }
   | { type: 'UPDATE_RULES'; config: Partial<HouseRulesConfig> }
   | { type: 'SET_ROUND_LIMIT'; limit: number | null }
+  | { type: 'SET_READY'; ready: boolean }
   | { type: 'TICK'; now: number };      // server-injected, drives timeouts
 ```
 
@@ -643,6 +644,7 @@ export interface ClientToServerEvents {
   joinRoom: (roomId: string, playerName: string, resumeToken?: string) => void;
   updateRules: (config: Partial<HouseRulesConfig>) => void;
   setRoundLimit: (limit: number | null) => void;
+  setReady: (ready: boolean) => void;
   startGame: () => void;
   playCards: (cardIds: string[], bindings?: JokerBinding[]) => void;
   pass: () => void;
@@ -667,7 +669,7 @@ N-of-a-kind is the only combo shape (Section 5.3), so shape rejection is just
 
 | Group | Codes |
 | :--- | :--- |
-| Permissions and phase | `NOT_HOST`, `NOT_YOUR_TURN`, `WRONG_STATUS`, `GAME_ALREADY_STARTED`, `NOT_ENOUGH_PLAYERS`, `TOO_MANY_PLAYERS`, `PLAYER_NOT_FOUND`, `INVALID_ROUND_LIMIT` |
+| Permissions and phase | `NOT_HOST`, `NOT_YOUR_TURN`, `WRONG_STATUS`, `GAME_ALREADY_STARTED`, `NOT_ENOUGH_PLAYERS`, `TOO_MANY_PLAYERS`, `PLAYERS_NOT_READY`, `PLAYER_NOT_FOUND`, `INVALID_ROUND_LIMIT` |
 | Pending actions (7.2) | `PENDING_ACTION_BLOCKS`, `NO_PENDING_ACTION`, `WRONG_PENDING_ACTION` |
 | Card selection | `EMPTY_SELECTION`, `DUPLICATE_CARD_IDS`, `CARD_NOT_IN_HAND`, `WRONG_CARD_COUNT` |
 | Combo shape (5.3) | `MIXED_RANKS`, `JOKER_MUST_BE_BOUND` |
@@ -724,6 +726,30 @@ reaches `graveyard` is redacted afterwards.
 The view shares no mutable container with the authoritative state: `Card` objects
 are immutable and shared, but every array and object the caller could mutate —
 `graveyard`, `suitLock`, `pendingAction`, and the rest — is copied.
+
+### 8.6 Ready
+`Player.isReady` is each player's own statement that they are willing to be dealt
+in. `setReady` sets it for the sender alone; it is the one client-to-server event
+that is nobody else's to send, and it is accepted only in `LOBBY` and `ROUND_END`,
+the two statuses a deal can follow.
+
+**Readiness gates the deal.** `START_GAME` fails with `PLAYERS_NOT_READY` unless
+every **connected** player in the roster the deal would take — `players` plus
+`pendingJoins`, minus `pendingLeaves` (§7.7) — other than the host is ready. Two
+exclusions carry the weight:
+
+* **The host is exempt.** Clicking start *is* the host's readiness, and requiring a
+  separate toggle only adds a way for the table to sit waiting on the one player
+  who is trying to deal.
+* **Disconnected players do not block.** A player in the 30-second grace (§8.3)
+  cannot press anything, and waiting on them would stall the table until the grace
+  expires and the seat is removed.
+
+`isReady` is reset to `false` for the whole roster by the deal itself, so the
+between-round lobby (§9) is a fresh round of readying rather than a stale one
+carried over from the last. The lobby's start button is disabled while this
+section would refuse the deal (§10.11), so `PLAYERS_NOT_READY` is a guard rail
+rather than a banner anyone reads.
 
 ---
 
@@ -836,8 +862,15 @@ so reconnects and latency stay honest. Turn ring on the active seat, exchange ri
 centred during `EXCHANGE`.
 
 ### 10.11 Host panel
-Rule toggles are hidden behind a disclosure in the lobby, visible only to the host,
-collapsed by default with all nine rules ON. Round limit lives here too.
+Rule toggles are hidden behind a disclosure in the lobby, collapsed by default with
+all nine rules ON. Round limit lives here too.
+
+The panel renders for **every** seat, because the rules decide how the next round
+plays for the whole table and a change to them has to be visible to everyone. Only
+the host can operate it: a non-host's controls are rendered disabled rather than
+merely rejected, so `NOT_HOST` (§8.2) never arrives as a banner for something the
+client should not have sent. The start button is disabled on the same principle
+while §8.6 would refuse the deal, and everyone but the host readies beside it.
 
 ---
 
@@ -924,6 +957,7 @@ Language toggle on the main menu, persisted to localStorage, no server involveme
 18. 7-pass to a player who then immediately goes out.
 19. All-pass trick clear returning the lead to `trickLeaderId`.
 20. Leader attempting to pass is rejected.
+20a. `SET_READY` sets the sender's flag alone and is refused outside `LOBBY` and `ROUND_END`; `START_GAME` is refused with `PLAYERS_NOT_READY` while a connected non-host seat is unready, exempts a disconnected one, and resets the whole roster's flag on the deal (§8.6).
 
 ### 12.3 Invariants and fuzz
 21. **Card conservation**: `sum(hands) + trick + graveyard === 54` after every action.
@@ -934,6 +968,7 @@ Language toggle on the main menu, persisted to localStorage, no server involveme
 ### 12.4 Server tests
 25. Reconnect reclaims the correct seat via `resumeToken`.
 26. Non-host `updateRules` and `startGame` are rejected.
+26a. `setReady` round-trips over the socket and the refused `startGame` reaches the sender alone as `PLAYERS_NOT_READY` (§8.6).
 27. Host transfer on disconnect.
 28. Turn timeout fires for a disconnected player before the 30 second grace expires.
 29. Mid-round leave records the player as last place and the round continues.

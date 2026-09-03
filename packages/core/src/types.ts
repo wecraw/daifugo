@@ -190,6 +190,7 @@ export type ClientAction =
   | { type: "EXCHANGE_CARDS"; cardIds: string[] }
   | { type: "UPDATE_RULES"; config: Partial<HouseRulesConfig> }
   | { type: "SET_ROUND_LIMIT"; limit: number | null }
+  | { type: "SET_READY"; ready: boolean }
   | { type: "TICK"; now: number }; // server-injected, drives timeouts
 
 export type ClientActionType = ClientAction["type"];

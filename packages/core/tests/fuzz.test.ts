@@ -155,6 +155,7 @@ describe("fuzz: random legal play over whole matches (test 24, §12.3)", () => {
       "EXCHANGE_CARDS",
       "PASS",
       "PLAY_CARDS",
+      "SET_READY",
       "SET_ROUND_LIMIT",
       "START_GAME",
       "SUBMIT_10_DISCARD",

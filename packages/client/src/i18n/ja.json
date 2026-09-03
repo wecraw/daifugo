@@ -64,6 +64,7 @@
   "error.GAME_ALREADY_STARTED": "ゲームはすでに始まっています",
   "error.NOT_ENOUGH_PLAYERS": "人数が足りません",
   "error.TOO_MANY_PLAYERS": "人数が多すぎます",
+  "error.PLAYERS_NOT_READY": "全員の準備を待っています",
   "error.PLAYER_NOT_FOUND": "プレイヤーが見つかりません",
   "error.INVALID_ROUND_LIMIT": "ラウンド数の指定が不正です",
 
@@ -137,6 +138,9 @@
   "ui.lobby.roster": "プレイヤー",
   "ui.lobby.host": "ホスト",
   "ui.lobby.you": "あなた",
+  "ui.lobby.readyUp": "準備完了にする",
+  "ui.lobby.unready": "準備を取り消す",
+  "ui.lobby.waitingForReady": "あと{count}人の準備待ち",
   "ui.lobby.ready": "準備完了",
   "ui.lobby.connected": "接続済み",
   "ui.lobby.disconnected": "切断中",

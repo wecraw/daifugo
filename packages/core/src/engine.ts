@@ -116,6 +116,8 @@ export function applyAction(
       return updateRules(state, playerId, action.config);
     case "SET_ROUND_LIMIT":
       return setRoundLimit(state, playerId, action.limit);
+    case "SET_READY":
+      return setReady(state, playerId, action.ready);
     case "PLAY_CARDS":
       return playCards(state, playerId, action.cardIds, action.bindings);
     case "PASS":
@@ -165,6 +167,13 @@ function commit(next: GameState, deadline: number | null = null): Result<GameSta
 function log(next: GameState, entry: GameState["history"][number]): void {
   next.history = [...next.history, entry];
 }
+
+/**
+ * The roster fields alone. `PublicGameState` carries them verbatim, so the client
+ * can ask the same questions of its own view as the engine asks of the state
+ * (§8.5) — `unreadyPlayerIds` is read on both sides of the wire.
+ */
+type RosterView = Pick<GameState, "hostId" | "players" | "pendingJoins" | "pendingLeaves">;
 
 function playerOf(state: GameState, playerId: string): Player | undefined {
   return state.players.find((player) => player.id === playerId);
@@ -269,6 +278,59 @@ function setRoundLimit(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Ready (§8.6)                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The sender's own readiness, and only ever their own (§8.6).
+ *
+ * `playerId` is resolved from the socket by the server (§8.4 step 1), so there is
+ * no target to pass and no way to ready somebody else. A player waiting in
+ * `pendingJoins` can ready too: they are part of the roster the next deal takes
+ * (§7.7), so the deal would otherwise wait on a flag they had no way to set.
+ *
+ * Idempotent. Setting a flag to what it already holds still commits — the write
+ * is what the version bump and the broadcast are for, and special-casing it would
+ * leave a client that missed a `roomState` with no way to resynchronise.
+ */
+function setReady(
+  state: GameState,
+  playerId: string,
+  ready: boolean,
+): Result<GameState, ErrorCode> {
+  if (state.status !== "LOBBY" && state.status !== "ROUND_END") return err("WRONG_STATUS");
+  const seated = [...state.players, ...state.pendingJoins].some((player) => player.id === playerId);
+  if (!seated) return err("PLAYER_NOT_FOUND");
+
+  const mark = (player: Player): Player =>
+    player.id === playerId ? { ...player, isReady: ready } : player;
+
+  const next = draft(state);
+  next.players = state.players.map(mark);
+  next.pendingJoins = state.pendingJoins.map(mark);
+  return commit(next);
+}
+
+/**
+ * Who the deal is still waiting on (§8.6): connected seats in the roster the deal
+ * would take, other than the host, that have not readied.
+ *
+ * Exported because the client renders the same answer — the start button is
+ * disabled while this is non-empty, so `PLAYERS_NOT_READY` is a guard rail rather
+ * than a banner (§10.11) — and re-deriving it there is how the two would drift.
+ *
+ * The host is exempt: `START_GAME` is theirs to send, and that click is their
+ * readiness. Disconnected players are exempt because they cannot press anything
+ * and the table would otherwise stall until the grace period removes the seat
+ * (§8.3).
+ */
+export function unreadyPlayerIds(state: RosterView): string[] {
+  return rosterAfterChanges(state)
+    .filter((player) => player.id !== state.hostId && player.isConnected && !player.isReady)
+    .map((player) => player.id);
+}
+
+/* -------------------------------------------------------------------------- */
 /* Round start (§3)                                                           */
 /* -------------------------------------------------------------------------- */
 
@@ -294,6 +356,8 @@ function startGame(state: GameState, playerId: string, seed: string): Result<Gam
   const roster = rosterAfterChanges(state);
   if (roster.length < MIN_PLAYERS) return err("NOT_ENOUGH_PLAYERS");
   if (roster.length > MAX_PLAYERS) return err("TOO_MANY_PLAYERS");
+  // §8.6: the host's click is their own readiness; everyone else says so first.
+  if (unreadyPlayerIds(state).length > 0) return err("PLAYERS_NOT_READY");
 
   const rng = createRng(seed);
   const first = state.status === "LOBBY";
@@ -308,7 +372,9 @@ function startGame(state: GameState, playerId: string, seed: string): Result<Gam
   next.turnOrder = [...turnOrder];
   next.players = turnOrder.flatMap((id, seatIndex) => {
     const player = roster.find((seated) => seated.id === id);
-    return player === undefined ? [] : [{ ...player, seatIndex }];
+    // The deal consumes readiness (§8.6): the next lobby is a fresh round of it,
+    // not last round's answer carried over.
+    return player === undefined ? [] : [{ ...player, seatIndex, isReady: false }];
   });
   next.dealerId = turnOrder[dealerIndex] ?? state.dealerId;
   next.hands = deal(shuffle(createDeck(), rng), turnOrder, dealerIndex);
@@ -1312,7 +1378,7 @@ function insertLeaver(
  * The roster the next deal runs on (§7.7): everyone still here, then everyone
  * who arrived while the round was running.
  */
-function rosterAfterChanges(state: GameState): Player[] {
+function rosterAfterChanges(state: RosterView): Player[] {
   const leaving = new Set(state.pendingLeaves);
   const staying = state.players.filter((player) => !leaving.has(player.id));
   const arriving = state.pendingJoins.filter(

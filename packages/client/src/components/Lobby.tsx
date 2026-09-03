@@ -14,11 +14,19 @@
  * still holding a full hand. The `history.miyakoOchi` line is surfaced beside the
  * table so the zero explains itself rather than looking like a scoring bug.
  *
- * Ready state is displayed, not driven: `Player.isReady` is server state and the
- * protocol of §8 has no event that sets it, so the roster shows the flag when it
- * is set and offers no toggle of its own.
+ * **Readiness gates the deal** (§8.6). Every seat but the host readies itself with
+ * `setReady`; the host's start click is their own readiness, so they get no toggle.
+ * Who the deal is still waiting on comes from core's `unreadyPlayerIds` — the same
+ * answer `START_GAME` checks — so the start button is disabled exactly when the
+ * engine would refuse it and `PLAYERS_NOT_READY` never reaches a banner (§10.11).
  */
-import { MAX_PLAYERS, MIN_PLAYERS, roundResults, type PublicGameState } from "@daifugo/core";
+import {
+  MAX_PLAYERS,
+  MIN_PLAYERS,
+  roundResults,
+  unreadyPlayerIds,
+  type PublicGameState,
+} from "@daifugo/core";
 import { useSocket } from "../context/SocketContext";
 import { historyLine } from "../history";
 import { useTranslate } from "../i18n/index";
@@ -39,6 +47,10 @@ export function Lobby({ room }: { room: PublicGameState }) {
   const size = rosterSize(room);
   const tooFew = size < MIN_PLAYERS;
   const tooMany = size > MAX_PLAYERS;
+  // §8.6, asked of core rather than re-derived: the host is exempt and so is a
+  // disconnected seat, and only the engine should be deciding either.
+  const waitingOn = matchOver ? [] : unreadyPlayerIds(room);
+  const iAmReady = room.players.find((seat) => seat.id === playerId)?.isReady ?? false;
 
   // The last demotion of the round just ended (§4.5). Read off the redacted
   // history this seat already has; `miyakoOchi` names a count, never a card, so
@@ -107,11 +119,25 @@ export function Lobby({ room }: { room: PublicGameState }) {
       <div className="lobby__actions">
         {matchOver && <p className="lobby__note">{t("ui.lobby.matchOver")}</p>}
         {!matchOver && isHost && (
-          <button type="button" disabled={tooFew || tooMany} onClick={() => send("startGame")}>
+          <button
+            type="button"
+            disabled={tooFew || tooMany || waitingOn.length > 0}
+            onClick={() => send("startGame")}
+          >
             {t(betweenRounds ? "ui.lobby.nextRound" : "ui.lobby.start")}
           </button>
         )}
+        {!matchOver && !isHost && (
+          <button type="button" onClick={() => send("setReady", !iAmReady)}>
+            {t(iAmReady ? "ui.lobby.unready" : "ui.lobby.readyUp")}
+          </button>
+        )}
         {!matchOver && !isHost && <p className="lobby__note">{t("ui.lobby.waitingForHost")}</p>}
+        {!matchOver && isHost && !tooFew && !tooMany && waitingOn.length > 0 && (
+          <p className="lobby__note">
+            {t("ui.lobby.waitingForReady", { count: waitingOn.length })}
+          </p>
+        )}
         {!matchOver && isHost && tooFew && (
           <p className="lobby__note">{t("ui.lobby.needMorePlayers", { min: MIN_PLAYERS })}</p>
         )}

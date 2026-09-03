@@ -64,6 +64,7 @@
   "error.GAME_ALREADY_STARTED": "The game has already started",
   "error.NOT_ENOUGH_PLAYERS": "Not enough players",
   "error.TOO_MANY_PLAYERS": "Too many players",
+  "error.PLAYERS_NOT_READY": "Waiting for everyone to be ready",
   "error.PLAYER_NOT_FOUND": "Player not found",
   "error.INVALID_ROUND_LIMIT": "Invalid round limit",
 
@@ -137,6 +138,9 @@
   "ui.lobby.roster": "Players",
   "ui.lobby.host": "Host",
   "ui.lobby.you": "You",
+  "ui.lobby.readyUp": "Ready up",
+  "ui.lobby.unready": "Not ready",
+  "ui.lobby.waitingForReady": "Waiting on {count} player(s)",
   "ui.lobby.ready": "Ready",
   "ui.lobby.connected": "Connected",
   "ui.lobby.disconnected": "Disconnected",

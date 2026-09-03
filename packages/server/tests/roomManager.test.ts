@@ -39,6 +39,15 @@ async function seatPlayer(
   return unwrap(await manager.join(roomId, name));
 }
 
+/**
+ * §8.6: the deal waits on every connected seat but the host, whose start click is
+ * their own readiness. The tests below are about what happens after the deal, so
+ * they get the table ready through the same path a client would.
+ */
+async function readyAll(manager: RoomManager, roomId: string, ...seats: JoinOutcome[]) {
+  for (const seat of seats) unwrap(await manager.setReady(roomId, seat.playerId, true));
+}
+
 describe("RoomManager acceptance (§12.4)", () => {
   let repo: InMemoryRoomRepository;
   let scheduler: ManualScheduler;
@@ -135,7 +144,7 @@ describe("RoomManager acceptance (§12.4)", () => {
     const roomId = await manager.createRoom();
     const host = await seatPlayer(manager, roomId, "Will");
     const other = await seatPlayer(manager, roomId, "Alex");
-    await seatPlayer(manager, roomId, "Sam");
+    const sam = await seatPlayer(manager, roomId, "Sam");
 
     const badRules = await manager.updateRules(roomId, other.playerId, { shibari: false });
     expect(badRules.ok).toBe(false);
@@ -150,6 +159,12 @@ describe("RoomManager acceptance (§12.4)", () => {
     expect(goodRules.ok).toBe(true);
     expect((await docOf(roomId)).state.config.shibari).toBe(false);
 
+    // §8.6: and the deal waits on the table, not on the host's own flag.
+    const unready = await manager.startGame(roomId, host.playerId);
+    expect(unready.ok).toBe(false);
+    if (!unready.ok) expect(unready.error).toBe("PLAYERS_NOT_READY");
+
+    await readyAll(manager, roomId, other, sam);
     const started = await manager.startGame(roomId, host.playerId);
     expect(started.ok).toBe(true);
     expect((await docOf(roomId)).state.status).toBe("IN_PROGRESS");
@@ -194,8 +209,9 @@ describe("RoomManager acceptance (§12.4)", () => {
   it("times out the turn of a disconnected player before their grace expires (test 28)", async () => {
     const roomId = await manager.createRoom();
     const host = await seatPlayer(manager, roomId, "Will");
-    await seatPlayer(manager, roomId, "Alex");
-    await seatPlayer(manager, roomId, "Sam");
+    const alex = await seatPlayer(manager, roomId, "Alex");
+    const sam = await seatPlayer(manager, roomId, "Sam");
+    await readyAll(manager, roomId, alex, sam);
     expect((await manager.startGame(roomId, host.playerId)).ok).toBe(true);
 
     const dealt = await docOf(roomId);
@@ -245,9 +261,10 @@ describe("RoomManager acceptance (§12.4)", () => {
   it("records a mid-round leaver as last place and continues the round (test 29)", async () => {
     const roomId = await manager.createRoom();
     const host = await seatPlayer(manager, roomId, "Will");
-    await seatPlayer(manager, roomId, "Alex");
-    await seatPlayer(manager, roomId, "Sam");
-    await seatPlayer(manager, roomId, "Rin");
+    const alex = await seatPlayer(manager, roomId, "Alex");
+    const sam = await seatPlayer(manager, roomId, "Sam");
+    const rin = await seatPlayer(manager, roomId, "Rin");
+    await readyAll(manager, roomId, alex, sam, rin);
     expect((await manager.startGame(roomId, host.playerId)).ok).toBe(true);
 
     const dealt = await docOf(roomId);
@@ -324,8 +341,11 @@ describe("concurrent writes under the CAS (§14)", () => {
 
     const roomId = await instanceA.createRoom();
     const host = unwrap(await instanceA.join(roomId, "Will"));
-    unwrap(await instanceB.join(roomId, "Alex"));
-    unwrap(await instanceA.join(roomId, "Sam"));
+    const alex = unwrap(await instanceB.join(roomId, "Alex"));
+    const sam = unwrap(await instanceA.join(roomId, "Sam"));
+    // Readiness is a write like any other, so it also crosses the two instances.
+    await readyAll(instanceB, roomId, alex);
+    await readyAll(instanceA, roomId, sam);
 
     // The host action can be served by the instance that did not seat them.
     const started = await instanceB.startGame(roomId, host.playerId);

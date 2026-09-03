@@ -27,10 +27,11 @@ async function seat(state: PublicGameState, playerId = "p_1") {
   return { socket, user };
 }
 
+/** A table the deal would accept: everyone but the host has readied (§8.6). */
 const THREE = [
   player("p_1", "Will", { seatIndex: 0 }),
-  player("p_2", "Alex", { seatIndex: 1 }),
-  player("p_3", "Sam", { seatIndex: 2 }),
+  player("p_2", "Alex", { seatIndex: 1, isReady: true }),
+  player("p_3", "Sam", { seatIndex: 2, isReady: true }),
 ];
 
 /** The rows of the standings table, header excluded, in render order. */
@@ -63,9 +64,11 @@ describe("Lobby", () => {
     expect(screen.getByText("Host")).toBeInTheDocument();
     expect(screen.getByText("You")).toBeInTheDocument();
     // §8.3: a disconnected player keeps their seat through the grace period, so
-    // the roster says so rather than dropping the row.
-    expect(screen.getByText("Disconnected")).toBeInTheDocument();
-    expect(screen.getByText("Ready")).toBeInTheDocument();
+    // the roster says so rather than dropping the row, and their own badges stay
+    // on their own row.
+    const samRow = screen.getByText("Sam").closest("li")!;
+    expect(within(samRow).getByText("Disconnected")).toBeInTheDocument();
+    expect(within(samRow).getByText("Ready")).toBeInTheDocument();
   });
 
   it("lets the host start once the table is big enough", async () => {
@@ -75,6 +78,40 @@ describe("Lobby", () => {
     expect(start).toBeEnabled();
     await user.click(start);
     expect(socket.sentOf("startGame").length).toBe(1);
+  });
+
+  it("holds the start button until the table has readied (§8.6)", async () => {
+    // The host is exempt — their click is their own readiness — so the one
+    // unready seat is what the button is waiting on.
+    const unready = [THREE[0]!, THREE[1]!, player("p_3", "Sam", { seatIndex: 2 })];
+    const { socket, user } = await seat(publicState({ players: unready }));
+
+    expect(screen.getByRole("button", { name: "Start match" })).toBeDisabled();
+    expect(screen.getByText("Waiting on 1 player(s)")).toBeInTheDocument();
+    // The host gets no ready toggle of their own.
+    expect(screen.queryByRole("button", { name: "Ready up" })).not.toBeInTheDocument();
+    expect(socket.sentOf("setReady")).toEqual([]);
+    await user.click(screen.getByRole("button", { name: "Start match" }));
+    expect(socket.sentOf("startGame")).toEqual([]);
+  });
+
+  it("lets a non-host ready up and take it back", async () => {
+    const { socket, user } = await seat(publicState({ players: THREE }), "p_2");
+
+    // p_2 arrives already ready in this fixture, so the toggle offers the undo.
+    await user.click(screen.getByRole("button", { name: "Not ready" }));
+    expect(socket.sentOf("setReady")).toEqual([[false]]);
+
+    act(() =>
+      socket.fire("roomState", {
+        ...publicState({
+          players: [THREE[0]!, player("p_2", "Alex", { seatIndex: 1 }), THREE[2]!],
+        }),
+        myPlayerId: "p_2",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Ready up" }));
+    expect(socket.sentOf("setReady")).toEqual([[false], [true]]);
   });
 
   it("disables the start button under three players and says why", async () => {

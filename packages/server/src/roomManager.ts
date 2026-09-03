@@ -291,6 +291,15 @@ export class RoomManager {
     return this.dispatch(roomId, playerId, { type: "SET_ROUND_LIMIT", limit });
   }
 
+  /** The sender's own readiness (§8.6). No host check: it is theirs to set. */
+  setReady(
+    roomId: string,
+    playerId: string,
+    ready: boolean,
+  ): Promise<Result<GameState, ErrorCode>> {
+    return this.dispatch(roomId, playerId, { type: "SET_READY", ready: ready === true });
+  }
+
   playCards(
     roomId: string,
     playerId: string,
