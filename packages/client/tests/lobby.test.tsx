@@ -114,6 +114,46 @@ describe("Lobby", () => {
     expect(socket.sentOf("setReady")).toEqual([[false], [true]]);
   });
 
+  it("reads a mid-round joiner's readiness off pendingJoins (§7.7, §8.6)", async () => {
+    // p_4 joined during the round, so they wait in `pendingJoins` and see this
+    // lobby at ROUND_END. Their ready flag lives there too — the toggle has to
+    // read it from there or it offers "ready up" to someone already ready, and
+    // they can never take it back.
+    const { socket, user } = await seat(
+      publicState({
+        status: "ROUND_END",
+        players: THREE,
+        pendingJoins: [player("p_4", "Kim", { seatIndex: 3, isReady: true })],
+      }),
+      "p_4",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Not ready" }));
+    expect(socket.sentOf("setReady")).toEqual([[false]]);
+  });
+
+  it("shows the miyako-ochi line only for the round it happened in (§4.5)", async () => {
+    // The demotion was round 2; these are round 3's standings. `history` spans the
+    // match, so an unbounded scan would keep explaining a zero that is now gone.
+    await seat(
+      publicState({
+        status: "ROUND_END",
+        roundNumber: 3,
+        players: THREE,
+        turnOrder: ["p_1", "p_2", "p_3"],
+        finishedPlayerIds: ["p_3", "p_2", "p_1"],
+        points: { p_1: 1, p_2: 2, p_3: 3 },
+        history: [
+          { key: "history.roundStarted", params: { round: 2 } },
+          { key: "history.miyakoOchi", params: { player: "p_3", target: "p_1", count: 9 } },
+          { key: "history.roundStarted", params: { round: 3 } },
+        ],
+      }),
+    );
+
+    expect(screen.queryByText(/falls to last/)).not.toBeInTheDocument();
+  });
+
   it("disables the start button under three players and says why", async () => {
     await seat(publicState({ players: THREE.slice(0, 2) }));
 

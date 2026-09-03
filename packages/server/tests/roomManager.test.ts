@@ -10,7 +10,13 @@
  * a repository read, never from in-process state (§8.1, §14).
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import { TURN_DURATION_MS, isOk, type ErrorCode, type GameState } from "@daifugo/core";
+import {
+  TURN_DURATION_MS,
+  isOk,
+  unreadyPlayerIds,
+  type ErrorCode,
+  type GameState,
+} from "@daifugo/core";
 import { RoomManager, type JoinOutcome } from "../src/roomManager.js";
 import { InMemoryRoomRepository, type RoomDoc } from "../src/repository.js";
 import { DISCONNECT_GRACE_MS, ManualScheduler, deadlineKey, graceKey } from "../src/timers.js";
@@ -252,6 +258,39 @@ describe("RoomManager acceptance (§12.4)", () => {
     expect(timedOut.state.droppedPlayerIds).toEqual([]);
     expect(scheduler.has(graceKey(roomId, dropped))).toBe(true);
     expect(timedOut.state.status).toBe("IN_PROGRESS");
+  });
+
+  it("marks a disconnected mid-round joiner disconnected in pendingJoins (§7.7, §8.6)", async () => {
+    const roomId = await manager.createRoom();
+    const host = await seatPlayer(manager, roomId, "Will");
+    const alex = await seatPlayer(manager, roomId, "Alex");
+    const sam = await seatPlayer(manager, roomId, "Sam");
+    await readyAll(manager, roomId, alex, sam);
+    expect((await manager.startGame(roomId, host.playerId)).ok).toBe(true);
+
+    // Kim joins during the round, so their seat waits in `pendingJoins` until the
+    // next deal — they never appear in `players`.
+    const kim = await seatPlayer(manager, roomId, "Kim");
+    const joined = await docOf(roomId);
+    expect(joined.state.players.some((p) => p.id === kim.playerId)).toBe(false);
+    expect(joined.state.pendingJoins.map((p) => p.id)).toEqual([kim.playerId]);
+
+    await manager.disconnect(roomId, kim.playerId);
+    const dropped = await docOf(roomId);
+
+    // The flag has to land on the pending entry: `unreadyPlayerIds` reads it to
+    // apply §8.6's disconnected-seat exemption, so leaving it `true` would hold
+    // the next deal on a player who is gone.
+    expect(dropped.state.pendingJoins.find((p) => p.id === kim.playerId)!.isConnected).toBe(false);
+    expect(dropped.state.stateVersion).toBeGreaterThan(joined.state.stateVersion);
+    expect(unreadyPlayerIds(dropped.state)).not.toContain(kim.playerId);
+
+    // And the reconnect path flips it back, from the pending entry just the same.
+    const resumed = unwrap(await manager.join(roomId, "Kim", kim.resumeToken));
+    expect(resumed.reconnected).toBe(true);
+    expect(
+      (await docOf(roomId)).state.pendingJoins.find((p) => p.id === kim.playerId)!.isConnected,
+    ).toBe(true);
   });
 
   /* ---------------------------------------------------------------------- */

@@ -50,14 +50,17 @@ export function Lobby({ room }: { room: PublicGameState }) {
   // §8.6, asked of core rather than re-derived: the host is exempt and so is a
   // disconnected seat, and only the engine should be deciding either.
   const waitingOn = matchOver ? [] : unreadyPlayerIds(room);
-  const iAmReady = room.players.find((seat) => seat.id === playerId)?.isReady ?? false;
+  // Off the same roster the deal takes, not just the seated one: a player who
+  // joined mid-round waits in `pendingJoins` and readies from there (§7.7, §8.6),
+  // so reading `players` alone would leave their own toggle stuck on "ready up"
+  // with no way to take it back.
+  const iAmReady =
+    [...room.players, ...room.pendingJoins].find((seat) => seat.id === playerId)?.isReady ?? false;
 
-  // The last demotion of the round just ended (§4.5). Read off the redacted
-  // history this seat already has; `miyakoOchi` names a count, never a card, so
-  // every seat sees the same line (§8.5).
-  const miyakoOchi = [...room.history]
-    .reverse()
-    .find((entry) => entry.key === "history.miyakoOchi");
+  // The demotion of the round just ended (§4.5). Read off the redacted history
+  // this seat already has; `miyakoOchi` names a count, never a card, so every seat
+  // sees the same line (§8.5).
+  const miyakoOchi = miyakoOchiThisRound(room);
 
   return (
     <div className="lobby">
@@ -147,6 +150,25 @@ export function Lobby({ room }: { room: PublicGameState }) {
       </div>
     </div>
   );
+}
+
+/**
+ * This round's miyako-ochi entry, or `undefined` if the round just ended had none.
+ *
+ * `history` spans the whole match, so the reverse scan stops at this round's
+ * `history.roundStarted` — the same bound core's own `demotedThisRound` uses.
+ * Without it, one demotion in round 2 would keep explaining a zero beside every
+ * later round's standings.
+ */
+function miyakoOchiThisRound(
+  room: PublicGameState,
+): PublicGameState["history"][number] | undefined {
+  for (let index = room.history.length - 1; index >= 0; index--) {
+    const entry = room.history[index];
+    if (entry === undefined || entry.key === "history.roundStarted") return undefined;
+    if (entry.key === "history.miyakoOchi") return entry;
+  }
+  return undefined;
 }
 
 function nameOf(room: PublicGameState, id: string): string {

@@ -491,11 +491,23 @@ const TICK_ACTOR = "@server/tick";
  * Connection is server metadata the pure engine never reads (turn timers run
  * regardless of it, §8.3), but it rides on `Player` so the broadcast carries it,
  * so the manager owns this one narrow write outside `applyAction`.
+ *
+ * `pendingJoins` counts as seated here, for the same reason `isReclaimable` and
+ * `setReady` treat it that way: a player who joined mid-round lives there until
+ * the next deal (§7.7), and `unreadyPlayerIds` reads their `isConnected` to decide
+ * whether the deal waits on them (§8.6). Skipping them would leave a departed
+ * newcomer marked connected and unready, blocking `START_GAME` for the whole
+ * disconnect grace despite the exemption meant to cover exactly that.
  */
 function setConnected(state: GameState, playerId: string, connected: boolean): GameState | null {
-  const index = state.players.findIndex((p) => p.id === playerId);
-  if (index === -1) return null;
-  if (state.players[index]!.isConnected === connected) return null;
-  const players = state.players.map((p, i) => (i === index ? { ...p, isConnected: connected } : p));
-  return { ...state, players, stateVersion: state.stateVersion + 1 };
+  const seat = [...state.players, ...state.pendingJoins].find((p) => p.id === playerId);
+  if (seat === undefined || seat.isConnected === connected) return null;
+
+  const mark = (p: Player): Player => (p.id === playerId ? { ...p, isConnected: connected } : p);
+  return {
+    ...state,
+    players: state.players.map(mark),
+    pendingJoins: state.pendingJoins.map(mark),
+    stateVersion: state.stateVersion + 1,
+  };
 }
