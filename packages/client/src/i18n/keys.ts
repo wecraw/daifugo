@@ -49,12 +49,48 @@ export const UI_I18N_KEYS = [
   "ui.connection.reconnecting",
   "ui.connection.offline",
 
-  // The seated shell. The lobby and table themselves arrive with their own
-  // issues; this is what the socket layer can already render on its own.
+  // The seated shell. The table itself arrives with its own issue; the lobby
+  // below is what a seated player sees before and between rounds.
   "ui.room.code",
   "ui.room.players",
   "ui.room.waiting",
   "ui.room.leave",
+
+  // Lobby (§10.11, §9): the roster, the round line, and the start control.
+  "ui.lobby.roster",
+  "ui.lobby.host",
+  "ui.lobby.you",
+  "ui.lobby.ready",
+  "ui.lobby.connected",
+  "ui.lobby.disconnected",
+  "ui.lobby.round",
+  "ui.lobby.roundOfLimit",
+  "ui.lobby.start",
+  "ui.lobby.nextRound",
+  "ui.lobby.waitingForHost",
+  "ui.lobby.needMorePlayers",
+  "ui.lobby.tooManyPlayers",
+  "ui.lobby.matchOver",
+
+  // Between-round standings (§9). Row order is core's finish order (§4.1); the
+  // client renders it and never re-derives it.
+  "ui.standings.title",
+  "ui.standings.position",
+  "ui.standings.player",
+  "ui.standings.role",
+  "ui.standings.points",
+  "ui.standings.roundRoles",
+
+  // Host panel (§10.11). Rendered to everyone so a rule change is visible to
+  // the whole table; only the host can operate it.
+  "ui.host.title",
+  "ui.host.rules",
+  "ui.host.readOnly",
+  "ui.host.roundLimitLabel",
+  "ui.host.roundLimitPlaceholder",
+  "ui.host.roundLimitApply",
+  "ui.host.roundLimitClear",
+  "ui.host.roundLimitInvalid",
 
   "ui.error.dismiss",
 ] as const;

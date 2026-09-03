@@ -134,5 +134,36 @@
   "ui.room.waiting": "Waiting for the table…",
   "ui.room.leave": "Leave room",
 
+  "ui.lobby.roster": "Players",
+  "ui.lobby.host": "Host",
+  "ui.lobby.you": "You",
+  "ui.lobby.ready": "Ready",
+  "ui.lobby.connected": "Connected",
+  "ui.lobby.disconnected": "Disconnected",
+  "ui.lobby.round": "Round {round}",
+  "ui.lobby.roundOfLimit": "Round {round} of {limit}",
+  "ui.lobby.start": "Start match",
+  "ui.lobby.nextRound": "Deal the next round",
+  "ui.lobby.waitingForHost": "Waiting for the host to deal…",
+  "ui.lobby.needMorePlayers": "Needs at least {min} players",
+  "ui.lobby.tooManyPlayers": "At most {max} players can be dealt in",
+  "ui.lobby.matchOver": "The match is over",
+
+  "ui.standings.title": "Standings",
+  "ui.standings.position": "#",
+  "ui.standings.player": "Player",
+  "ui.standings.role": "Role",
+  "ui.standings.points": "Points",
+  "ui.standings.roundRoles": "Round {round} result",
+
+  "ui.host.title": "Table rules",
+  "ui.host.rules": "House rules",
+  "ui.host.readOnly": "Only the host can change these",
+  "ui.host.roundLimitLabel": "Round limit",
+  "ui.host.roundLimitPlaceholder": "Endless",
+  "ui.host.roundLimitApply": "Set limit",
+  "ui.host.roundLimitClear": "Play endlessly",
+  "ui.host.roundLimitInvalid": "The limit must be a round still to come (over {min})",
+
   "ui.error.dismiss": "Dismiss"
 }

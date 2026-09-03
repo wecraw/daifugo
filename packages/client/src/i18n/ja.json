@@ -134,5 +134,36 @@
   "ui.room.waiting": "テーブルを待っています…",
   "ui.room.leave": "退出する",
 
+  "ui.lobby.roster": "プレイヤー",
+  "ui.lobby.host": "ホスト",
+  "ui.lobby.you": "あなた",
+  "ui.lobby.ready": "準備完了",
+  "ui.lobby.connected": "接続済み",
+  "ui.lobby.disconnected": "切断中",
+  "ui.lobby.round": "第{round}ラウンド",
+  "ui.lobby.roundOfLimit": "第{round}／{limit}ラウンド",
+  "ui.lobby.start": "対戦を始める",
+  "ui.lobby.nextRound": "次のラウンドを配る",
+  "ui.lobby.waitingForHost": "ホストが配るのを待っています…",
+  "ui.lobby.needMorePlayers": "あと{min}人以上必要です",
+  "ui.lobby.tooManyPlayers": "参加できるのは{max}人までです",
+  "ui.lobby.matchOver": "対戦は終了しました",
+
+  "ui.standings.title": "順位表",
+  "ui.standings.position": "順位",
+  "ui.standings.player": "プレイヤー",
+  "ui.standings.role": "役",
+  "ui.standings.points": "得点",
+  "ui.standings.roundRoles": "第{round}ラウンドの結果",
+
+  "ui.host.title": "テーブル設定",
+  "ui.host.rules": "ローカルルール",
+  "ui.host.readOnly": "変更できるのはホストだけです",
+  "ui.host.roundLimitLabel": "ラウンド数の上限",
+  "ui.host.roundLimitPlaceholder": "無制限",
+  "ui.host.roundLimitApply": "上限を設定",
+  "ui.host.roundLimitClear": "無制限にする",
+  "ui.host.roundLimitInvalid": "上限はこれから始まるラウンド（{min}より大きい数）にしてください",
+
   "ui.error.dismiss": "閉じる"
 }
