@@ -97,6 +97,22 @@ describe("selection (§10.4)", () => {
     expect(cardButton("C-9")).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("releases the touch's implicit pointer capture, so a drag reaches the rest", () => {
+    seat(table(PAIR_HAND));
+    const button = cardButton("S-5");
+    const released: unknown[] = [];
+    // jsdom implements neither, and a real touch captures to the first element
+    // unless the capture is given back.
+    Object.assign(button, {
+      hasPointerCapture: () => true,
+      releasePointerCapture: (id: unknown) => released.push(id),
+    });
+    fireEvent.pointerDown(button, { pointerId: 7, pointerType: "touch" });
+    // jsdom has no PointerEvent, so the id does not survive the synthesized
+    // event; that the capture was handed back for it is the part under test.
+    expect(released).toHaveLength(1);
+  });
+
   it("selects across a drag without deselecting what it crosses", () => {
     seat(table(PAIR_HAND));
     fireEvent.pointerDown(cardButton("S-5"));

@@ -10,7 +10,9 @@
  *   64x90 and overflows its own hit target to the right, where the next card
  *   covers it. The strip is what takes the tap (§10.2), the last card's strip is
  *   its full width because nothing overlaps it, and the 6px of vertical slop is
- *   on the button rather than the card so it does not show up as a gap.
+ *   on the button rather than the card so it does not show up as a gap. The box
+ *   itself takes no pointer events at all, so raising a selected card above its
+ *   neighbour cannot put its overflow over the neighbour's strip.
  * * **Nothing here plays a card.** Tap selects and tap again deselects; the Play
  *   button is the only way a card reaches the table (§10.4).
  *
@@ -87,7 +89,18 @@ export function Hand({ hand }: { hand: HandController }) {
                     "--card-saturation": unplayable ? UNPLAYABLE_SATURATION : 1,
                   } as CSSProperties
                 }
-                onPointerDown={() => hand.beginDrag(card.id)}
+                onPointerDown={(event) => {
+                  // A touch implicitly captures the pointer to the element it
+                  // started on, which would stop `pointerenter` reaching the
+                  // cards the finger crosses — and on a phone, dragging across
+                  // is how a pair gets selected (§10.4). Releasing the capture
+                  // puts hit testing back on every move.
+                  const target = event.currentTarget;
+                  if (target.hasPointerCapture?.(event.pointerId) === true) {
+                    target.releasePointerCapture(event.pointerId);
+                  }
+                  hand.beginDrag(card.id);
+                }}
                 onPointerEnter={() => hand.extendTo(card.id)}
                 onPointerUp={hand.endDrag}
                 onKeyDown={(event) => {

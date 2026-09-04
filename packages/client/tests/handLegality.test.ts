@@ -8,6 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_HOUSE_RULES,
   generateLegalMoves,
   parseCombo,
   type Card,
@@ -110,6 +111,34 @@ describe("joker bindings (§10.5)", () => {
     const options = bindingOptions([joker], { isRevolution: true });
     expect(options[0]?.combo.resolvedRank).toBe(3);
     expect(options.some((option) => option.bindings.length === 0)).toBe(true);
+  });
+
+  it("keeps the suit that would set a lock as its own choice (§6)", () => {
+    // A heart on the table: binding the joker to a heart locks the trick to
+    // hearts, any other suit does not — so those are two different plays and the
+    // badge has to be able to reach both.
+    const ctx: TrickContext = { top: top([card("H-5", "H", 5)]) };
+    const options = bindingOptions([joker], ctx);
+    const sixes = options.filter((option) => option.combo.resolvedRank === 6);
+    expect(sixes).toHaveLength(2);
+    expect(sixes.some((option) => option.combo.suits[0] === "H")).toBe(true);
+    expect(sixes.some((option) => option.combo.suits[0] !== "H")).toBe(true);
+  });
+
+  it("collapses the suits nothing can tell apart", () => {
+    // Leading: no play to match, so no lock can be established and the suits
+    // differ in nothing. One option per rank, plus pure.
+    const options = bindingOptions([joker], {});
+    const ranks = options.map((option) => option.combo.resolvedRank);
+    expect(new Set(ranks).size).toBe(ranks.length);
+
+    // Same table with shibari off: the lock variant is not a choice any more.
+    const heartTop: TrickContext = { top: top([card("H-5", "H", 5)]) };
+    const off = bindingOptions([joker], {
+      ...heartTop,
+      config: { ...DEFAULT_HOUSE_RULES, shibari: false },
+    });
+    expect(off.filter((option) => option.combo.resolvedRank === 6)).toHaveLength(1);
   });
 
   it("offers only the rank the naturals force", () => {

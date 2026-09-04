@@ -749,12 +749,24 @@ button:disabled {
  * undamped period of about 100ms, so 180ms of a mild overshoot curve lands the
  * card in about the same time with the same small bounce, and costs no runtime.
  */
+/*
+ * The row is 116px and a selected card stands 90 + 10 of fan rise + 26 of lift
+ * tall, so the fan sits on the floor of the row and the lift is allowed to paint
+ * up into the middle band. `.game-table__hand` gives up its clip for that; the
+ * table's own `overflow: hidden` still holds the viewport edge, and a lifted
+ * card reaching over the trick area is the card game's own idiom.
+ */
+.game-table__hand {
+  overflow: visible;
+}
+
 .hand {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   height: 100%;
+  padding-bottom: 0.35rem;
   overflow: visible;
 }
 
@@ -787,6 +799,9 @@ button:disabled {
 
 .hand__card-box {
   position: absolute;
+  /* The visual box overflows its strip, but only the strip is a hit target
+     (§10.2) — which stays true however the slots end up stacked. */
+  pointer-events: none;
   bottom: var(--hand-hit-slop);
   left: 0;
   display: block;

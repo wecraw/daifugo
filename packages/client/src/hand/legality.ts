@@ -18,6 +18,7 @@
  * resolve by default — a test pins that.
  */
 import {
+  DEFAULT_HOUSE_RULES,
   RANKS,
   SUITS,
   checkLegality,
@@ -26,6 +27,7 @@ import {
   err,
   invertedIn,
   parseCombo,
+  shibariLock,
   type Card,
   type ComboContext,
   type ErrorCode,
@@ -99,7 +101,7 @@ export interface BindingOption {
 }
 
 /**
- * The legal bindings for `cards`, strongest first, deduplicated by resolved rank.
+ * The legal bindings for `cards`, strongest first, one per distinguishable choice.
  *
  * Empty when the selection holds no joker — there is nothing to choose — and also
  * when no binding of it is legal at all, which the caller reports through
@@ -131,18 +133,45 @@ export function bindingOptions(cards: readonly Card[], ctx: TrickContext): Bindi
     }
   }
 
-  const byRank = new Map<string, BindingOption>();
+  const distinct = new Map<string, BindingOption>();
   for (const candidate of candidates) {
-    const key =
-      candidate.combo.resolvedRank === null ? "pure" : String(candidate.combo.resolvedRank);
-    const held = byRank.get(key);
-    if (held === undefined || preferSuits(candidate.combo, held.combo) < 0)
-      byRank.set(key, candidate);
+    const key = choiceKey(candidate.combo, ctx);
+    const held = distinct.get(key);
+    if (held === undefined || preferSuits(candidate.combo, held.combo) < 0) {
+      distinct.set(key, candidate);
+    }
   }
 
-  return [...byRank.values()].sort((a, b) =>
-    compareStrength(comboStrength(b.combo), comboStrength(a.combo), inverted),
-  );
+  // Strongest first; within one rank, core's own default (the `preferSuits`
+  // minimum) leads and the lock-setting variant sits next to it.
+  return [...distinct.values()].sort((a, b) => {
+    const byStrength = compareStrength(comboStrength(b.combo), comboStrength(a.combo), inverted);
+    return byStrength !== 0 ? byStrength : preferSuits(a.combo, b.combo);
+  });
+}
+
+/**
+ * What actually makes two bindings of the same cards different plays.
+ *
+ * The rank, always — and whether the play establishes a suit lock, which is the
+ * *only* other thing a joker's bound suit can change. Strength never depends on
+ * suit (§5.1), every house rule reads the resolved rank (§5.4), the Spade-3
+ * counter matches a card id rather than a binding (§5.4), and under an existing
+ * lock the legal assignments all match that same multiset. That leaves shibari:
+ * binding a joker to the top's suits locks the trick, any other suit does not
+ * (§6), so those are two choices and everything else at that rank is one.
+ *
+ * Which is what keeps the badge cyclable: a lone joker led has 52 legal bindings
+ * and 13 distinguishable ones, and a player who wants the lock is one tap away
+ * rather than lost in a suit cycle nothing else can tell apart.
+ */
+function choiceKey(combo: PlayCombo, ctx: TrickContext): string {
+  const rank = combo.resolvedRank === null ? "pure" : String(combo.resolvedRank);
+  const existing = ctx.suitLock ?? null;
+  const locks =
+    existing === null &&
+    shibariLock(ctx.top ?? null, combo, null, ctx.config ?? DEFAULT_HOUSE_RULES) !== null;
+  return `${rank}|${locks ? "lock" : "-"}`;
 }
 
 /**
