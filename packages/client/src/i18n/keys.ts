@@ -147,6 +147,30 @@ export const UI_I18N_KEYS = [
   "ui.combo.joker",
   "ui.combo.jokers",
 
+  // The exchange phase (§4.3, §4.4). The rich side chooses, the poor side is
+  // told what leaves, and the middle seat at odd N is told it sits out.
+  "ui.exchange.title",
+  "ui.exchange.giveTo",
+  "ui.exchange.forced",
+  "ui.exchange.sitOut",
+  "ui.exchange.send",
+  "ui.exchange.sent",
+  "ui.exchange.waiting",
+
+  // The pending-action modals (§7.2). Both name the count; the 7-pass names the
+  // target, and either can empty the hand, which is a normal agari (§7.3).
+  "ui.pending.title",
+  "ui.pending.sevenPass",
+  "ui.pending.tenDiscard",
+  "ui.pending.submitPass",
+  "ui.pending.submitDiscard",
+  "ui.pending.lastCards",
+
+  // Shared by both: how many more cards a selection needs, and the promise that
+  // the clock sends exactly what is on screen (§4.4, §7.6).
+  "ui.select.more",
+  "ui.select.timeout",
+
   "ui.error.dismiss",
 ] as const;
 

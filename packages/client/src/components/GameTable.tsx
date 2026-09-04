@@ -37,7 +37,9 @@ import {
   type SeatEdge,
 } from "../layout/tableLayout";
 import { ActionBar } from "./ActionBar";
+import { ExchangeScreen } from "./ExchangeScreen";
 import { Hand } from "./Hand";
+import { PendingActionModal } from "./PendingActionModal";
 import { HistoryLog } from "./HistoryLog";
 import { PlayerSeat } from "./PlayerSeat";
 import { TrickArea } from "./TrickArea";
@@ -139,17 +141,29 @@ export function GameTable({ room }: { room: PublicGameState }) {
       </div>
 
       <div className="game-table__bottom">
-        <section className="game-table__hand" aria-label={t("ui.table.handArea")}>
-          <Hand hand={hand} />
-        </section>
-        <section className="game-table__action" aria-label={t("ui.table.actionArea")}>
-          <ActionBar
-            hand={hand}
-            deadline={room.deadline}
-            isMyTurn={inTurn && activeId === room.myPlayerId}
-          />
-        </section>
+        {/* The exchange is a different choice from a play, over a hand that is
+            not yet in a round (§4.3), so it takes the row rather than sharing
+            it. */}
+        {room.status === "EXCHANGE" ? (
+          <ExchangeScreen room={room} />
+        ) : (
+          <>
+            <section className="game-table__hand" aria-label={t("ui.table.handArea")}>
+              <Hand hand={hand} />
+            </section>
+            <section className="game-table__action" aria-label={t("ui.table.actionArea")}>
+              <ActionBar
+                hand={hand}
+                deadline={room.deadline}
+                isMyTurn={inTurn && activeId === room.myPlayerId}
+              />
+            </section>
+          </>
+        )}
       </div>
+
+      {/* Owed by this seat, it covers the table until it is answered (§7.2). */}
+      <PendingActionModal room={room} />
     </div>
   );
 }

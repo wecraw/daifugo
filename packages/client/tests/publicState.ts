@@ -34,6 +34,8 @@ export function publicState(overrides: Partial<PublicGameState> = {}): PublicGam
     hands: Object.fromEntries(players.map((seat) => [seat.id, { cardCount: 0 }])),
     myHand: [],
     myPlayerId: "p_1",
+    myForcedCards: [],
+    mySubmittedCards: [],
     graveyard: [],
     dealerId: "p_1",
     turnOrder: players.map((seat) => seat.id),
