@@ -132,7 +132,6 @@
 
   "ui.room.code": "ルーム {code}",
   "ui.room.players": "{count}人",
-  "ui.room.waiting": "テーブルを待っています…",
   "ui.room.leave": "退出する",
 
   "ui.lobby.roster": "プレイヤー",
@@ -168,6 +167,27 @@
   "ui.host.roundLimitApply": "上限を設定",
   "ui.host.roundLimitClear": "無制限にする",
   "ui.host.roundLimitInvalid": "上限はこれから始まるラウンド（{min}より大きい数）にしてください",
+
+  "ui.table.opponents": "ほかのプレイヤー",
+  "ui.table.history": "直近の記録",
+  "ui.table.trickArea": "場",
+  "ui.table.handArea": "自分の手札",
+  "ui.table.actionArea": "操作",
+  "ui.table.yourTurn": "あなたの番",
+  "ui.table.turnOf": "{player}の番",
+  "ui.table.exchange": "カード交換中…",
+  "ui.table.leadOpen": "場は流れています — 自由に出せます",
+
+  "ui.seat.cards": "{count}枚",
+  "ui.seat.passed": "パス",
+  "ui.seat.finished": "上がり{position}位",
+  "ui.seat.dropped": "離脱",
+  "ui.seat.disconnected": "切断中",
+
+  "ui.trick.suitLock": "{suits}に縛り",
+  "ui.trick.playedBy": "{player}が出しました",
+
+  "ui.timer.remaining": "残り{seconds}秒",
 
   "ui.error.dismiss": "閉じる"
 }

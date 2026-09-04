@@ -132,7 +132,6 @@
 
   "ui.room.code": "Room {code}",
   "ui.room.players": "{count} player(s)",
-  "ui.room.waiting": "Waiting for the table…",
   "ui.room.leave": "Leave room",
 
   "ui.lobby.roster": "Players",
@@ -168,6 +167,27 @@
   "ui.host.roundLimitApply": "Set limit",
   "ui.host.roundLimitClear": "Play endlessly",
   "ui.host.roundLimitInvalid": "The limit must be a round still to come (over {min})",
+
+  "ui.table.opponents": "Opponents",
+  "ui.table.history": "Recent plays",
+  "ui.table.trickArea": "Trick",
+  "ui.table.handArea": "Your hand",
+  "ui.table.actionArea": "Actions",
+  "ui.table.yourTurn": "Your turn",
+  "ui.table.turnOf": "{player}'s turn",
+  "ui.table.exchange": "Exchanging cards…",
+  "ui.table.leadOpen": "Table is open — lead anything",
+
+  "ui.seat.cards": "{count} card(s)",
+  "ui.seat.passed": "Passed",
+  "ui.seat.finished": "Out #{position}",
+  "ui.seat.dropped": "Dropped",
+  "ui.seat.disconnected": "Disconnected",
+
+  "ui.trick.suitLock": "Locked to {suits}",
+  "ui.trick.playedBy": "{player} played",
+
+  "ui.timer.remaining": "{seconds}s left",
 
   "ui.error.dismiss": "Dismiss"
 }

@@ -49,11 +49,10 @@ export const UI_I18N_KEYS = [
   "ui.connection.reconnecting",
   "ui.connection.offline",
 
-  // The seated shell. The table itself arrives with its own issue; the lobby
-  // below is what a seated player sees before and between rounds.
+  // The seated shell: the lobby header, and the leave control the table borrows
+  // for a mid-round exit (§7.7).
   "ui.room.code",
   "ui.room.players",
-  "ui.room.waiting",
   "ui.room.leave",
 
   // Lobby (§10.11, §9): the roster, the round line, and the start control.
@@ -94,6 +93,32 @@ export const UI_I18N_KEYS = [
   "ui.host.roundLimitApply",
   "ui.host.roundLimitClear",
   "ui.host.roundLimitInvalid",
+
+  // The table (§10.1). Region labels first — the seat columns, the trick area,
+  // and the two regions #18 fills — then the turn line above the clock.
+  "ui.table.opponents",
+  "ui.table.history",
+  "ui.table.trickArea",
+  "ui.table.handArea",
+  "ui.table.actionArea",
+  "ui.table.yourTurn",
+  "ui.table.turnOf",
+  "ui.table.exchange",
+  "ui.table.leadOpen",
+
+  // Seat chips (§10.1): count, standing in the round, and presence.
+  "ui.seat.cards",
+  "ui.seat.passed",
+  "ui.seat.finished",
+  "ui.seat.dropped",
+  "ui.seat.disconnected",
+
+  // Trick area. The rule badges reuse `rule.*`; only the lock names its suits.
+  "ui.trick.suitLock",
+  "ui.trick.playedBy",
+
+  // Timers (§10.10). Rendered against `state.deadline`, never a local clock.
+  "ui.timer.remaining",
 
   "ui.error.dismiss",
 ] as const;
