@@ -25,6 +25,8 @@
  */
 import type { CSSProperties } from "react";
 import { TURN_DURATION_MS, seatingOf, type Player, type PublicGameState } from "@daifugo/core";
+import { miyakoOchiTarget } from "../animation/events";
+import { useTableAnimations } from "../animation/useTableAnimations";
 import { useSocket } from "../context/SocketContext";
 import { useHandController } from "../hooks/useHandController";
 import { useTranslate } from "../i18n/index";
@@ -37,6 +39,7 @@ import {
   type SeatEdge,
 } from "../layout/tableLayout";
 import { ActionBar } from "./ActionBar";
+import { AnimationLayer } from "./AnimationLayer";
 import { ExchangeScreen } from "./ExchangeScreen";
 import { Hand } from "./Hand";
 import { PendingActionModal, owesPendingAction } from "./PendingActionModal";
@@ -50,6 +53,12 @@ export function GameTable({ room }: { room: PublicGameState }) {
   const { leaveRoom } = useSocket();
 
   const hand = useHandController(room);
+  // Derived from the state that is already on screen (§10.9): what plays over the
+  // table never gates what the table shows.
+  const animations = useTableAnimations(room);
+  const revolving = animations.some((animation) => animation.kind === "revolution");
+  // §4.5: while the sweep runs, the demoted chip carries the reason it emptied.
+  const demotedId = miyakoOchiTarget(animations);
 
   const seating = seatingOf(room);
   const opponents = opponentIds(room);
@@ -85,6 +94,7 @@ export function GameTable({ room }: { room: PublicGameState }) {
             finishPosition={finishPositionOf(id, room.finishedPlayerIds)}
             edge={edge}
             isActive={inTurn && id === activeId}
+            demoted={id === demotedId}
             deadline={room.deadline}
             turnDurationMs={TURN_DURATION_MS}
           />
@@ -154,7 +164,10 @@ export function GameTable({ room }: { room: PublicGameState }) {
           <ExchangeScreen room={room} />
         ) : (
           <>
-            <section className="game-table__hand" aria-label={t("ui.table.handArea")}>
+            <section
+              className={`game-table__hand${revolving ? " game-table__hand--revolution" : ""}`}
+              aria-label={t("ui.table.handArea")}
+            >
               <Hand hand={hand} />
             </section>
             <section className="game-table__action" aria-label={t("ui.table.actionArea")}>
@@ -167,6 +180,10 @@ export function GameTable({ room }: { room: PublicGameState }) {
           </>
         )}
       </div>
+
+      {/* Over the table, never in front of it: the layer takes no pointer events
+          and the state under it is already the authoritative one (§10.9). */}
+      <AnimationLayer room={room} animations={animations} />
 
       {/* Owed by this seat, it covers the table until it is answered (§7.2). */}
       <PendingActionModal room={room} />

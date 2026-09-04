@@ -226,5 +226,10 @@
   "ui.select.timeout": "If the clock runs out, this selection is sent",
   "ui.select.timeoutChanged": "If the clock runs out, your weakest {count} card(s) go instead",
 
+  "ui.animation.revolutionOn": "The order is upside down",
+  "ui.animation.revolutionOff": "The order is restored",
+  "ui.animation.agari": "{player} is out — place {position}",
+  "ui.animation.miyakoOchiSeat": "Cast out",
+
   "ui.error.dismiss": "Dismiss"
 }

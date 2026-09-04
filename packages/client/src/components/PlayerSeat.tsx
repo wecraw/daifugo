@@ -35,6 +35,8 @@ export interface PlayerSeatProps {
   finishPosition: number | null;
   edge: SeatEdge;
   isActive: boolean;
+  /** Mid-miyako-ochi (§4.5): this chip is emptying and dropping to last. */
+  demoted?: boolean;
   /** `state.deadline`; only the active seat rings against it (§10.10). */
   deadline: number | null;
   turnDurationMs: number;
@@ -47,6 +49,7 @@ export function PlayerSeat({
   finishPosition,
   edge,
   isActive,
+  demoted = false,
   deadline,
   turnDurationMs,
 }: PlayerSeatProps) {
@@ -56,6 +59,7 @@ export function PlayerSeat({
     `player-seat--${edge}`,
     `player-seat--${status}`,
     isActive ? "player-seat--active" : "",
+    demoted ? "player-seat--demoted" : "",
     player.isConnected ? "" : "player-seat--offline",
   ].filter((name) => name !== "");
 
@@ -90,6 +94,7 @@ export function PlayerSeat({
           </span>
         )}
         {status === "dropped" && <span className="badge badge--warn">{t("ui.seat.dropped")}</span>}
+        {demoted && <span className="badge badge--warn">{t("ui.animation.miyakoOchiSeat")}</span>}
       </div>
     </div>
   );
