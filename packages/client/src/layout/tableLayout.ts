@@ -39,6 +39,76 @@ export const TRICK_AREA_WIDTH = VIEWPORT_WIDTH - SIDE_COLUMN_WIDTH * 2;
 export const CARD_WIDTH = 64;
 export const CARD_HEIGHT = 90;
 
+/**
+ * The trick stack's own arithmetic (§10.9).
+ *
+ * The band is not wide enough for every legal trick: seven triples at an
+ * eight-player table are ~888px of cards against the ~606px the centre column
+ * has. Since the newest play is the one everyone has to beat, it is the one that
+ * may never be clipped — so the plays tuck further under one another as the
+ * trick grows, and once even the tightest overlap will not fit, the oldest plays
+ * drop off the left instead. `fitTrickStack` decides both; the stylesheet only
+ * applies the number it returns.
+ */
+/** `.game-table__middle`'s own padding (0.4rem) and column gaps (0.3rem). */
+const MIDDLE_PADDING_X = 6.4;
+const MIDDLE_COLUMN_GAP = 4.8;
+export const TRICK_STACK_WIDTH = TRICK_AREA_WIDTH - 2 * (MIDDLE_PADDING_X + MIDDLE_COLUMN_GAP);
+
+/** `.card-face--trick` is the hand's card at 0.7, with a 0.15rem gap beside it. */
+export const TRICK_CARD_WIDTH = CARD_WIDTH * 0.7;
+const TRICK_CARD_GAP = 2.4;
+
+/** The resting overlap between plays (0.9rem), and how far it may tighten. */
+export const TRICK_PLAY_OVERLAP = 14.4;
+export const MAX_TRICK_PLAY_OVERLAP = TRICK_CARD_WIDTH * 0.75;
+
+/**
+ * The player label under the newest play is up to 9rem wide and centred on it,
+ * so it hangs past a narrow play by about half that on each side. The stack has
+ * to leave that room or the name is the thing that gets cut.
+ */
+const TRICK_LABEL_OVERHANG = 52;
+
+/** Which plays of a trick the band can show, and how tightly they must sit. */
+export interface TrickStackFit {
+  /** Index of the oldest play still rendered; earlier ones do not fit. */
+  firstVisibleIndex: number;
+  /** Px each play tucks under the one that beat it. */
+  overlap: number;
+}
+
+/** Width of one play, laid out as `.trick-area__cards`. */
+function trickPlayWidth(cards: number): number {
+  return cards * TRICK_CARD_WIDTH + Math.max(0, cards - 1) * TRICK_CARD_GAP;
+}
+
+/**
+ * Fit `cardCounts` — the current trick, oldest play first — into `available`.
+ *
+ * Tighten the overlap first, because a trick that still shows every play is
+ * worth more than one that reads prettily; drop from the oldest end only once
+ * the tightest overlap has run out. The newest play always survives both.
+ */
+export function fitTrickStack(
+  cardCounts: readonly number[],
+  available: number = TRICK_STACK_WIDTH,
+): TrickStackFit {
+  const room = available - 2 * TRICK_LABEL_OVERHANG;
+  for (let first = 0; first < cardCounts.length; first += 1) {
+    const shown = cardCounts.slice(first);
+    const total = shown.reduce((sum, count) => sum + trickPlayWidth(count), 0);
+    const gaps = shown.length - 1;
+    if (gaps === 0) return { firstVisibleIndex: first, overlap: TRICK_PLAY_OVERLAP };
+    const overlap = Math.min(
+      MAX_TRICK_PLAY_OVERLAP,
+      Math.max(TRICK_PLAY_OVERLAP, (total - room) / gaps),
+    );
+    if (total - overlap * gaps <= room) return { firstVisibleIndex: first, overlap };
+  }
+  return { firstVisibleIndex: 0, overlap: TRICK_PLAY_OVERLAP };
+}
+
 export type SeatEdge = "left" | "top" | "right";
 
 /**
@@ -117,10 +187,15 @@ export type SeatStatus = "playing" | "passed" | "finished" | "dropped";
  * Asked of core rather than re-derived. Eligibility is a function of
  * `turnOrder` plus the finished, dropped and passed lists (§7.5), and the client
  * must not invent a second answer to it.
+ *
+ * Dropped is asked first because a player who leaves after going out stays in
+ * both lists, and core reads that pair as dropped — the later and lower of the
+ * two facts (§7.7). Reporting their old place back would contradict the finish
+ * order the round actually scores.
  */
 export function seatStatus(playerId: string, seating: SeatingContext): SeatStatus {
-  if (hasFinished(playerId, seating)) return "finished";
   if (hasDropped(playerId, seating)) return "dropped";
+  if (hasFinished(playerId, seating)) return "finished";
   if (isInRound(playerId, seating) && hasPassed(playerId, seating)) return "passed";
   return "playing";
 }

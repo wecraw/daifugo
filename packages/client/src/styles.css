@@ -359,16 +359,23 @@ button:disabled {
 }
 
 /*
- * The table (§10.1). The three bands are fixed heights that add up to the
- * viewport exactly, so nothing here may grow: every region gets `min-width: 0`
- * or `min-height: 0` and clips its own overflow rather than pushing a
- * neighbour off the screen. The px figures arrive as custom properties from
- * `layout/tableLayout.ts`, which is the one place they are written down.
+ * The table (§10.1). The three bands add up to the viewport exactly, so nothing
+ * here may grow: every region gets `min-width: 0` or `min-height: 0` and clips
+ * its own overflow rather than pushing a neighbour off the screen. The px
+ * figures arrive as custom properties from `layout/tableLayout.ts`, which is the
+ * one place they are written down.
+ *
+ * The strip and the hand row keep their heights; the middle band is the one that
+ * gives. The table is a flex sibling of the error banner and the viewport is not
+ * always the reference 390px, so on anything shorter the trick area loses the
+ * difference rather than the hand row falling off the bottom (§10.2).
  */
 .game-table {
-  display: grid;
-  grid-template-rows: var(--top-strip-height) var(--middle-height) var(--hand-row-height);
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -376,6 +383,7 @@ button:disabled {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) auto auto;
   align-items: center;
+  flex: 0 0 var(--top-strip-height);
   gap: 0.4rem;
   height: var(--top-strip-height);
   padding: 0.25rem 0.4rem;
@@ -385,8 +393,8 @@ button:disabled {
 .game-table__middle {
   display: grid;
   grid-template-columns: var(--side-column-width) minmax(0, 1fr) var(--side-column-width);
+  flex: 1 1 var(--middle-height);
   gap: 0.3rem;
-  height: var(--middle-height);
   min-height: 0;
   padding: 0.3rem 0.4rem;
 }
@@ -394,6 +402,7 @@ button:disabled {
 .game-table__bottom {
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--action-column-width);
+  flex: 0 0 var(--hand-row-height);
   height: var(--hand-row-height);
   border-top: 1px solid rgba(245, 243, 238, 0.12);
 }
@@ -597,6 +606,7 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
+  max-width: 100%;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -612,9 +622,17 @@ button:disabled {
   flex-direction: column;
   align-items: center;
   gap: 0.2rem;
-  margin-left: -0.9rem;
-  /* Each beaten play sits a step higher, so the trick reads as a history. */
-  transform: translateY(calc(var(--depth) * -10px));
+  /*
+   * How far each play tucks under the one that beat it. `fitTrickStack` widens
+   * it when the trick would otherwise outgrow the band; the resting value here
+   * is the 0.9rem it starts from.
+   */
+  margin-left: calc(var(--trick-overlap, 14.4px) * -1);
+  /*
+   * Each beaten play sits a step higher, so the trick reads as a history — but
+   * only for the first few, or a long trick would climb out of the band.
+   */
+  transform: translateY(calc(min(var(--depth), 4) * -10px));
 }
 
 .trick-area__play:first-child {

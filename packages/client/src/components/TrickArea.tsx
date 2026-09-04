@@ -8,7 +8,9 @@
  *
  * The stack keeps every play of the current trick rather than only the top one,
  * so you can see what was beaten and by how much. Jokers render under their
- * binding (§5.4).
+ * binding (§5.4). A trick wider than the band tightens its overlap and then
+ * sheds its oldest plays, because the newest one — the one that has to be beaten
+ * — is the one that may never be clipped; `fitTrickStack` owns that arithmetic.
  *
  * During `EXCHANGE` there is no trick yet: the band holds the exchange ring,
  * centred (§10.10). The exchange UI itself is its own issue.
@@ -17,6 +19,7 @@ import type { CSSProperties } from "react";
 import { EXCHANGE_DURATION_MS, type PublicGameState } from "@daifugo/core";
 import { suitLockGlyphs } from "../glyphs";
 import { useTranslate } from "../i18n/index";
+import { fitTrickStack } from "../layout/tableLayout";
 import { CardFace } from "./CardFace";
 import { TurnTimer } from "./TurnTimer";
 
@@ -24,6 +27,9 @@ export function TrickArea({ room }: { room: PublicGameState }) {
   const t = useTranslate();
   const lock = room.suitLock ?? [];
   const top = room.currentTrick.length - 1;
+  const { firstVisibleIndex, overlap } = fitTrickStack(
+    room.currentTrick.map((play) => play.combo.cards.length),
+  );
 
   return (
     <section className="trick-area" aria-label={t("ui.table.trickArea")}>
@@ -50,35 +56,41 @@ export function TrickArea({ room }: { room: PublicGameState }) {
           <p className="trick-area__note">{t("ui.table.leadOpen")}</p>
         </div>
       ) : (
-        <ol className="trick-area__stack">
-          {room.currentTrick.map((play, index) => (
-            <li
-              key={`${index}-${play.playedBy}`}
-              className="trick-area__play"
-              style={
-                {
-                  zIndex: index,
-                  opacity: Math.max(0.35, 1 - (top - index) * 0.22),
-                  "--depth": top - index,
-                } as CSSProperties
-              }
-            >
-              <span className="trick-area__cards">
-                {play.combo.cards.map((card) => (
-                  <CardFace
-                    key={card.id}
-                    card={card}
-                    binding={play.combo.bindings.find((bound) => bound.cardId === card.id)}
-                  />
-                ))}
-              </span>
-              {index === top && (
-                <span className="trick-area__player">
-                  {t("ui.trick.playedBy", { player: nameOf(room, play.playedBy) })}
+        <ol
+          className="trick-area__stack"
+          style={{ "--trick-overlap": `${overlap}px` } as CSSProperties}
+        >
+          {room.currentTrick.slice(firstVisibleIndex).map((play, offset) => {
+            const index = firstVisibleIndex + offset;
+            return (
+              <li
+                key={`${index}-${play.playedBy}`}
+                className="trick-area__play"
+                style={
+                  {
+                    zIndex: index,
+                    opacity: Math.max(0.35, 1 - (top - index) * 0.22),
+                    "--depth": top - index,
+                  } as CSSProperties
+                }
+              >
+                <span className="trick-area__cards">
+                  {play.combo.cards.map((card) => (
+                    <CardFace
+                      key={card.id}
+                      card={card}
+                      binding={play.combo.bindings.find((bound) => bound.cardId === card.id)}
+                    />
+                  ))}
                 </span>
-              )}
-            </li>
-          ))}
+                {index === top && (
+                  <span className="trick-area__player">
+                    {t("ui.trick.playedBy", { player: nameOf(room, play.playedBy) })}
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ol>
       )}
     </section>

@@ -26,11 +26,16 @@ import {
   HAND_ROW_HEIGHT,
   MAX_OPPONENTS,
   MIDDLE_HEIGHT,
+  MAX_TRICK_PLAY_OVERLAP,
   SEAT_CAPACITY,
   TOP_STRIP_HEIGHT,
+  TRICK_CARD_WIDTH,
+  TRICK_PLAY_OVERLAP,
+  TRICK_STACK_WIDTH,
   VIEWPORT_HEIGHT,
   VIEWPORT_WIDTH,
   distributeSeats,
+  fitTrickStack,
   opponentIds,
 } from "../src/layout/tableLayout";
 import { FakeSocket } from "./fakeSocket";
@@ -192,6 +197,18 @@ describe("PlayerSeat", () => {
     expect(within(chipOf("p_5")).queryByText("Passed")).not.toBeInTheDocument();
   });
 
+  it("calls a player who left after going out dropped, not by their old place (§7.7)", async () => {
+    await seat(
+      table(8, {
+        finishedPlayerIds: ["p_3"],
+        droppedPlayerIds: ["p_3"],
+      }),
+    );
+    const chip = document.querySelector<HTMLElement>('[data-player-id="p_3"]') as HTMLElement;
+    expect(within(chip).getByText("Dropped")).toBeInTheDocument();
+    expect(within(chip).queryByText("Out #1")).not.toBeInTheDocument();
+  });
+
   it("flags a disconnected seat", async () => {
     const room = table(3);
     room.players[1] = player("p_2", "Seat2", { seatIndex: 1, isConnected: false });
@@ -253,6 +270,66 @@ describe("TrickArea", () => {
     expect(screen.getByText("Revolution")).toBeInTheDocument();
     expect(screen.getByText("Jack Reversal")).toBeInTheDocument();
     expect(screen.getByTitle("Locked to ♥♠")).toBeInTheDocument();
+  });
+});
+
+describe("trick stack fit (§10.9)", () => {
+  /** Total width of a stack, as the stylesheet lays it out. */
+  function stackWidth(cardCounts: number[], overlap: number): number {
+    const plays = cardCounts.map((count) => count * TRICK_CARD_WIDTH + (count - 1) * 2.4);
+    return plays.reduce((sum, each) => sum + each, 0) - overlap * (plays.length - 1);
+  }
+
+  it("leaves a short trick at its resting overlap", () => {
+    const fit = fitTrickStack([1, 1, 2]);
+    expect(fit).toEqual({ firstVisibleIndex: 0, overlap: TRICK_PLAY_OVERLAP });
+  });
+
+  it("tightens the overlap before it drops a play", () => {
+    const trick = [3, 3, 3, 3];
+    const fit = fitTrickStack(trick);
+    expect(fit.firstVisibleIndex).toBe(0);
+    expect(fit.overlap).toBeGreaterThan(TRICK_PLAY_OVERLAP);
+    expect(fit.overlap).toBeLessThanOrEqual(MAX_TRICK_PLAY_OVERLAP);
+    expect(stackWidth(trick, fit.overlap)).toBeLessThanOrEqual(TRICK_STACK_WIDTH);
+  });
+
+  it("keeps the newest play inside the band for the widest legal trick", () => {
+    // Seven triples at an eight-player table: ~888px of cards in a ~606px band.
+    const trick = [3, 3, 3, 3, 3, 3, 3];
+    const fit = fitTrickStack(trick);
+    expect(fit.firstVisibleIndex).toBeGreaterThan(0);
+    expect(fit.firstVisibleIndex).toBeLessThan(trick.length);
+    expect(stackWidth(trick.slice(fit.firstVisibleIndex), fit.overlap)).toBeLessThanOrEqual(
+      TRICK_STACK_WIDTH,
+    );
+  });
+
+  it("shows the newest play even when it alone fills the band", () => {
+    const fit = fitTrickStack([4, 4, 4, 4, 4, 4, 4, 6]);
+    expect(fit.firstVisibleIndex).toBeLessThan(8);
+    expect(fit.overlap).toBeLessThanOrEqual(MAX_TRICK_PLAY_OVERLAP);
+  });
+
+  it("renders the last play of a trick too long to fit whole", async () => {
+    const ranks: Card["rank"][] = [4, 5, 6, 7, 8, 9, 10];
+    await seat(
+      table(8, {
+        currentTrick: ranks.map((rank, index) => ({
+          combo: combo([
+            card(`H-${rank}`, "H", rank),
+            card(`S-${rank}`, "S", rank),
+            card(`D-${rank}`, "D", rank),
+          ]),
+          playedBy: `p_${(index % 7) + 2}`,
+        })),
+        trickLeaderId: "p_2",
+      }),
+    );
+    expect(document.querySelector('[data-card-id="H-10"]')).not.toBeNull();
+    expect(document.querySelector('[data-card-id="H-4"]')).toBeNull();
+    const stack = document.querySelector<HTMLElement>(".trick-area__stack") as HTMLElement;
+    expect(stack.style.getPropertyValue("--trick-overlap")).not.toBe("");
   });
 });
 
