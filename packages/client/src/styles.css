@@ -371,6 +371,8 @@ button:disabled {
  * difference rather than the hand row falling off the bottom (§10.2).
  */
 .game-table {
+  /* The pending-action modal covers this frame, not the page (§7.2). */
+  position: relative;
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -882,4 +884,137 @@ button:disabled {
 
 .action-bar .turn-timer {
   align-self: center;
+}
+
+/*
+ * The exchange row (§4.3) and the pending-action modal (§7.2): a flat tray of
+ * cards, not the fan of §10.2, because neither choice has a legality to show.
+ */
+.card-tray {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-tray__card {
+  padding: 0.1rem;
+  border: 1px solid transparent;
+  border-radius: 0.35rem;
+  background: none;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease;
+}
+
+button.card-tray__card {
+  cursor: pointer;
+}
+
+.card-tray__card--selected {
+  border-color: var(--accent);
+  transform: translateY(-6px);
+}
+
+/* Read-only by rule: the poor side's cards, and a hand the action takes whole. */
+.card-tray__card--fixed {
+  opacity: 0.9;
+}
+
+.exchange {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.25rem;
+}
+
+.exchange__prompt {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.75rem;
+}
+
+.exchange__note {
+  margin: 0;
+  opacity: 0.6;
+  font-size: 0.6rem;
+  text-align: center;
+}
+
+.exchange__send {
+  padding: 0.3rem 0.2rem;
+  border-radius: 0.3rem;
+  background: var(--accent);
+  color: #14110d;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.exchange__send:disabled {
+  background: rgba(245, 243, 238, 0.12);
+  color: rgba(245, 243, 238, 0.65);
+  font-weight: 400;
+}
+
+/* The modal covers the table: while the action is owed, nothing else is (§7.2). */
+.pending-action {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 59, 37, 0.82);
+}
+
+.pending-action__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 90%;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--accent);
+  border-radius: 0.5rem;
+  background: var(--felt);
+}
+
+.pending-action__header,
+.pending-action__footer {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.pending-action__prompt {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.8rem;
+}
+
+.pending-action__note {
+  margin: 0;
+  opacity: 0.6;
+  font-size: 0.6rem;
+}
+
+.pending-action__submit {
+  padding: 0.3rem 0.8rem;
+  border-radius: 0.3rem;
+  background: var(--accent);
+  color: #14110d;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.pending-action__submit:disabled {
+  background: rgba(245, 243, 238, 0.12);
+  color: rgba(245, 243, 238, 0.65);
+  font-weight: 400;
 }

@@ -207,5 +207,24 @@
   "ui.combo.joker": "ジョーカー",
   "ui.combo.jokers": "ジョーカー{count}枚",
 
+  "ui.exchange.title": "カード交換",
+  "ui.exchange.giveTo": "{player}にカードを{count}枚渡します",
+  "ui.exchange.forced": "強い{count}枚が{player}へ渡ります",
+  "ui.exchange.sitOut": "今回の交換はありません",
+  "ui.exchange.send": "{count}枚を渡す",
+  "ui.exchange.sent": "{player}へ渡しました",
+  "ui.exchange.waiting": "ほかのプレイヤーを待っています",
+
+  "ui.pending.title": "未完了の処理があります",
+  "ui.pending.sevenPass": "7渡し：{player}にカードを{count}枚渡します",
+  "ui.pending.tenDiscard": "10捨て：カードを{count}枚捨てます",
+  "ui.pending.submitPass": "{count}枚を渡す",
+  "ui.pending.submitDiscard": "{count}枚を捨てる",
+  "ui.pending.lastCards": "最後の手札です — これで上がりです",
+
+  "ui.select.more": "あと{count}枚選んでください",
+  "ui.select.timeout": "時間切れになるとこの選択がそのまま送られます",
+  "ui.select.timeoutChanged": "時間切れになると、代わりに弱い{count}枚が送られます",
+
   "ui.error.dismiss": "閉じる"
 }

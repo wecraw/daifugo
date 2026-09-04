@@ -207,5 +207,24 @@
   "ui.combo.joker": "Joker",
   "ui.combo.jokers": "{count} Jokers",
 
+  "ui.exchange.title": "Card exchange",
+  "ui.exchange.giveTo": "Give {count} card(s) to {player}",
+  "ui.exchange.forced": "Your {count} strongest card(s) go to {player}",
+  "ui.exchange.sitOut": "You sit this exchange out",
+  "ui.exchange.send": "Send {count}",
+  "ui.exchange.sent": "Sent to {player}",
+  "ui.exchange.waiting": "Waiting for the other players",
+
+  "ui.pending.title": "Your play is not finished",
+  "ui.pending.sevenPass": "Seven: pass {count} card(s) to {player}",
+  "ui.pending.tenDiscard": "Ten: discard {count} card(s)",
+  "ui.pending.submitPass": "Pass {count}",
+  "ui.pending.submitDiscard": "Discard {count}",
+  "ui.pending.lastCards": "Your last card(s) — this is your agari",
+
+  "ui.select.more": "Select {count} more",
+  "ui.select.timeout": "If the clock runs out, this selection is sent",
+  "ui.select.timeoutChanged": "If the clock runs out, your weakest {count} card(s) go instead",
+
   "ui.error.dismiss": "Dismiss"
 }
