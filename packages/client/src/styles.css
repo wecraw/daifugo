@@ -357,3 +357,364 @@ button:disabled {
   color: var(--accent);
   font-size: 0.72rem;
 }
+
+/*
+ * The table (§10.1). The three bands are fixed heights that add up to the
+ * viewport exactly, so nothing here may grow: every region gets `min-width: 0`
+ * or `min-height: 0` and clips its own overflow rather than pushing a
+ * neighbour off the screen. The px figures arrive as custom properties from
+ * `layout/tableLayout.ts`, which is the one place they are written down.
+ */
+.game-table {
+  display: grid;
+  grid-template-rows: var(--top-strip-height) var(--middle-height) var(--hand-row-height);
+  height: 100%;
+  overflow: hidden;
+}
+
+.game-table__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) auto auto;
+  align-items: center;
+  gap: 0.4rem;
+  height: var(--top-strip-height);
+  padding: 0.25rem 0.4rem;
+  border-bottom: 1px solid rgba(245, 243, 238, 0.12);
+}
+
+.game-table__middle {
+  display: grid;
+  grid-template-columns: var(--side-column-width) minmax(0, 1fr) var(--side-column-width);
+  gap: 0.3rem;
+  height: var(--middle-height);
+  min-height: 0;
+  padding: 0.3rem 0.4rem;
+}
+
+.game-table__bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--action-column-width);
+  height: var(--hand-row-height);
+  border-top: 1px solid rgba(245, 243, 238, 0.12);
+}
+
+.game-table__hand,
+.game-table__action {
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* The action column is on the right edge, not a bottom bar (§10.1). */
+.game-table__action {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-left: 1px solid rgba(245, 243, 238, 0.12);
+}
+
+.game-table__seats {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  gap: 0.3rem;
+}
+
+/* Ring order runs bottom-to-top on the left edge and top-to-bottom on the right. */
+.game-table__seats--left {
+  flex-direction: column-reverse;
+  justify-content: center;
+}
+
+.game-table__seats--right {
+  flex-direction: column;
+  justify-content: center;
+}
+
+.game-table__seats--top {
+  align-items: center;
+}
+
+.game-table__clock {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.game-table__turn {
+  max-width: 8rem;
+  overflow: hidden;
+  color: var(--accent);
+  font-size: 0.68rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.game-table__leave {
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.3rem;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+/* Seat chips. */
+.player-seat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.1rem;
+  min-width: 0;
+  min-height: 0;
+  /* The bands are fixed heights: a chip clips rather than growing past its edge. */
+  max-height: 100%;
+  overflow: hidden;
+  padding: 0.15rem 0.3rem;
+  border: 1px solid rgba(245, 243, 238, 0.18);
+  border-radius: 0.35rem;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.7rem;
+}
+
+/* Top chips share the strip evenly; side chips are only as tall as they need. */
+.player-seat--top {
+  flex: 1 1 0;
+}
+
+.player-seat--left,
+.player-seat--right {
+  flex: 0 0 auto;
+}
+
+.player-seat--active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.player-seat--finished {
+  border-color: rgba(245, 243, 238, 0.4);
+}
+
+.player-seat--passed,
+.player-seat--dropped,
+.player-seat--offline {
+  opacity: 0.6;
+}
+
+.player-seat__line {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/*
+ * A wrapped badge is what pushes a chip past the 56px strip, so inside a seat
+ * they stay on one line and lose their tail instead.
+ */
+.player-seat .badge {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.player-seat__line--quiet {
+  font-size: 0.62rem;
+  opacity: 0.8;
+}
+
+.player-seat__name {
+  overflow: hidden;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.player-seat__role {
+  color: var(--accent);
+  font-size: 0.6rem;
+  letter-spacing: -0.05em;
+}
+
+.player-seat__count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.player-seat__offline {
+  color: var(--danger);
+  font-size: 0.5rem;
+}
+
+.badge--good {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.badge--rule {
+  border-color: var(--accent);
+  color: var(--accent);
+  text-transform: none;
+}
+
+/* Trick area and banners. */
+.trick-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.trick-area__banners {
+  position: absolute;
+  top: 0;
+  display: flex;
+  gap: 0.3rem;
+}
+
+.trick-area__centre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.trick-area__note {
+  margin: 0;
+  opacity: 0.6;
+  font-size: 0.75rem;
+}
+
+.trick-area__stack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Each play of the trick sits a little behind the one that beat it, so the
+ * whole trick reads at a glance and the top play is unmistakably on top.
+ */
+.trick-area__play {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  margin-left: -0.9rem;
+  /* Each beaten play sits a step higher, so the trick reads as a history. */
+  transform: translateY(calc(var(--depth) * -10px));
+}
+
+.trick-area__play:first-child {
+  margin-left: 0;
+}
+
+.trick-area__cards {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.trick-area__player {
+  max-width: 9rem;
+  overflow: hidden;
+  font-size: 0.65rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0.75;
+}
+
+/* Card faces. The hand row sizes them at the full 64x90 of §10.2. */
+.card-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  border-radius: 0.25rem;
+  background: var(--ink);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.card-face--trick {
+  width: calc(var(--card-width) * 0.7);
+  height: calc(var(--card-height) * 0.7);
+  font-size: 0.85rem;
+}
+
+.card-face--hand {
+  width: var(--card-width);
+  height: var(--card-height);
+  font-size: 1.1rem;
+}
+
+.card-face--red {
+  color: #b3261e;
+}
+
+.card-face--black {
+  color: #14110d;
+}
+
+.card-face--joker {
+  background: linear-gradient(140deg, #f7efd8, #e8b64c);
+}
+
+.card-face--bound {
+  border-style: dashed;
+}
+
+/* History log (§11): keys and params, resolved at render time. */
+.history-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  height: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  font-size: 0.62rem;
+  line-height: 1.25;
+  list-style: none;
+  opacity: 0.8;
+}
+
+.history-log__line {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The countdown ring of §10.10. */
+.turn-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.turn-timer__track {
+  stroke: rgba(245, 243, 238, 0.2);
+}
+
+.turn-timer__ring {
+  stroke: var(--accent);
+  stroke-linecap: round;
+}
+
+.turn-timer__seconds {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.7rem;
+}
