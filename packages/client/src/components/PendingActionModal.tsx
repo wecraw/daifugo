@@ -20,23 +20,31 @@
  */
 import { TURN_DURATION_MS, weakestSelection, type PublicGameState } from "@daifugo/core";
 import { useSocket } from "../context/SocketContext";
-import { selectionKey, useCardSelection } from "../hooks/useCardSelection";
+import { selectionKey, timeoutNote, useCardSelection } from "../hooks/useCardSelection";
 import { useTranslate } from "../i18n/index";
 import { CardTray } from "./CardTray";
 import { TurnTimer } from "./TurnTimer";
+
+/**
+ * Whether this seat is the one a pending action is waiting on (§7.2).
+ *
+ * `GameTable` asks the same question to mark the table behind the modal inert:
+ * covering the bands with an overlay stops a finger, but not a Tab key, and the
+ * leave button under there ends the player's round (§7.7).
+ */
+export function owesPendingAction(room: PublicGameState): boolean {
+  const pending = room.pendingAction;
+  if (pending === null) return false;
+  const owner = pending.type === "RESOLVE_7_PASS" ? pending.sourcePlayerId : pending.playerId;
+  return owner === room.myPlayerId;
+}
 
 export function PendingActionModal({ room }: { room: PublicGameState }) {
   const t = useTranslate();
   const { send } = useSocket();
 
   const pending = room.pendingAction;
-  const owner =
-    pending === null
-      ? null
-      : pending.type === "RESOLVE_7_PASS"
-        ? pending.sourcePlayerId
-        : pending.playerId;
-  const isMine = owner !== null && owner === room.myPlayerId;
+  const isMine = owesPendingAction(room);
   const count = pending?.count ?? 0;
   const hand = room.myHand;
 
@@ -90,11 +98,16 @@ export function PendingActionModal({ room }: { room: PublicGameState }) {
 
         <footer className="pending-action__footer">
           <p className="pending-action__note">
-            {takesWholeHand ? t("ui.pending.lastCards") : t("ui.select.timeout")}
+            {takesWholeHand
+              ? t("ui.pending.lastCards")
+              : t(...timeoutNote(selection.isDefault, count))}
           </p>
           <button
             type="button"
             className="pending-action__submit"
+            // The modal opens on the server's word, not on a click of the
+            // player's, so nothing has moved focus into it yet.
+            autoFocus
             disabled={!selection.complete}
             onClick={submit}
           >

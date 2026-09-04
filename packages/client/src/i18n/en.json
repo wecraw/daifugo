@@ -224,6 +224,7 @@
 
   "ui.select.more": "Select {count} more",
   "ui.select.timeout": "If the clock runs out, this selection is sent",
+  "ui.select.timeoutChanged": "If the clock runs out, your weakest {count} card(s) go instead",
 
   "ui.error.dismiss": "Dismiss"
 }

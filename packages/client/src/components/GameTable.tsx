@@ -39,7 +39,7 @@ import {
 import { ActionBar } from "./ActionBar";
 import { ExchangeScreen } from "./ExchangeScreen";
 import { Hand } from "./Hand";
-import { PendingActionModal } from "./PendingActionModal";
+import { PendingActionModal, owesPendingAction } from "./PendingActionModal";
 import { HistoryLog } from "./HistoryLog";
 import { PlayerSeat } from "./PlayerSeat";
 import { TrickArea } from "./TrickArea";
@@ -63,6 +63,12 @@ export function GameTable({ room }: { room: PublicGameState }) {
   // the seat that will lead, but during `EXCHANGE` the deadline belongs to the
   // exchange and its ring is the centred one (§10.10).
   const inTurn = room.status === "IN_PROGRESS";
+
+  // A pending action of this seat's halts everything until it is answered
+  // (§7.2), so the table behind its modal is inert rather than merely covered:
+  // an overlay stops a finger, but a Tab key would still reach the hand, the
+  // sort toggle, and the leave button that ends the player's round (§7.7).
+  const blocked = owesPendingAction(room);
 
   const renderEdge = (edge: SeatEdge) =>
     seats
@@ -89,7 +95,7 @@ export function GameTable({ room }: { room: PublicGameState }) {
 
   return (
     <div className="game-table" style={tableCssVariables() as CSSProperties}>
-      <div className="game-table__top">
+      <div className="game-table__top" inert={blocked}>
         <div
           className="game-table__seats game-table__seats--top"
           aria-label={t("ui.table.opponents")}
@@ -122,7 +128,7 @@ export function GameTable({ room }: { room: PublicGameState }) {
         </button>
       </div>
 
-      <div className="game-table__middle">
+      <div className="game-table__middle" inert={blocked}>
         <div
           className="game-table__seats game-table__seats--left"
           role="group"
@@ -140,7 +146,7 @@ export function GameTable({ room }: { room: PublicGameState }) {
         </div>
       </div>
 
-      <div className="game-table__bottom">
+      <div className="game-table__bottom" inert={blocked}>
         {/* The exchange is a different choice from a play, over a hand that is
             not yet in a round (§4.3), so it takes the row rather than sharing
             it. */}

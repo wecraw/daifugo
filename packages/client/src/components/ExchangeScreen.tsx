@@ -26,7 +26,7 @@
  */
 import { weakestSelection, type PublicGameState } from "@daifugo/core";
 import { useSocket } from "../context/SocketContext";
-import { selectionKey, useCardSelection } from "../hooks/useCardSelection";
+import { selectionKey, timeoutNote, useCardSelection } from "../hooks/useCardSelection";
 import { useTranslate } from "../i18n/index";
 import { CardTray, cardsById } from "./CardTray";
 
@@ -95,7 +95,7 @@ export function ExchangeScreen({ room }: { room: PublicGameState }) {
                 ? t("ui.exchange.send", { count: required })
                 : t("ui.select.more", { count: selection.missing })}
             </button>
-            <p className="exchange__note">{t("ui.select.timeout")}</p>
+            <p className="exchange__note">{t(...timeoutNote(selection.isDefault, required))}</p>
           </>
         ) : (
           <p className="exchange__note">{t("ui.exchange.waiting")}</p>

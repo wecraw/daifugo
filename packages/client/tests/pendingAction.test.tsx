@@ -109,6 +109,29 @@ describe("RESOLVE_7_PASS (§7.2)", () => {
     expect(selectedIds()).toEqual(weakestSelection(HAND, 1));
   });
 
+  it("says the weakest cards go once the selection is no longer the default (§7.6)", () => {
+    seat(owed(SEVEN_PASS));
+    expect(screen.getByText("If the clock runs out, this selection is sent")).toBeInTheDocument();
+    fireEvent.click(trayCard("H-9"));
+    expect(
+      screen.getByText("If the clock runs out, your weakest 1 card(s) go instead"),
+    ).toBeInTheDocument();
+  });
+
+  it("makes the covered table inert, not merely hidden", () => {
+    seat(owed(SEVEN_PASS));
+    for (const band of ["top", "middle", "bottom"]) {
+      expect(document.querySelector(`.game-table__${band}`)).toHaveAttribute("inert");
+    }
+    // The dialog's own control is still reachable — it is not inside the bands.
+    expect(submitButton()).not.toBeDisabled();
+  });
+
+  it("leaves the table alone once nothing is owed", () => {
+    seat(owed(SEVEN_PASS, HAND, { pendingAction: null }));
+    expect(document.querySelector(".game-table__top")).not.toHaveAttribute("inert");
+  });
+
   it("submits the chosen cards", () => {
     const socket = seat(owed(SEVEN_PASS));
     fireEvent.click(trayCard("H-9"));

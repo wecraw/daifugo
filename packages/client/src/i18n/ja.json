@@ -224,6 +224,7 @@
 
   "ui.select.more": "あと{count}枚選んでください",
   "ui.select.timeout": "時間切れになるとこの選択がそのまま送られます",
+  "ui.select.timeoutChanged": "時間切れになると、代わりに弱い{count}枚が送られます",
 
   "ui.error.dismiss": "閉じる"
 }

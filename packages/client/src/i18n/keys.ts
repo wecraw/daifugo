@@ -166,10 +166,12 @@ export const UI_I18N_KEYS = [
   "ui.pending.submitDiscard",
   "ui.pending.lastCards",
 
-  // Shared by both: how many more cards a selection needs, and the promise that
-  // the clock sends exactly what is on screen (§4.4, §7.6).
+  // Shared by both: how many more cards a selection needs, and what the clock
+  // will do — which depends on whether the selection is still the default it
+  // would send anyway (§4.4, §7.6).
   "ui.select.more",
   "ui.select.timeout",
+  "ui.select.timeoutChanged",
 
   "ui.error.dismiss",
 ] as const;

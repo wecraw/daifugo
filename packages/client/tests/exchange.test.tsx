@@ -121,6 +121,17 @@ describe("the rich side (§4.3)", () => {
     expect(after).not.toContain(before[0]);
   });
 
+  it("stops promising the selection once it stops being the default (§4.4)", () => {
+    seat(exchanging());
+    expect(screen.getByText("If the clock runs out, this selection is sent")).toBeInTheDocument();
+    // Nothing reaches the server until Send: from here the deadline takes the
+    // weakest cards, whatever is on screen.
+    fireEvent.click(trayCard("D-13"));
+    expect(
+      screen.getByText("If the clock runs out, your weakest 2 card(s) go instead"),
+    ).toBeInTheDocument();
+  });
+
   it("will not submit a short selection", () => {
     seat(exchanging());
     fireEvent.click(trayCard(selectedIds()[0] as string));

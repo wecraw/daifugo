@@ -18,6 +18,7 @@
  * selection from scratch can.
  */
 import { useState } from "react";
+import type { I18nKey, TranslateParams } from "../i18n/index";
 
 export interface CardSelection {
   /** The chosen ids, oldest pick first — the order the cap swaps against. */
@@ -27,6 +28,16 @@ export interface CardSelection {
   /** How many more cards the choice needs. Zero means it can be submitted. */
   missing: number;
   complete: boolean;
+  /**
+   * Whether the selection is still the untouched default — the same *set* the
+   * clock would submit on its own.
+   *
+   * The client never sends a selection the player did not submit, so once they
+   * have changed it the deadline still takes the weakest cards (§4.4, §7.6) and
+   * what is on screen is a draft, not a promise. This is what lets the two
+   * screens say which of the two is about to happen.
+   */
+  isDefault: boolean;
 }
 
 /**
@@ -65,7 +76,15 @@ export function useCardSelection(
     toggle,
     missing: Math.max(0, count - selected.length),
     complete: selected.length === count,
+    isDefault: sameCards(selected, initial),
   };
+}
+
+/** Set equality: which cards, not the order they were picked in. */
+function sameCards(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  const held = new Set(a);
+  return b.every((id) => held.has(id));
 }
 
 /**
@@ -77,4 +96,17 @@ export function useCardSelection(
  */
 export function selectionKey(kind: string, count: number, cardIds: readonly string[]): string {
   return `${kind}:${count}:${cardIds.join(" ")}`;
+}
+
+/**
+ * What the clock is about to do with this selection, as a key and its params.
+ *
+ * The default selection *is* the weakest `count` cards, so while it is untouched
+ * "this selection is sent" is the literal truth. The moment the player changes
+ * it, it stops being: nothing reaches the server until they submit, and both
+ * deadlines take the weakest cards regardless (§4.4, §7.6). Saying so is the
+ * difference between a hint and a lie.
+ */
+export function timeoutNote(isDefault: boolean, count: number): [I18nKey, TranslateParams] {
+  return isDefault ? ["ui.select.timeout", {}] : ["ui.select.timeoutChanged", { count }];
 }
