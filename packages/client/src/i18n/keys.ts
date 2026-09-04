@@ -120,6 +120,33 @@ export const UI_I18N_KEYS = [
   // Timers (§10.10). Rendered against `state.deadline`, never a local clock.
   "ui.timer.remaining",
 
+  // The hand row (§10.2-§10.5). The cards themselves are the deck's own glyphs;
+  // what needs language is the joker badge, which says what the joker will
+  // resolve to and that tapping it changes that.
+  "ui.hand.jokerBinding",
+  "ui.hand.jokerPure",
+
+  // The action column (§10.6, §10.7, §10.8). The Play button names the resolved
+  // combo; every reason it is disabled is an `error.*` code (§8.0), never a
+  // catch-all and never a toast.
+  "ui.action.play",
+  "ui.action.pass",
+  "ui.action.autoPass",
+  "ui.action.sortLabel",
+  "ui.action.sortByRank",
+  "ui.action.sortBySuit",
+
+  // Combo names for the Play button, from the combo's count and *resolved* rank
+  // (§5.4). Four is the widest N-of-a-kind the naturals make; bound jokers can
+  // push a play past it, which is what `many` is for.
+  "ui.combo.single",
+  "ui.combo.pair",
+  "ui.combo.triple",
+  "ui.combo.quad",
+  "ui.combo.many",
+  "ui.combo.joker",
+  "ui.combo.jokers",
+
   "ui.error.dismiss",
 ] as const;
 

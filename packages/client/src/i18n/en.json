@@ -189,5 +189,23 @@
 
   "ui.timer.remaining": "{seconds}s left",
 
+  "ui.hand.jokerBinding": "Joker plays as {binding} — tap to change",
+  "ui.hand.jokerPure": "Joker plays as itself — tap to change",
+
+  "ui.action.play": "Play {combo}",
+  "ui.action.pass": "Pass",
+  "ui.action.autoPass": "No legal play, passing",
+  "ui.action.sortLabel": "Sort hand",
+  "ui.action.sortByRank": "By rank",
+  "ui.action.sortBySuit": "By suit",
+
+  "ui.combo.single": "{rank}",
+  "ui.combo.pair": "Pair of {rank}s",
+  "ui.combo.triple": "Three {rank}s",
+  "ui.combo.quad": "Four {rank}s",
+  "ui.combo.many": "{count} {rank}s",
+  "ui.combo.joker": "Joker",
+  "ui.combo.jokers": "{count} Jokers",
+
   "ui.error.dismiss": "Dismiss"
 }

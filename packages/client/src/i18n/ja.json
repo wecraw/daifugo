@@ -189,5 +189,23 @@
 
   "ui.timer.remaining": "残り{seconds}秒",
 
+  "ui.hand.jokerBinding": "ジョーカーは{binding}として出ます（タップで変更）",
+  "ui.hand.jokerPure": "ジョーカーはそのまま出ます（タップで変更）",
+
+  "ui.action.play": "{combo}を出す",
+  "ui.action.pass": "パス",
+  "ui.action.autoPass": "出せる手がないのでパスします",
+  "ui.action.sortLabel": "手札を並べ替え",
+  "ui.action.sortByRank": "強さ順",
+  "ui.action.sortBySuit": "スート順",
+
+  "ui.combo.single": "{rank}",
+  "ui.combo.pair": "{rank}のペア",
+  "ui.combo.triple": "{rank}の3枚",
+  "ui.combo.quad": "{rank}の4枚",
+  "ui.combo.many": "{rank}の{count}枚",
+  "ui.combo.joker": "ジョーカー",
+  "ui.combo.jokers": "ジョーカー{count}枚",
+
   "ui.error.dismiss": "閉じる"
 }

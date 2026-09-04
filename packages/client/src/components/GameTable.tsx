@@ -19,13 +19,14 @@
  * travels, and the seat that would be the viewer's own is the hand row. Who sits
  * where is `distributeSeats`; what each chip says is `PlayerSeat`.
  *
- * The hand and the action column are framed here and filled in by their own
- * issue (§10.2-§10.6); this component owns the frame they sit in and nothing
- * inside them.
+ * The hand row and the action column fill that frame (§10.2-§10.8). They are one
+ * interaction — what is selected decides what the Play button says — so their
+ * state is `useHandController`, held here and handed to both.
  */
 import type { CSSProperties } from "react";
 import { TURN_DURATION_MS, seatingOf, type Player, type PublicGameState } from "@daifugo/core";
 import { useSocket } from "../context/SocketContext";
+import { useHandController } from "../hooks/useHandController";
 import { useTranslate } from "../i18n/index";
 import {
   distributeSeats,
@@ -45,6 +46,8 @@ import { TurnTimer } from "./TurnTimer";
 export function GameTable({ room }: { room: PublicGameState }) {
   const t = useTranslate();
   const { leaveRoom } = useSocket();
+
+  const hand = useHandController(room);
 
   const seating = seatingOf(room);
   const opponents = opponentIds(room);
@@ -137,10 +140,14 @@ export function GameTable({ room }: { room: PublicGameState }) {
 
       <div className="game-table__bottom">
         <section className="game-table__hand" aria-label={t("ui.table.handArea")}>
-          <Hand />
+          <Hand hand={hand} />
         </section>
         <section className="game-table__action" aria-label={t("ui.table.actionArea")}>
-          <ActionBar />
+          <ActionBar
+            hand={hand}
+            deadline={room.deadline}
+            isMyTurn={inTurn && activeId === room.myPlayerId}
+          />
         </section>
       </div>
     </div>
