@@ -96,3 +96,8 @@ export function cardFace(card: Card, binding?: JokerBinding): CardFaceParts {
 export function suitLockGlyphs(suits: readonly Suit[]): string {
   return suits.map((suit) => SUIT_GLYPH[suit]).join("");
 }
+
+/** What a joker's binding badge shows (§10.5): the rank it stands for, and its pip. */
+export function bindingGlyph(binding: JokerBinding): string {
+  return `${RANK_LABEL[binding.rank]}${SUIT_GLYPH[binding.suit]}`;
+}

@@ -736,3 +736,150 @@ button:disabled {
   font-variant-numeric: tabular-nums;
   font-size: 0.7rem;
 }
+
+/*
+ * The hand row (§10.2-§10.5).
+ *
+ * Every px in the fan is inline, from `layout/handLayout.ts` — the stylesheet
+ * owns how a card looks, never where it sits. The button is the exposed strip
+ * and the card box overflows it to the right, under the next card's strip, which
+ * is what makes the hit target the strip rather than the whole card.
+ *
+ * The transition is the spring of §10.4 at stiffness ~400, damping ~30: an
+ * undamped period of about 100ms, so 180ms of a mild overshoot curve lands the
+ * card in about the same time with the same small bounce, and costs no runtime.
+ */
+/*
+ * The row is 116px and a selected card stands 90 + 10 of fan rise + 26 of lift
+ * tall, so the fan sits on the floor of the row and the lift is allowed to paint
+ * up into the middle band. `.game-table__hand` gives up its clip for that; the
+ * table's own `overflow: hidden` still holds the viewport edge, and a lifted
+ * card reaching over the trick area is the card game's own idiom.
+ */
+.game-table__hand {
+  overflow: visible;
+}
+
+.hand {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 100%;
+  padding-bottom: 0.35rem;
+  overflow: visible;
+}
+
+.hand__fan {
+  position: relative;
+  height: var(--card-height);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hand__slot {
+  position: absolute;
+  top: 0;
+  height: var(--card-height);
+}
+
+.hand__card {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  /* The card box overflows the strip; the strip is what takes the tap (§10.2). */
+  overflow: visible;
+  touch-action: none;
+}
+
+.hand__card-box {
+  position: absolute;
+  /* The visual box overflows its strip, but only the strip is a hit target
+     (§10.2) — which stays true however the slots end up stacked. */
+  pointer-events: none;
+  bottom: var(--hand-hit-slop);
+  left: 0;
+  display: block;
+  transform: var(--card-transform);
+  transform-origin: 50% 100%;
+  filter: saturate(var(--card-saturation, 1));
+  transition:
+    transform 180ms cubic-bezier(0.2, 1.5, 0.4, 1),
+    filter 180ms ease,
+    opacity 180ms ease;
+}
+
+.hand__card--selected .hand__card-box {
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+}
+
+/* §10.3: dimming narrows within the turn and never resizes — opacity only. */
+.hand__card--dimmed .hand__card-box {
+  opacity: 0.5;
+}
+
+.hand__card--unplayable .hand__card-box {
+  opacity: 0.75;
+}
+
+.hand__binding {
+  position: absolute;
+  top: -0.35rem;
+  left: 0.15rem;
+  z-index: 1;
+  padding: 0.05rem 0.25rem;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 0.6rem;
+  background: var(--accent);
+  color: #14110d;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* §10.7: the auto-pass card, over the row it is passing for. */
+.hand__auto-pass {
+  position: absolute;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.4rem;
+  background: rgba(10, 59, 37, 0.92);
+  font-size: 0.8rem;
+}
+
+/* The action column (§10.6). */
+.action-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  height: 100%;
+  justify-content: center;
+}
+
+.action-bar button {
+  padding: 0.3rem 0.2rem;
+  border-radius: 0.3rem;
+  font-size: 0.65rem;
+  line-height: 1.15;
+}
+
+.action-bar__play {
+  background: var(--accent);
+  color: #14110d;
+  font-weight: 700;
+}
+
+.action-bar__play:disabled {
+  background: rgba(245, 243, 238, 0.12);
+  color: rgba(245, 243, 238, 0.65);
+  font-weight: 400;
+}
+
+.action-bar .turn-timer {
+  align-self: center;
+}
