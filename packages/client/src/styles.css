@@ -200,7 +200,160 @@ button:disabled {
   font-size: 0.75rem;
 }
 
-.room-shell__players {
+/*
+ * Lobby and host panel (§9, §10.11). The room shell scrolls internally rather
+ * than growing the page: the viewport itself never scrolls (§10.1).
+ */
+.room-shell {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.room-shell__leave {
+  align-self: flex-start;
+}
+
+.lobby {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+}
+
+.lobby h2 {
+  margin: 0 0 0.3rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+
+.lobby__round {
   margin: 0;
-  padding-left: 1.1rem;
+  color: var(--accent);
+}
+
+.lobby__roster ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lobby__roster li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.lobby__name {
+  font-weight: 600;
+}
+
+.badge {
+  padding: 0.05rem 0.35rem;
+  border: 1px solid rgba(245, 243, 238, 0.35);
+  border-radius: 0.8rem;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge--quiet {
+  border-color: transparent;
+  opacity: 0.5;
+}
+
+.badge--warn {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.lobby__standings table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.lobby__standings caption {
+  padding-bottom: 0.2rem;
+  opacity: 0.6;
+  font-size: 0.7rem;
+  text-align: left;
+}
+
+.lobby__standings th,
+.lobby__standings td {
+  padding: 0.15rem 0.6rem 0.15rem 0;
+  text-align: left;
+}
+
+.lobby__standings th {
+  opacity: 0.6;
+  font-weight: 500;
+  font-size: 0.7rem;
+}
+
+/* §4.5: the demoted player's zero needs its explanation next to it. */
+.lobby__miyako-ochi {
+  margin: 0.3rem 0 0;
+  color: var(--accent);
+  font-size: 0.72rem;
+}
+
+.lobby__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.lobby__note {
+  margin: 0;
+  opacity: 0.7;
+}
+
+.host-panel__summary {
+  font-size: 0.75rem;
+}
+
+.host-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid rgba(245, 243, 238, 0.2);
+  border-radius: 0.4rem;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.host-panel__rules {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(8rem, 1fr));
+  gap: 0.2rem 0.8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.host-panel__rule {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.host-panel__limit {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.host-panel__limit .field input {
+  width: 5rem;
+}
+
+.host-panel__note {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.72rem;
 }

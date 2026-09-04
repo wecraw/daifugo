@@ -26,8 +26,11 @@ function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: ErrorCod
 async function startedRoom(manager: RoomManager): Promise<string> {
   const roomId = await manager.createRoom();
   const host = unwrap(await manager.join(roomId, "Will"));
-  unwrap(await manager.join(roomId, "Alex"));
-  unwrap(await manager.join(roomId, "Sam"));
+  const alex = unwrap(await manager.join(roomId, "Alex"));
+  const sam = unwrap(await manager.join(roomId, "Sam"));
+  // §8.6: the deal waits on every seat but the host's.
+  unwrap(await manager.setReady(roomId, alex.playerId, true));
+  unwrap(await manager.setReady(roomId, sam.playerId, true));
   unwrap(await manager.startGame(roomId, host.playerId));
   return roomId;
 }

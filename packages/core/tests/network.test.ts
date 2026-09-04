@@ -34,6 +34,7 @@ describe("socket contracts (§8)", () => {
       "joinRoom",
       "pass",
       "playCards",
+      "setReady",
       "setRoundLimit",
       "startGame",
       "submit10Discard",

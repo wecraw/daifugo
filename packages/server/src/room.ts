@@ -105,6 +105,11 @@ export class RoomHub {
         this.manager.setRoundLimit(roomId, playerId, limit),
       );
     });
+    socket.on("setReady", (ready) => {
+      void this.guarded(socket, (roomId, playerId) =>
+        this.manager.setReady(roomId, playerId, ready),
+      );
+    });
     socket.on("startGame", () => {
       void this.guarded(socket, (roomId, playerId) => this.manager.startGame(roomId, playerId));
     });

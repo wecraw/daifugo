@@ -51,7 +51,13 @@ function dealtState(roomId: string): GameState {
     isReady: false,
     isConnected: true,
   }));
-  const lobby = createGameState({ roomId, hostId: "a", players });
+  let lobby = createGameState({ roomId, hostId: "a", players });
+  // The host's start click is their readiness (§8.6); every other seat has to say so.
+  for (const id of ["b", "c"]) {
+    const readied = applyAction(lobby, { type: "SET_READY", ready: true }, id);
+    if (!readied.ok) throw new Error(`could not ready ${id}: ${readied.error}`);
+    lobby = readied.value;
+  }
   const started = applyAction(lobby, { type: "START_GAME", seed: "emulator-seed" }, "a");
   if (!started.ok) throw new Error(`could not deal: ${started.error}`);
   return started.value;

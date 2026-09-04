@@ -36,6 +36,7 @@ import {
   queueJoin,
   queueLeave,
   stampDeadline,
+  unreadyPlayerIds,
 } from "../../src/engine.js";
 import { DEFAULT_HOUSE_RULES } from "../../src/config.js";
 import { generateLegalMoves, trickContextOf } from "../../src/evaluator.js";
@@ -372,7 +373,19 @@ function nextStep(
 ): FuzzStep | null {
   switch (state.status) {
     case "LOBBY":
-    case "ROUND_END":
+    case "ROUND_END": {
+      // §8.6: the deal waits on every connected non-host seat, and the deal
+      // itself clears the flags, so each round boundary is a fresh round of
+      // readying. Taken before the host's own steps so a match still progresses.
+      const waiting = unreadyPlayerIds(state)[0];
+      if (waiting !== undefined) {
+        return {
+          kind: "ACTION",
+          playerId: waiting,
+          action: { type: "SET_READY", ready: true },
+          now,
+        };
+      }
       return chance(rng, 0.12)
         ? hostStep(state, rng, now, options)
         : {
@@ -381,6 +394,7 @@ function nextStep(
             action: { type: "START_GAME", seed: `${options.seed}#${state.roundNumber + 1}` },
             now,
           };
+    }
     case "EXCHANGE":
       return exchangeStep(state, rng, now);
     case "IN_PROGRESS":
@@ -608,8 +622,10 @@ function describeStep(step: FuzzStep): string {
         ? ` ${action.cardIds.join(" ")}`
         : action.type === "START_GAME"
           ? ` seed=${action.seed}`
-          : action.type === "TICK"
-            ? ` now=${action.now}`
-            : "";
+          : action.type === "SET_READY"
+            ? ` ready=${String(action.ready)}`
+            : action.type === "TICK"
+              ? ` now=${action.now}`
+              : "";
   return `${step.playerId} ${action.type}${detail}`;
 }

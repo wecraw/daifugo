@@ -75,6 +75,18 @@ async function join(
   return { socket, joined, state };
 }
 
+/**
+ * §8.6: a seat says it is ready, and resolves once every socket named has seen
+ * the broadcast. Each recipient is awaited explicitly because the broadcast
+ * reaches them independently — a listener registered later would otherwise pick
+ * up this state rather than the one the test is waiting for.
+ */
+async function ready(seat: { socket: Client }, ...observers: { socket: Client }[]): Promise<void> {
+  const seen = [seat, ...observers].map((client) => once(client.socket, "roomState"));
+  seat.socket.emit("setReady", true);
+  await Promise.all(seen);
+}
+
 describe("Socket.IO contract (§8, §12.4)", () => {
   it("delivers `joined` with the resumeToken before the first `roomState` (test 30a)", async () => {
     const roomId = await createRoom();
@@ -103,6 +115,8 @@ describe("Socket.IO contract (§8, §12.4)", () => {
     const host = await join(roomId, "Will");
     const alex = await join(roomId, "Alex");
     const sam = await join(roomId, "Sam");
+    await ready(alex, host, sam);
+    await ready(sam, host, alex);
 
     // Each seat's next roomState after the deal.
     const hostState = once(host.socket, "roomState");
@@ -140,6 +154,37 @@ describe("Socket.IO contract (§8, §12.4)", () => {
     alex.socket.emit("startGame");
     const [error] = await errorP;
     expect(error.code).toBe("NOT_HOST");
+  });
+
+  it("readies a seat and holds the deal until the table has (test 26a, §8.6)", async () => {
+    const roomId = await createRoom();
+    const host = await join(roomId, "Will");
+    const alex = await join(roomId, "Alex");
+    const sam = await join(roomId, "Sam");
+
+    // The host's own start is refused while the table is unready, and the
+    // refusal reaches the sender alone (§8.4 step 3).
+    const refusedP = once(host.socket, "gameError");
+    host.socket.emit("startGame");
+    const [refused] = await refusedP;
+    expect(refused.code).toBe("PLAYERS_NOT_READY");
+
+    // `setReady` sets the sender's flag and broadcasts it to the whole table.
+    const seenByHost = once(host.socket, "roomState");
+    alex.socket.emit("setReady", true);
+    const [afterAlex] = await seenByHost;
+    const readyOf = (state: PublicGameState, id: string): boolean =>
+      state.players.find((player) => player.id === id)?.isReady ?? false;
+    expect(readyOf(afterAlex, alex.joined.playerId)).toBe(true);
+    expect(readyOf(afterAlex, sam.joined.playerId)).toBe(false);
+
+    await ready(sam, host);
+    const dealt = once(host.socket, "roomState");
+    host.socket.emit("startGame");
+    const [afterDeal] = await dealt;
+    expect(afterDeal.status).toBe("IN_PROGRESS");
+    // The deal consumes readiness, so the next lobby asks again (§8.6).
+    expect(afterDeal.players.every((player) => !player.isReady)).toBe(true);
   });
 
   it("reclaims the seat when a socket rejoins with its resumeToken (test 25)", async () => {

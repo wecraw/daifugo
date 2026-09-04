@@ -161,6 +161,9 @@ export const ERROR_CODES = [
   "GAME_ALREADY_STARTED",
   "NOT_ENOUGH_PLAYERS",
   "TOO_MANY_PLAYERS",
+  // §8.6: the deal waits on every connected non-host seat. Its own code, not a
+  // WRONG_STATUS, because the host reads it as "who are we waiting for".
+  "PLAYERS_NOT_READY",
   "PLAYER_NOT_FOUND",
   "INVALID_ROUND_LIMIT",
 
