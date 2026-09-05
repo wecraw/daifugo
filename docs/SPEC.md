@@ -685,6 +685,15 @@ token reaches the client on `joined`, emitted to that socket alone before the fi
 the payload unconditionally. Without this event the token would have no channel and
 every reconnect would be a fresh join.
 
+A page load replays the stored seat automatically, with no click: reloading
+mid-round puts you back at the table rather than at the main menu. The stored
+session carries a `savedAt` write timestamp, and the replay is skipped when it is
+older than six hours or missing entirely — otherwise the next game night every
+browser would silently rejoin the previous one's finished lobby. A skipped replay is
+not a lost seat: the menu still offers it as a Rejoin button. The two ways back to
+the menu are leaving, which clears the stored seat, and a room the server has
+forgotten, whose `ROOM_NOT_FOUND` drops the seat and falls back without retrying.
+
 ### 8.2 Host
 The first player to join a room is host, recorded as `hostId`. `updateRules`,
 `setRoundLimit`, and `startGame` are host-only and rejected otherwise. Host transfers
@@ -695,6 +704,12 @@ within the grace period.
 30 seconds, governing **seat removal only**. Turn timers continue to run for
 disconnected players, so a dropped player auto-passes on schedule and the table
 never stalls.
+
+The grace starts only when the *last* socket on a seat closes. A seat can hold
+more than one — a second tab replays the same stored session (§8.1), and a resume
+can land before the dropped socket's close is processed — and starting the grace
+while another socket is still live would remove a player who is sitting at the
+table, with no disconnect left to reconnect from.
 
 ### 8.4 Server loop
 1. Receive action, resolve player id from socket.
