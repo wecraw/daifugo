@@ -236,6 +236,11 @@ export function useHandController(room: PublicGameState): HandController {
       return;
     }
     setAutoPassing(true);
+    // The guard is marked *inside* the timeout, never here. Its job is to stop a
+    // second pass for the same turn, and it can do that from either place — but
+    // StrictMode double-invokes mount effects, so a guard set before scheduling
+    // would make the re-run bail on its own mark and leave the turn unpassed.
+    // Mounting straight into an empty legal set is what a reconnect does (§8.1).
     const handle = setTimeout(() => {
       setAutoPassing(false);
       if (send("pass")) autoPassed.current = turnKey;
