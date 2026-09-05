@@ -17,6 +17,16 @@
  * unconditionally. It is replayed on every `joinRoom` — after a transport drop and
  * after a page reload alike — which is what reclaims the seat instead of taking a
  * new one.
+ *
+ * **A reload replays the seat by itself** (§8.1). The provider — not `MainMenu`,
+ * which would have to render first — auto-rejoins on mount from `storedSession`,
+ * so a player who reloads mid-round is back at the table without a click. The one
+ * guard is age: a session stamped more than `SESSION_MAX_AGE_MS` ago, or written
+ * before the stamp existed, is left for the menu's Rejoin button rather than
+ * dragging next game night's browsers back into last week's finished lobby. The
+ * two ways out stay what they were: `leaveRoom` clears the seat, and a room the
+ * server has forgotten answers `ROOM_NOT_FOUND`, which drops the seat and falls
+ * back to the menu without retrying.
  */
 import {
   createContext,
@@ -54,6 +64,24 @@ export interface StoredSession {
   roomId: string;
   playerName: string;
   resumeToken: string;
+  /**
+   * When the seat was last written, epoch ms. Absent on sessions written before
+   * this field existed, which is why `isSessionFresh` treats it as stale.
+   */
+  savedAt?: number;
+}
+
+/**
+ * How long a stored seat stays eligible for the mount-time auto-rejoin. Long
+ * enough to cover any one sitting, short enough that the next evening starts at
+ * the menu instead of in a finished lobby.
+ */
+export const SESSION_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+
+/** Whether the stored seat is recent enough to replay without asking. */
+export function isSessionFresh(session: StoredSession, now: number): boolean {
+  if (typeof session.savedAt !== "number") return false;
+  return now - session.savedAt < SESSION_MAX_AGE_MS;
 }
 
 export function readStoredSession(): StoredSession | null {
@@ -62,22 +90,33 @@ export function readStoredSession(): StoredSession | null {
     if (raw === null || raw === undefined) return null;
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return null;
-    const { roomId, playerName, resumeToken } = parsed as Record<string, unknown>;
+    const { roomId, playerName, resumeToken, savedAt } = parsed as Record<string, unknown>;
     if (typeof roomId !== "string" || typeof playerName !== "string") return null;
     if (typeof resumeToken !== "string") return null;
-    return { roomId, playerName, resumeToken };
+    return {
+      roomId,
+      playerName,
+      resumeToken,
+      savedAt: typeof savedAt === "number" ? savedAt : undefined,
+    };
   } catch {
     return null;
   }
 }
 
-function writeStoredSession(session: StoredSession | null): void {
+/**
+ * Persists the seat, stamping it with the write time. Returns what was stored so
+ * callers hold the same `savedAt` the next load will read back.
+ */
+function writeStoredSession(session: StoredSession | null): StoredSession | null {
+  const stamped = session === null ? null : { ...session, savedAt: Date.now() };
   try {
-    if (session === null) globalThis.localStorage?.removeItem(SESSION_STORAGE_KEY);
-    else globalThis.localStorage?.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+    if (stamped === null) globalThis.localStorage?.removeItem(SESSION_STORAGE_KEY);
+    else globalThis.localStorage?.setItem(SESSION_STORAGE_KEY, JSON.stringify(stamped));
   } catch {
     // A browser refusing storage costs a reconnect, not a crash.
   }
+  return stamped;
 }
 
 export interface SocketContextValue {
@@ -155,12 +194,11 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
 
     socket.on("joined", (payload) => {
       const join = pendingJoin.current;
-      const session: StoredSession = {
+      const session = writeStoredSession({
         roomId: payload.roomId,
         playerName: join?.playerName ?? "",
         resumeToken: payload.resumeToken,
-      };
-      writeStoredSession(session);
+      });
       setStoredSession(session);
       seated.current = true;
       setPlayerId(payload.playerId);
@@ -234,6 +272,17 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
       socket.connect();
     }
   }, []);
+
+  // A reload replays the seat by itself: no click, no waiting for `MainMenu` to
+  // render. Deliberately unguarded against a second run — StrictMode remounts the
+  // socket effect above too, and the join has to be replayed onto the new socket.
+  // It runs on mount only, so a `ROOM_NOT_FOUND` for a room the server has
+  // forgotten ends at the menu instead of starting a retry loop.
+  useEffect(() => {
+    const stored = readStoredSession();
+    if (stored === null || !isSessionFresh(stored, Date.now())) return;
+    joinRoom(stored.roomId, stored.playerName);
+  }, [joinRoom]);
 
   const createRoom = useCallback(
     async (playerName: string): Promise<string> => {
