@@ -636,8 +636,6 @@ export interface ServerToClientEvents {
   joined: (payload: { roomId: string; playerId: string; resumeToken: string }) => void;
   roomState: (state: PublicGameState) => void;
   gameError: (error: { code: ErrorCode; params?: Record<string, unknown> }) => void;
-  roundFinished: (results: { playerId: string; role: Role }[]) => void;
-  matchFinished: (standings: { playerId: string; points: number }[]) => void;
 }
 
 export interface ClientToServerEvents {
@@ -760,8 +758,10 @@ Points awarded at round end: `N - finishPosition` over the final finish order of
 demoted by miyako-ochi (§4.5) is last place and scores 0. Standings accumulate
 across rounds in `GameState.points` (§2) and render in the lobby between rounds.
 
-Endless by default. If `roundLimit` is set, the match ends at that round and emits
-`matchFinished`.
+Endless by default. If `roundLimit` is set, the match ends at that round
+(`status` becomes `MATCH_END`), and the lobby's standings table orders by
+`matchStandings` — cumulative points descending — rather than the last round's
+finish order.
 
 ---
 

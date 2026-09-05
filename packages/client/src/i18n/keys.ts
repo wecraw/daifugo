@@ -86,6 +86,7 @@ export const UI_I18N_KEYS = [
   "ui.standings.role",
   "ui.standings.points",
   "ui.standings.roundRoles",
+  "ui.standings.matchResult",
 
   // Host panel (§10.11). Rendered to everyone so a rule change is visible to
   // the whole table; only the host can operate it.

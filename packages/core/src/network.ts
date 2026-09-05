@@ -48,8 +48,6 @@ export interface ServerToClientEvents {
   joined: (payload: JoinedPayload) => void;
   roomState: (state: PublicGameState) => void;
   gameError: (error: GameErrorPayload) => void;
-  roundFinished: (results: RoundResult[]) => void;
-  matchFinished: (standings: MatchStanding[]) => void;
 }
 
 export interface ClientToServerEvents {
@@ -74,8 +72,6 @@ export const SERVER_TO_CLIENT_EVENTS = [
   "joined",
   "roomState",
   "gameError",
-  "roundFinished",
-  "matchFinished",
 ] as const satisfies readonly ServerToClientEvent[];
 
 export const CLIENT_TO_SERVER_EVENTS = [
