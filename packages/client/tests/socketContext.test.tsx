@@ -94,7 +94,7 @@ async function joinAs(socket: FakeSocket, name: string): Promise<void> {
 }
 
 describe("SocketContext", () => {
-  it("drops room actions issued while the socket is reconnecting", async () => {
+  it("drops room actions until reconnecting has delivered fresh room state", async () => {
     const socket = new FakeSocket();
     render(
       <SocketProvider connect={() => socket.asSocket()}>
@@ -105,13 +105,22 @@ describe("SocketContext", () => {
 
     await user.click(screen.getByRole("button", { name: "Join" }));
     act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok" }));
+    act(() => socket.fire("roomState", publicState()));
     await user.click(screen.getByRole("button", { name: "Pass" }));
     expect(socket.sentOf("pass")).toHaveLength(1);
 
     act(() => socket.disconnect());
     await user.click(screen.getByRole("button", { name: "Pass" }));
+    act(() => socket.connect());
+    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok" }));
+    await user.click(screen.getByRole("button", { name: "Pass" }));
 
     expect(socket.sentOf("pass")).toHaveLength(1);
+
+    act(() => socket.fire("roomState", publicState()));
+    await user.click(screen.getByRole("button", { name: "Pass" }));
+
+    expect(socket.sentOf("pass")).toHaveLength(2);
   });
 
   it("stores the resume token from `joined` and shows the room on `roomState`", async () => {

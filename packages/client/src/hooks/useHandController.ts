@@ -82,7 +82,7 @@ export interface HandController {
 }
 
 export function useHandController(room: PublicGameState): HandController {
-  const { send } = useSocket();
+  const { status, send } = useSocket();
   const legalMoves = useRef(createLegalMoveCache()).current;
 
   const ctx = useMemo(() => trickContextOf(room), [room]);
@@ -223,8 +223,10 @@ export function useHandController(room: PublicGameState): HandController {
   // Only on a genuinely empty legal set, never merely on a bad hand — and only
   // when passing is legal, so a leader with cards is never passed for. A pending
   // action of the player's blocks it through `turnBlocker`, which `passBlocker`
-  // reports first.
-  const shouldAutoPass = passReason === null && moves.length === 0 && room.myHand.length > 0;
+  // reports first. Connection readiness belongs here too: after a reconnect, the
+  // refreshed room state must arrive before this stale view can schedule anything.
+  const shouldAutoPass =
+    status === "connected" && passReason === null && moves.length === 0 && room.myHand.length > 0;
   const [autoPassing, setAutoPassing] = useState(false);
   const autoPassed = useRef<string | null>(null);
 
@@ -233,11 +235,10 @@ export function useHandController(room: PublicGameState): HandController {
       setAutoPassing(false);
       return;
     }
-    autoPassed.current = turnKey;
     setAutoPassing(true);
     const handle = setTimeout(() => {
       setAutoPassing(false);
-      send("pass");
+      if (send("pass")) autoPassed.current = turnKey;
     }, AUTO_PASS_DELAY_MS);
     return () => clearTimeout(handle);
   }, [shouldAutoPass, turnKey, send]);

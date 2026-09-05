@@ -95,8 +95,8 @@ export interface SocketContextValue {
   joinRoom: (roomId: string, playerName: string) => void;
   leaveRoom: () => void;
   clearError: () => void;
-  /** Typed passthrough for every other client-to-server event. */
-  send: <E extends RoomAction>(event: E, ...args: Parameters<ClientToServerEvents[E]>) => void;
+  /** Typed passthrough for every other client-to-server event; false when dropped offline. */
+  send: <E extends RoomAction>(event: E, ...args: Parameters<ClientToServerEvents[E]>) => boolean;
 }
 
 const SocketContext = createContext<SocketContextValue | null>(null);
@@ -165,7 +165,8 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
       seated.current = true;
       setPlayerId(payload.playerId);
       setRoomId(payload.roomId);
-      setStatus("connected");
+      // Identity is restored, but the table still holds its pre-drop snapshot.
+      // `roomState` below is the readiness boundary for rendering and actions.
     });
 
     socket.on("roomState", (state) => {
@@ -263,12 +264,13 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
     (event, ...args) => {
       // Socket.IO buffers emits made while disconnected and flushes them after
       // reconnecting. A turn action is stale by then, so drop it at the source.
-      if (status !== "connected") return;
+      if (status !== "connected") return false;
       const socket = socketRef.current;
-      if (socket === null) return;
+      if (socket === null || !socket.connected) return false;
       // socket.io-client's overloads do not narrow through a generic event name;
       // the contract itself is enforced by `RoomAction` and `Parameters<>` above.
       (socket.emit as (name: string, ...rest: unknown[]) => void)(event, ...args);
+      return true;
     },
     [status],
   );
