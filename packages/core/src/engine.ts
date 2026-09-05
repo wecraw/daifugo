@@ -1128,8 +1128,13 @@ function exchangeTimeout(state: GameState): Result<GameState, ErrorCode> {
  * there is no round to wait for — and at any other status the player waits in
  * `pendingJoins` until the next deal, because `turnOrder` is never mutated
  * mid-round (§2).
+ *
+ * `MATCH_END` is terminal — `startGame` never deals from it (§7.7) — so a join
+ * there is refused outright rather than queued for a round that will never come.
  */
 export function queueJoin(state: GameState, player: Player): Result<GameState, ErrorCode> {
+  if (state.status === "MATCH_END") return err("WRONG_STATUS");
+
   const leaving = new Set(state.pendingLeaves);
   const roster = [
     ...state.players.filter((seated) => !leaving.has(seated.id)),

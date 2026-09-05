@@ -81,6 +81,17 @@ describe("the lobby roster (§7.7)", () => {
 });
 
 /* -------------------------------------------------------------------------- */
+/* MATCH_END: terminal, so nobody queues for a round that will never come     */
+/* -------------------------------------------------------------------------- */
+
+describe("a join once the match has ended (§7.7)", () => {
+  it("is refused instead of queued", () => {
+    const over = { ...lobby(3), status: "MATCH_END" as const };
+    expect(queueJoin(over, newcomer("p3"))).toMatchObject({ error: "WRONG_STATUS" });
+  });
+});
+
+/* -------------------------------------------------------------------------- */
 /* Mid-round: the leaver finishes last (§7.7, test 29)                        */
 /* -------------------------------------------------------------------------- */
 
