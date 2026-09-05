@@ -200,8 +200,8 @@
   "ui.action.mustPlayCount": "{count}枚で出してください",
   "ui.action.autoPass": "出せる手がないのでパスします",
   "ui.action.sortLabel": "手札を並べ替え",
-  "ui.action.sortByRank": "強さ順",
-  "ui.action.sortBySuit": "スート順",
+  "ui.action.sortByRank": "強さ順にする",
+  "ui.action.sortBySuit": "スート順にする",
 
   "ui.combo.single": "{rank}",
   "ui.combo.pair": "{rank}のペア",

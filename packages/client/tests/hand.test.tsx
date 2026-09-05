@@ -290,6 +290,19 @@ describe("auto-pass (§10.7)", () => {
     expect(socket.sentOf("pass")).toEqual([[]]);
   });
 
+  it("carries the pass animation, timed to the pass it announces", () => {
+    seat(table([card("C-3", "C", 3)], { currentTrick: trick }));
+    const announcement = document.querySelector<HTMLElement>(".hand__auto-pass");
+    expect(announcement?.style.getPropertyValue("--auto-pass-duration")).toBe(
+      `${AUTO_PASS_DELAY_MS}ms`,
+    );
+    // The fan stands down under the card, and stands back up once it is gone.
+    expect(document.querySelector(".hand__fan--passing")).not.toBeNull();
+    act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS));
+    expect(document.querySelector(".hand__fan--passing")).toBeNull();
+    expect(document.querySelector(".hand__auto-pass")).toBeNull();
+  });
+
   it("does not fire merely because the hand is bad", () => {
     // A 3 and a 5 against a 4: nearly nothing to play, but not nothing.
     const socket = seat(
@@ -328,6 +341,14 @@ describe("sorting (§10.8)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sort hand" }));
     expect(handOrder()).toEqual(["S-5", "H-3", "H-13"]);
     expect(localStorage.getItem("daifugo.handSort")).toBe("suit");
+  });
+
+  it("labels the toggle with the order a tap gives you, not the current one", () => {
+    seat(table([card("S-5", "S", 5)]));
+    const toggle = screen.getByRole("button", { name: "Sort hand" });
+    expect(toggle).toHaveTextContent("Sort by suit");
+    fireEvent.click(toggle);
+    expect(toggle).toHaveTextContent("Sort by rank");
   });
 
   it("reverses the hand on revolution, because the order itself reversed", () => {

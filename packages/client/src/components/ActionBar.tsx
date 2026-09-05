@@ -100,7 +100,9 @@ export function ActionBar({ hand, deadline, isMyTurn }: ActionBarProps) {
         aria-label={t("ui.action.sortLabel")}
         onClick={hand.toggleSort}
       >
-        {t(hand.sortMode === "rank" ? "ui.action.sortByRank" : "ui.action.sortBySuit")}
+        {/* The label is the action, not the state: it names the order a tap
+            gives you, so which of the two you get is never a guess (§10.8). */}
+        {t(hand.sortMode === "rank" ? "ui.action.sortBySuit" : "ui.action.sortByRank")}
       </button>
     </div>
   );

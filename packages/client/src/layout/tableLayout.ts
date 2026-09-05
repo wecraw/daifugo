@@ -212,7 +212,6 @@ export function finishPositionOf(
 /** The frame above, as the custom properties `styles.css` lays the table out with. */
 export function tableCssVariables(): Record<string, string> {
   return {
-    "--table-width": `${VIEWPORT_WIDTH}px`,
     "--top-strip-height": `${TOP_STRIP_HEIGHT}px`,
     "--middle-height": `${MIDDLE_HEIGHT}px`,
     "--hand-row-height": `${HAND_ROW_HEIGHT}px`,
