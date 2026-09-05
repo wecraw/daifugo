@@ -160,6 +160,7 @@
   "ui.standings.role": "Role",
   "ui.standings.points": "Points",
   "ui.standings.roundRoles": "Round {round} result",
+  "ui.standings.matchResult": "Match result",
 
   "ui.host.title": "Table rules",
   "ui.host.rules": "House rules",

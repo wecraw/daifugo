@@ -356,7 +356,7 @@ describe("application (§4.3)", () => {
   });
 });
 
-describe("roundResults, the roundFinished payload (§8, §4.1)", () => {
+describe("roundResults, the round-end standings payload (§8, §4.1)", () => {
   it("lists players in finish order, best first, with the §4.1 roles at N = 3", () => {
     // p1 went out first, then p0; p2 is left holding cards, so last place.
     const results = roundResults({
@@ -421,7 +421,7 @@ describe("roundResults, the roundFinished payload (§8, §4.1)", () => {
   });
 });
 
-describe("matchStandings, the matchFinished payload (§8, §9)", () => {
+describe("matchStandings, the match-end standings payload (§8, §9)", () => {
   it("sorts by points descending, breaking ties by player id", () => {
     expect(matchStandings({ points: { p0: 6, p1: 3, p2: 3, p3: 0 } })).toEqual([
       { playerId: "p0", points: 6 },

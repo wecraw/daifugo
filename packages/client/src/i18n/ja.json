@@ -160,6 +160,7 @@
   "ui.standings.role": "役",
   "ui.standings.points": "得点",
   "ui.standings.roundRoles": "第{round}ラウンドの結果",
+  "ui.standings.matchResult": "試合結果",
 
   "ui.host.title": "テーブル設定",
   "ui.host.rules": "ローカルルール",
