@@ -77,6 +77,15 @@ two revisions produced 75 lines of spec and a follow-up issue for a scenario tha
 required deploying mid-game. Both were reverted in #42. When in doubt, err toward
 less.
 
+## PR workflow
+
+- When creating a GitHub PR, always close the target issue in the PR description
+  (e.g. `Closes #N`).
+- After implementing a GH issue, always create a PR and then leave a comment
+  `@codex review` — unless there are outstanding action items or decisions
+  requiring product input, in which case surface those instead of requesting
+  review.
+
 ## Working style
 
 - Write the tests from §12 first and confirm they fail before implementing. The
