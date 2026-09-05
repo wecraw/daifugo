@@ -117,8 +117,28 @@ export class RoomHub {
 
     socket.on("disconnect", () => {
       const { roomId, playerId } = socket.data;
-      if (roomId !== null && playerId !== null) void this.manager.disconnect(roomId, playerId);
+      if (roomId !== null && playerId !== null) void this.onDisconnect(socket, roomId, playerId);
     });
+  }
+
+  /**
+   * A closing socket drops the seat only if it was the last one holding it (§8.3).
+   * A seat can carry more than one socket — a second tab auto-rejoins the stored
+   * session (§8.1), and a resume can land before the dropped socket's `disconnect`
+   * is processed — and marking it disconnected then would start the 30s removal
+   * grace on a player who is still at the table, with no live socket to clear it.
+   */
+  private async onDisconnect(
+    socket: DaifugoSocket,
+    roomId: string,
+    playerId: string,
+  ): Promise<void> {
+    const sockets = await this.io.in(roomId).fetchSockets();
+    const stillSeated = sockets.some(
+      (other) => other.id !== socket.id && other.data.playerId === playerId,
+    );
+    if (stillSeated) return;
+    await this.manager.disconnect(roomId, playerId);
   }
 
   /**

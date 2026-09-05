@@ -705,6 +705,12 @@ within the grace period.
 disconnected players, so a dropped player auto-passes on schedule and the table
 never stalls.
 
+The grace starts only when the *last* socket on a seat closes. A seat can hold
+more than one — a second tab replays the same stored session (§8.1), and a resume
+can land before the dropped socket's close is processed — and starting the grace
+while another socket is still live would remove a player who is sitting at the
+table, with no disconnect left to reconnect from.
+
 ### 8.4 Server loop
 1. Receive action, resolve player id from socket.
 2. `applyAction(state, action, playerId)`.
