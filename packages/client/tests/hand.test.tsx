@@ -6,6 +6,7 @@
  * reason when it is disabled, dimming within a turn does not move anything, and
  * auto-pass fires only on an empty legal set.
  */
+import { StrictMode } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseCombo, type Card, type PlayCombo, type PublicGameState } from "@daifugo/core";
@@ -39,9 +40,10 @@ function table(myHand: Card[], overrides: Partial<PublicGameState> = {}): Public
   });
 }
 
-function seat(state: PublicGameState): FakeSocket {
+function seat(state: PublicGameState, strict = false): FakeSocket {
   const socket = new FakeSocket();
-  render(<App connect={() => socket.asSocket()} />);
+  const app = <App connect={() => socket.asSocket()} />;
+  render(strict ? <StrictMode>{app}</StrictMode> : app);
   act(() => socket.connect());
   act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok" }));
   act(() => socket.fire("roomState", state));
@@ -287,6 +289,21 @@ describe("auto-pass (§10.7)", () => {
     expect(screen.getByText("No legal play, passing")).toBeInTheDocument();
     expect(socket.sentOf("pass")).toEqual([]);
     act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS));
+    expect(socket.sentOf("pass")).toEqual([[]]);
+  });
+
+  // React 19 StrictMode double-invokes mount effects: the first run schedules the
+  // delay and is torn down, the second re-runs from scratch. The guard only marks
+  // the turn once the pass is actually sent, so the second run still fires — and
+  // still fires only once. Mounting straight into an empty legal set is what a
+  // reconnect does (§8.1), so this is the shape the dev playtest meets.
+  it("fires once for a hand mounted straight into an empty legal set, under StrictMode", () => {
+    const socket = seat(table([card("C-3", "C", 3)], { currentTrick: trick }), true);
+    expect(socket.sentOf("pass")).toEqual([]);
+    act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS));
+    expect(socket.sentOf("pass")).toEqual([[]]);
+
+    act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS * 2));
     expect(socket.sentOf("pass")).toEqual([[]]);
   });
 
