@@ -140,6 +140,7 @@ export const UI_I18N_KEYS = [
   // has to stay generic — no params travel with `gameError` (§8.4) — so the
   // specific phrasing lives here, in the namespace the client owns (§11).
   "ui.action.mustFollowSuits",
+  "ui.action.mustPlayCount",
   "ui.action.autoPass",
   "ui.action.sortLabel",
   "ui.action.sortByRank",

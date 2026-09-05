@@ -17,22 +17,39 @@
  */
 import { TURN_DURATION_MS, errorKey, type ErrorCode } from "@daifugo/core";
 import type { HandController } from "../hooks/useHandController";
-import { useTranslate, type I18nKey, type TranslateParams } from "../i18n/index";
+import { useTranslate, type I18nKey, type TranslateParams, type UiI18nKey } from "../i18n/index";
 import { TurnTimer } from "./TurnTimer";
 
 /**
- * The reason a control is disabled, as specifically as §10.6 asks for it.
+ * The two reasons that have something concrete to name, and the param each needs.
  *
- * `error.*` is the transport's vocabulary (§8.0) and has to read sensibly in the
- * `gameError` banner too, where no params travel (§8.4) — so it stays generic.
- * The one blocker with something concrete to name is the shibari lock, and the
- * client already holds the suits, so it says them here: "Must follow ♠" rather
- * than "Must follow the locked suits". `ui.*` is where that belongs — it is
- * presentation text the client owns, and nothing in core emits it (§11).
+ * §10.6 wants the disabled button specific — "Must follow ♠", "Must play 2
+ * card(s)" — but `error.*` is the *transport's* vocabulary (§8.0) and also has
+ * to read in the `gameError` banner, where no params ever travel: the server
+ * emits `{ code }` and nothing else (§8.4). An `error.*` string that
+ * interpolated a param would therefore render its placeholder raw the moment it
+ * lost the race to the disabled button.
+ *
+ * So the codes stay generic and the specific phrasing lives in `ui.*`, which is
+ * client presentation text nothing in core emits (§11) — and which is rendered
+ * only here, where the client is holding the values to fill it with.
  */
+const SPECIFIC: Partial<Record<ErrorCode, { key: UiI18nKey; param: string }>> = {
+  SUIT_LOCK_MISMATCH: { key: "ui.action.mustFollowSuits", param: "suits" },
+  COMBO_COUNT_MISMATCH: { key: "ui.action.mustPlayCount", param: "count" },
+};
+
+/** The reason a control is disabled, as specifically as the client can put it. */
 function blockerText(code: ErrorCode, params: TranslateParams): [I18nKey, TranslateParams] {
-  const named = code === "SUIT_LOCK_MISMATCH" && params["suits"] !== "";
-  return [named ? "ui.action.mustFollowSuits" : errorKey(code), params];
+  const specific = SPECIFIC[code];
+  if (specific !== undefined) {
+    // Neither code can fire without its value, but a blank "Must follow " is a
+    // worse failure than the generic sentence, so it falls back rather than
+    // trusting that.
+    const value = params[specific.param];
+    if (value !== undefined && value !== "" && value !== 0) return [specific.key, params];
+  }
+  return [errorKey(code), params];
 }
 
 export interface ActionBarProps {

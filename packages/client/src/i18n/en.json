@@ -84,7 +84,7 @@
   "error.DUPLICATE_BINDING": "Two jokers cannot stand for the same card",
   "error.NO_LEGAL_BINDING": "No legal joker binding",
 
-  "error.COMBO_COUNT_MISMATCH": "Must play {count} card(s)",
+  "error.COMBO_COUNT_MISMATCH": "Must match the number of cards on the table",
   "error.TOO_WEAK": "Not high enough",
   "error.SUIT_LOCK_MISMATCH": "Must follow the locked suits",
 
@@ -197,6 +197,7 @@
   "ui.action.play": "Play {combo}",
   "ui.action.pass": "Pass",
   "ui.action.mustFollowSuits": "Must follow {suits}",
+  "ui.action.mustPlayCount": "Must play {count} card(s)",
   "ui.action.autoPass": "No legal play, passing",
   "ui.action.sortLabel": "Sort hand",
   "ui.action.sortByRank": "By rank",

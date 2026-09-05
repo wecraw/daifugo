@@ -84,7 +84,7 @@
   "error.DUPLICATE_BINDING": "2枚のジョーカーを同じカードには見立てられません",
   "error.NO_LEGAL_BINDING": "有効なジョーカーの見立てがありません",
 
-  "error.COMBO_COUNT_MISMATCH": "{count}枚で出してください",
+  "error.COMBO_COUNT_MISMATCH": "場と同じ枚数で出してください",
   "error.TOO_WEAK": "場より弱いです",
   "error.SUIT_LOCK_MISMATCH": "縛りのスートに従ってください",
 
@@ -197,6 +197,7 @@
   "ui.action.play": "{combo}を出す",
   "ui.action.pass": "パス",
   "ui.action.mustFollowSuits": "{suits}に従ってください",
+  "ui.action.mustPlayCount": "{count}枚で出してください",
   "ui.action.autoPass": "出せる手がないのでパスします",
   "ui.action.sortLabel": "手札を並べ替え",
   "ui.action.sortByRank": "強さ順",

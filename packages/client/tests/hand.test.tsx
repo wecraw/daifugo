@@ -204,6 +204,24 @@ describe("the action bar (§10.6)", () => {
     expect(playButton()).toHaveTextContent("Play 9");
   });
 
+  it("names the count the trick top demands (§7.1)", () => {
+    seat(
+      table(PAIR_HAND, {
+        currentTrick: [
+          { combo: combo([card("S-3", "S", 3), card("H-3", "H", 3)]), playedBy: "p_2" },
+        ],
+      }),
+    );
+    tap("D-13");
+    expect(playButton()).toBeDisabled();
+    expect(playButton()).toHaveTextContent("Must play 2 card(s)");
+
+    tap("D-13");
+    tap("S-5");
+    tap("H-5");
+    expect(playButton()).toBeEnabled();
+  });
+
   it("says whose turn it is rather than letting a play be refused", () => {
     seat(table(PAIR_HAND, { activePlayerIndex: 1 }));
     expect(playButton()).toBeDisabled();
