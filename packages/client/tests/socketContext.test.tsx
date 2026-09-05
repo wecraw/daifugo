@@ -135,6 +135,18 @@ describe("SocketContext", () => {
     expect(socket.connected).toBe(false);
   });
 
+  it("drops a seat for a join refused because the match already ended", async () => {
+    const socket = new FakeSocket();
+    render(<App connect={() => socket.asSocket()} />);
+    await joinAs(socket, "Will");
+
+    act(() => socket.fire("gameError", { code: "WRONG_STATUS" }));
+
+    expect(await screen.findByRole("button", { name: "Create room" })).toBeInTheDocument();
+    expect(readStoredSession()).toBeNull();
+    expect(socket.connected).toBe(false);
+  });
+
   it("falls back to the menu when a replayed join fails after a drop", async () => {
     const socket = new FakeSocket();
     render(<App connect={() => socket.asSocket()} />);

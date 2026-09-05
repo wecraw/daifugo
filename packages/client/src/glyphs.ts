@@ -12,7 +12,14 @@
  * one renders, the translated role name rides along as the element's title, so
  * the name is still reachable — the glyph is shorthand, not a replacement.
  */
-import type { Card, JokerBinding, Rank, RoleKind, Suit } from "@daifugo/core";
+import {
+  JOKER_IDS,
+  type Card,
+  type JokerBinding,
+  type Rank,
+  type RoleKind,
+  type Suit,
+} from "@daifugo/core";
 
 export const SUIT_GLYPH: Readonly<Record<Suit, string>> = Object.freeze({
   S: "♠",
@@ -95,6 +102,43 @@ export function cardFace(card: Card, binding?: JokerBinding): CardFaceParts {
 /** The exact suit multiset a shibari lock names (§5), as pips. */
 export function suitLockGlyphs(suits: readonly Suit[]): string {
   return suits.map((suit) => SUIT_GLYPH[suit]).join("");
+}
+
+/**
+ * A card's face from its id alone.
+ *
+ * History params carry card *ids* — `GameState` may hold nothing else (§11) —
+ * so the log has to read them back before anyone sees them: §8.5's own worked
+ * example is "Will passed 3♠ to Alex", not "Will passed S-3 to Alex". A joker
+ * shows its own glyph, because a history line names the card that moved and
+ * never the binding it was played under.
+ *
+ * A string the deck never minted comes back unchanged rather than mangled: this
+ * runs over every string param the log carries, and guessing at one it does not
+ * recognise would be worse than leaving it alone.
+ */
+export function cardIdFace(id: string): string {
+  if (JOKER_IDS.includes(id)) return JOKER_GLYPH;
+  const dash = id.indexOf("-");
+  if (dash === -1) return id;
+  const suit = id.slice(0, dash);
+  const rank = Number(id.slice(dash + 1));
+  if (!(suit in SUIT_GLYPH) || !(rank in RANK_LABEL)) return id;
+  return `${RANK_LABEL[rank as Rank]}${SUIT_GLYPH[suit as Suit]}`;
+}
+
+/** A card-id list, joined by a single space the way the engine logs one (§8.5). */
+export function cardIdsFace(ids: string): string {
+  const trimmed = ids.trim();
+  if (trimmed === "") return ids;
+  return trimmed.split(/\s+/).map(cardIdFace).join(" ");
+}
+
+/** A run of suit letters, as `history.shibariLocked` records a lock (§6). */
+export function suitLetterGlyphs(letters: string): string {
+  const each = [...letters];
+  if (!each.every((letter) => letter in SUIT_GLYPH)) return letters;
+  return each.map((letter) => SUIT_GLYPH[letter as Suit]).join("");
 }
 
 /** What a joker's binding badge shows (§10.5): the rank it stands for, and its pip. */

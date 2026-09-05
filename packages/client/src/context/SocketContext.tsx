@@ -180,7 +180,8 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
       const joinFailed =
         payload.code === "ROOM_NOT_FOUND" ||
         payload.code === "ROOM_FULL" ||
-        payload.code === "NAME_TAKEN";
+        payload.code === "NAME_TAKEN" ||
+        payload.code === "WRONG_STATUS";
       if (joinFailed && !seated.current) {
         const failedRoomId = pendingJoin.current?.roomId;
         pendingJoin.current = null;

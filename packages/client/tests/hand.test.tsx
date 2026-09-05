@@ -183,6 +183,45 @@ describe("the action bar (§10.6)", () => {
     expect(socket.sentOf("playCards")).toEqual([]);
   });
 
+  it("names the locked suits on the disabled Play button (§6)", () => {
+    // §10.6 wants the reason to be specific — "Must follow Hearts", not a
+    // generic sentence — and the lock is the one blocker that has something
+    // concrete to name. Strong enough and the right count, wrong suit.
+    seat(
+      table([card("H-9", "H", 9), card("S-9", "S", 9)], {
+        currentTrick: [{ combo: combo([card("S-5", "S", 5)]), playedBy: "p_2" }],
+        suitLock: ["S"],
+      }),
+    );
+    tap("H-9");
+    expect(playButton()).toBeDisabled();
+    expect(playButton()).toHaveTextContent("Must follow ♠");
+
+    // The card that does follow the lock is playable, so the reason is gone.
+    tap("H-9");
+    tap("S-9");
+    expect(playButton()).toBeEnabled();
+    expect(playButton()).toHaveTextContent("Play 9");
+  });
+
+  it("names the count the trick top demands (§7.1)", () => {
+    seat(
+      table(PAIR_HAND, {
+        currentTrick: [
+          { combo: combo([card("S-3", "S", 3), card("H-3", "H", 3)]), playedBy: "p_2" },
+        ],
+      }),
+    );
+    tap("D-13");
+    expect(playButton()).toBeDisabled();
+    expect(playButton()).toHaveTextContent("Must play 2 card(s)");
+
+    tap("D-13");
+    tap("S-5");
+    tap("H-5");
+    expect(playButton()).toBeEnabled();
+  });
+
   it("says whose turn it is rather than letting a play be refused", () => {
     seat(table(PAIR_HAND, { activePlayerIndex: 1 }));
     expect(playButton()).toBeDisabled();

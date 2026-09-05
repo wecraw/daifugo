@@ -61,6 +61,10 @@ export const UI_I18N_KEYS = [
   "ui.lobby.you",
   "ui.lobby.ready",
   "ui.lobby.readyUp",
+  // §7.7: between rounds a join queues and a leave is pending, and §8.6 counts
+  // both for the deal — so both are on the roster rather than only in the count.
+  "ui.lobby.joining",
+  "ui.lobby.leaving",
   "ui.lobby.unready",
   "ui.lobby.waitingForReady",
   "ui.lobby.connected",
@@ -131,6 +135,12 @@ export const UI_I18N_KEYS = [
   // catch-all and never a toast.
   "ui.action.play",
   "ui.action.pass",
+  // §10.6 wants the reason to be as specific as the client can put it, and a
+  // shibari lock is the one blocker with something concrete to name. `error.*`
+  // has to stay generic — no params travel with `gameError` (§8.4) — so the
+  // specific phrasing lives here, in the namespace the client owns (§11).
+  "ui.action.mustFollowSuits",
+  "ui.action.mustPlayCount",
   "ui.action.autoPass",
   "ui.action.sortLabel",
   "ui.action.sortByRank",

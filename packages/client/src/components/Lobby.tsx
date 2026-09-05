@@ -25,6 +25,7 @@ import {
   MIN_PLAYERS,
   roundResults,
   unreadyPlayerIds,
+  type Player,
   type PublicGameState,
 } from "@daifugo/core";
 import { useSocket } from "../context/SocketContext";
@@ -35,6 +36,33 @@ import { HostPanel } from "./HostPanel";
 /** The round a `startGame` would deal to (§7.7): queued joins and leaves land there. */
 function rosterSize(room: PublicGameState): number {
   return room.players.length + room.pendingJoins.length - room.pendingLeaves.length;
+}
+
+/** Where a row stands relative to the next deal, or null for a settled seat. */
+type PendingChange = "joining" | "leaving" | null;
+
+/**
+ * The roster the *deal* would take, which is not the seated one (§7.7).
+ *
+ * A join outside `LOBBY` — and the between-round lobby is outside it — queues in
+ * `pendingJoins` rather than taking a seat, and §8.6 counts that player for
+ * readiness. Listing `players` alone therefore leaves the start button held for
+ * someone who is nowhere on screen, and leaves the newcomer looking at a roster
+ * without their own name in it. A queued leave is the mirror: the seat is still
+ * in `players` but the next round will not deal it in.
+ *
+ * The order is seated first, arrivals after, which is the order they will hold
+ * once the boundary applies.
+ */
+function rosterRows(room: PublicGameState): { seat: Player; pending: PendingChange }[] {
+  const leaving = new Set(room.pendingLeaves);
+  return [
+    ...room.players.map((seat) => ({
+      seat,
+      pending: (leaving.has(seat.id) ? "leaving" : null) as PendingChange,
+    })),
+    ...room.pendingJoins.map((seat) => ({ seat, pending: "joining" as PendingChange })),
+  ];
 }
 
 export function Lobby({ room }: { room: PublicGameState }) {
@@ -103,11 +131,19 @@ export function Lobby({ room }: { room: PublicGameState }) {
       <section className="lobby__roster">
         <h2>{t("ui.lobby.roster")}</h2>
         <ul>
-          {room.players.map((seat) => (
+          {rosterRows(room).map(({ seat, pending }) => (
             <li key={seat.id}>
               <span className="lobby__name">{seat.name}</span>
               {seat.id === room.hostId && <span className="badge">{t("ui.lobby.host")}</span>}
               {seat.id === playerId && <span className="badge">{t("ui.lobby.you")}</span>}
+              {/* A round boundary this promises never comes once the match is over
+                  (§7.7) — a queued join/leave from just before `MATCH_END` still
+                  sits in the arrays with no deal left to consume it. */}
+              {pending !== null && !matchOver && (
+                <span className="badge badge--quiet">
+                  {t(pending === "joining" ? "ui.lobby.joining" : "ui.lobby.leaving")}
+                </span>
+              )}
               {seat.isReady && <span className="badge">{t("ui.lobby.ready")}</span>}
               <span className={seat.isConnected ? "badge badge--quiet" : "badge badge--warn"}>
                 {t(seat.isConnected ? "ui.lobby.connected" : "ui.lobby.disconnected")}

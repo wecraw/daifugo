@@ -37,6 +37,19 @@ describe("i18n bundles", () => {
     });
   }
 
+  it("keeps error.* free of placeholders, because none ever arrive (§8.4)", () => {
+    // `gameError` is `{ code }` and never params, so an `error.*` string that
+    // interpolates one renders the placeholder raw in the banner. The specific
+    // phrasing a disabled control wants belongs in `ui.*`, where the client
+    // holds the values to fill it with (§10.6, §11).
+    for (const [language, bundle] of Object.entries(bundles)) {
+      for (const [key, value] of Object.entries(bundle)) {
+        if (!key.startsWith("error.")) continue;
+        expect(placeholders(value), `${language} ${key}`).toEqual([]);
+      }
+    }
+  });
+
   it("uses the same params in both languages", () => {
     for (const key of I18N_KEYS) {
       expect(placeholders(BUNDLES.ja[key]), key).toEqual(placeholders(BUNDLES.en[key]));
