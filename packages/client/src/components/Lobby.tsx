@@ -2,13 +2,18 @@
  * The lobby (§9, §10.11): the roster before the first deal, and the standings
  * between rounds.
  *
- * **The standings order comes from core.** `roundResults` is `finishOrderOf`
- * followed by `assignRoles` (§4.1) — everyone who went out, then whoever was
- * still holding cards, then the `droppedPlayerIds` bottom block — and the rows
- * are rendered in exactly that order. The client never re-derives a finish order
- * from points or seats: a miyako-ochi demotion (§4.5) and a mid-round leave
- * (§7.7) both land in that bottom block whatever the hand held, and only core
- * knows where.
+ * **The standings order comes from core.** Between rounds, `roundResults` is
+ * `finishOrderOf` followed by `assignRoles` (§4.1) — everyone who went out, then
+ * whoever was still holding cards, then the `droppedPlayerIds` bottom block —
+ * and the rows are rendered in exactly that order. The client never re-derives a
+ * finish order from points or seats: a miyako-ochi demotion (§4.5) and a
+ * mid-round leave (§7.7) both land in that bottom block whatever the hand held,
+ * and only core knows where.
+ *
+ * At `MATCH_END` the table instead orders by `matchStandings` — cumulative
+ * points descending (§9) — since that is the ranking the match actually ended
+ * on, not the last round's finish order. The role shown per row is still each
+ * seat's role from that final round (`Player.role`), just reordered by points.
  *
  * That is also why a demoted player reads as `DAI_HINMIN` on `0` points while
  * still holding a full hand. The `history.miyakoOchi` line is surfaced beside the
@@ -23,10 +28,12 @@
 import {
   MAX_PLAYERS,
   MIN_PLAYERS,
+  matchStandings,
   roundResults,
   unreadyPlayerIds,
   type Player,
   type PublicGameState,
+  type Role,
 } from "@daifugo/core";
 import { useSocket } from "../context/SocketContext";
 import { historyLine } from "../history";
@@ -90,6 +97,18 @@ export function Lobby({ room }: { room: PublicGameState }) {
   // sees the same line (§8.5).
   const miyakoOchi = miyakoOchiThisRound(room);
 
+  const standingsRows = matchOver
+    ? matchStandings(room).map((standing) => ({
+        playerId: standing.playerId,
+        role: roleOf(room, standing.playerId),
+        points: standing.points,
+      }))
+    : roundResults(room).map((result) => ({
+        playerId: result.playerId,
+        role: result.role as Role | null,
+        points: room.points[result.playerId] ?? 0,
+      }));
+
   return (
     <div className="lobby">
       <p className="lobby__round">
@@ -102,7 +121,11 @@ export function Lobby({ room }: { room: PublicGameState }) {
         <section className="lobby__standings">
           <h2>{t("ui.standings.title")}</h2>
           <table>
-            <caption>{t("ui.standings.roundRoles", { round: room.roundNumber })}</caption>
+            <caption>
+              {matchOver
+                ? t("ui.standings.matchResult")
+                : t("ui.standings.roundRoles", { round: room.roundNumber })}
+            </caption>
             <thead>
               <tr>
                 <th scope="col">{t("ui.standings.position")}</th>
@@ -112,12 +135,12 @@ export function Lobby({ room }: { room: PublicGameState }) {
               </tr>
             </thead>
             <tbody>
-              {roundResults(room).map((result, index) => (
-                <tr key={result.playerId}>
+              {standingsRows.map((row, index) => (
+                <tr key={row.playerId}>
                   <td>{index + 1}</td>
-                  <td>{nameOf(room, result.playerId)}</td>
-                  <td>{t(`role.${result.role.kind}`)}</td>
-                  <td>{room.points[result.playerId] ?? 0}</td>
+                  <td>{nameOf(room, row.playerId)}</td>
+                  <td>{row.role === null ? "" : t(`role.${row.role.kind}`)}</td>
+                  <td>{row.points}</td>
                 </tr>
               ))}
             </tbody>
@@ -209,4 +232,9 @@ function miyakoOchiThisRound(
 
 function nameOf(room: PublicGameState, id: string): string {
   return room.players.find((seat) => seat.id === id)?.name ?? id;
+}
+
+/** A seat's role from the round that just ended, for the `MATCH_END` table. */
+function roleOf(room: PublicGameState, id: string): Role | null {
+  return room.players.find((seat) => seat.id === id)?.role ?? null;
 }

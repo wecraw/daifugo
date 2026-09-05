@@ -160,6 +160,7 @@
   "ui.standings.role": "Role",
   "ui.standings.points": "Points",
   "ui.standings.roundRoles": "Round {round} result",
+  "ui.standings.matchResult": "Match result",
 
   "ui.host.title": "Table rules",
   "ui.host.rules": "House rules",
@@ -199,7 +200,6 @@
   "ui.action.mustFollowSuits": "Must follow {suits}",
   "ui.action.mustPlayCount": "Must play {count} card(s)",
   "ui.action.autoPass": "No legal play, passing",
-  "ui.action.sortLabel": "Sort hand",
   "ui.action.sortByRank": "Sort by rank",
   "ui.action.sortBySuit": "Sort by suit",
 

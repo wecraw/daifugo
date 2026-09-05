@@ -356,8 +356,8 @@ export function roundPoints(finishOrder: readonly string[]): Record<string, numb
 /* -------------------------------------------------------------------------- */
 
 /**
- * The `roundFinished` payload (§8): each player and their role, in the round's
- * final finish order (§4.1), best-placed first.
+ * The between-round and match-end standings payload (§8): each player and
+ * their role, in the round's final finish order (§4.1), best-placed first.
  *
  * Derived from the very finish order and role table `endRound` writes onto
  * `Player.role` — `finishOrderOf` then `assignRoles` — rather than read back from
@@ -381,13 +381,14 @@ export function roundResults(
 }
 
 /**
- * The `matchFinished` / lobby-standings payload (§8, §9): cumulative points per
- * player, highest first.
+ * The match-standings payload (§8, §9): cumulative points per player, highest
+ * first.
  *
  * Reads `GameState.points`, which `endRound` accumulates as `N - finishPosition`
  * each round. The order is a total function of the state — points descending,
- * then player id — so two servers serialising one state agree, and the lobby
- * renders the same table between rounds that `matchFinished` emits at the end.
+ * then player id — so two servers serialising one state agree. The lobby orders
+ * its `MATCH_END` table by this rather than by `roundResults`' finish order,
+ * since the match itself is won on points.
  */
 export function matchStandings(state: Pick<GameState, "points">): MatchStanding[] {
   return Object.entries(state.points)

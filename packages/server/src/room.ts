@@ -3,23 +3,16 @@
  * `onUpdate` hook into per-recipient `roomState` broadcasts.
  *
  * Redaction is per seat (§8.5): every recipient gets `getPublicState(state, its
- * own playerId)`, so one broadcast is really N sanitized payloads. Round and
- * match transitions emit `roundFinished` / `matchFinished` once, tracked by the
- * last status seen for each room.
+ * own playerId)`, so one broadcast is really N sanitized payloads. The client
+ * derives round and match transitions from `roomState` alone (§9); nothing else
+ * is emitted for them.
  *
  * Transport is WebSocket-only (§14). Broadcast uses Socket.IO's in-process adapter:
  * the service runs as a single instance, so every socket in a room is here. A socket
  * carries its own `resumeToken` and the seat behind it is resolved from Firestore,
  * so a reconnect after a redeploy still lands on the right seat.
  */
-import {
-  getPublicState,
-  matchStandings,
-  roundResults,
-  type ErrorCode,
-  type GameState,
-  type GameStatus,
-} from "@daifugo/core";
+import { getPublicState, type ErrorCode } from "@daifugo/core";
 import type { ClientToServerEvents, ServerToClientEvents, SocketData } from "@daifugo/core";
 import type { Server, Socket } from "socket.io";
 import type { RoomDoc } from "./repository.js";
@@ -44,7 +37,6 @@ export type DaifugoSocket = Socket<
  * `onUpdate`.
  */
 export class RoomHub {
-  private readonly lastStatus = new Map<string, GameStatus>();
   private manager!: RoomManager;
 
   constructor(private readonly io: DaifugoServer) {}
@@ -60,8 +52,7 @@ export class RoomHub {
 
   /**
    * The manager's `onUpdate` (§8.4 step 4): fan a stored doc out to every socket
-   * in the room as its own redacted `roomState`, then emit any round/match
-   * transition once.
+   * in the room as its own redacted `roomState`.
    */
   broadcast = async (doc: RoomDoc): Promise<void> => {
     const sockets = await this.io.in(doc.roomId).fetchSockets();
@@ -70,20 +61,7 @@ export class RoomHub {
       if (playerId === null) continue;
       socket.emit("roomState", getPublicState(doc.state, playerId));
     }
-    this.emitTransitions(doc.roomId, doc.state);
   };
-
-  private emitTransitions(roomId: string, state: GameState): void {
-    const previous = this.lastStatus.get(roomId);
-    this.lastStatus.set(roomId, state.status);
-    if (state.status === previous) return;
-    if (state.status === "ROUND_END" || state.status === "MATCH_END") {
-      this.io.in(roomId).emit("roundFinished", roundResults(state));
-    }
-    if (state.status === "MATCH_END") {
-      this.io.in(roomId).emit("matchFinished", matchStandings(state));
-    }
-  }
 
   /** Register every `ClientToServerEvents` handler on a fresh connection (§8). */
   register(socket: DaifugoSocket): void {
@@ -139,8 +117,28 @@ export class RoomHub {
 
     socket.on("disconnect", () => {
       const { roomId, playerId } = socket.data;
-      if (roomId !== null && playerId !== null) void this.manager.disconnect(roomId, playerId);
+      if (roomId !== null && playerId !== null) void this.onDisconnect(socket, roomId, playerId);
     });
+  }
+
+  /**
+   * A closing socket drops the seat only if it was the last one holding it (§8.3).
+   * A seat can carry more than one socket — a second tab auto-rejoins the stored
+   * session (§8.1), and a resume can land before the dropped socket's `disconnect`
+   * is processed — and marking it disconnected then would start the 30s removal
+   * grace on a player who is still at the table, with no live socket to clear it.
+   */
+  private async onDisconnect(
+    socket: DaifugoSocket,
+    roomId: string,
+    playerId: string,
+  ): Promise<void> {
+    const sockets = await this.io.in(roomId).fetchSockets();
+    const stillSeated = sockets.some(
+      (other) => other.id !== socket.id && other.data.playerId === playerId,
+    );
+    if (stillSeated) return;
+    await this.manager.disconnect(roomId, playerId);
   }
 
   /**

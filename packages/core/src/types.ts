@@ -143,9 +143,10 @@ export interface GameState {
    * Match standings: cumulative `N - finishPosition` per player (§9).
    *
    * The one field here that §2 does not list. §9 requires points to accumulate
-   * across rounds and `matchFinished` to emit them, and neither `GameState` nor
-   * `Player` as written in §2 has anywhere to keep them, so they live here rather
-   * than being recomputed from a round history that the engine does not keep.
+   * across rounds and the match-end standings to read them, and neither
+   * `GameState` nor `Player` as written in §2 has anywhere to keep them, so they
+   * live here rather than being recomputed from a round history that the engine
+   * does not keep.
    */
   points: Record<string, number>;
 

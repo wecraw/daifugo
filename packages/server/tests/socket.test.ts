@@ -8,7 +8,7 @@
  * ids (test 30), and that a non-host action comes back as `gameError` to the
  * sender alone (test 26).
  */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { io as ioClient, type Socket as ClientSocket } from "socket.io-client";
 import type {
   ClientToServerEvents,
@@ -85,6 +85,27 @@ async function ready(seat: { socket: Client }, ...observers: { socket: Client }[
   const seen = [seat, ...observers].map((client) => once(client.socket, "roomState"));
   seat.socket.emit("setReady", true);
   await Promise.all(seen);
+}
+
+/** Whether the stored seat still counts as connected (§8.3). */
+async function seatConnected(roomId: string, playerId: string): Promise<boolean> {
+  const doc = await server.manager.get(roomId);
+  return doc?.state.players.find((player) => player.id === playerId)?.isConnected ?? false;
+}
+
+/**
+ * Close a client and resolve once the server has both dropped it from the io room
+ * and had a turn to run its `disconnect` handler — the point after which the seat's
+ * connection state is settled either way.
+ */
+async function close(socket: Client, roomId: string): Promise<void> {
+  const id = socket.id;
+  socket.disconnect();
+  await vi.waitFor(async () => {
+    const sockets = await server.io.in(roomId).fetchSockets();
+    expect(sockets.some((other) => other.id === id)).toBe(false);
+  });
+  await new Promise((resolve) => setTimeout(resolve, 50));
 }
 
 describe("Socket.IO contract (§8, §12.4)", () => {
@@ -200,6 +221,25 @@ describe("Socket.IO contract (§8, §12.4)", () => {
     expect(resumed.joined.resumeToken).toBe(host.joined.resumeToken);
     expect(resumed.state.players.filter((p) => p.id === host.joined.playerId)).toHaveLength(1);
     expect(resumed.state.players).toHaveLength(2);
+  });
+
+  it("holds the disconnect grace while a second socket still holds the seat (§8.3)", async () => {
+    const roomId = await createRoom();
+    const host = await join(roomId, "Will");
+    await join(roomId, "Alex");
+
+    // A second tab replays the stored session onto the same seat (§8.1).
+    const secondTab = await join(roomId, "Will", host.joined.resumeToken);
+    expect(secondTab.joined.playerId).toBe(host.joined.playerId);
+
+    // Closing it leaves the original socket seated, so the seat stays connected
+    // and no removal grace is armed against a player who is still at the table.
+    await close(secondTab.socket, roomId);
+    expect(await seatConnected(roomId, host.joined.playerId)).toBe(true);
+
+    // The last socket closing is the one that starts the grace.
+    await close(host.socket, roomId);
+    expect(await seatConnected(roomId, host.joined.playerId)).toBe(false);
   });
 
   it("answers the health probe", async () => {

@@ -6,6 +6,7 @@
  * reason when it is disabled, dimming within a turn does not move anything, and
  * auto-pass fires only on an empty legal set.
  */
+import { StrictMode } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseCombo, type Card, type PlayCombo, type PublicGameState } from "@daifugo/core";
@@ -39,9 +40,10 @@ function table(myHand: Card[], overrides: Partial<PublicGameState> = {}): Public
   });
 }
 
-function seat(state: PublicGameState): FakeSocket {
+function seat(state: PublicGameState, strict = false): FakeSocket {
   const socket = new FakeSocket();
-  render(<App connect={() => socket.asSocket()} />);
+  const app = <App connect={() => socket.asSocket()} />;
+  render(strict ? <StrictMode>{app}</StrictMode> : app);
   act(() => socket.connect());
   act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok" }));
   act(() => socket.fire("roomState", state));
@@ -303,6 +305,21 @@ describe("auto-pass (§10.7)", () => {
     expect(document.querySelector(".hand__auto-pass")).toBeNull();
   });
 
+  // React 19 StrictMode double-invokes mount effects: the first run schedules the
+  // delay and is torn down, the second re-runs from scratch. The guard only marks
+  // the turn once the pass is actually sent, so the second run still fires — and
+  // still fires only once. Mounting straight into an empty legal set is what a
+  // reconnect does (§8.1), so this is the shape the dev playtest meets.
+  it("fires once for a hand mounted straight into an empty legal set, under StrictMode", () => {
+    const socket = seat(table([card("C-3", "C", 3)], { currentTrick: trick }), true);
+    expect(socket.sentOf("pass")).toEqual([]);
+    act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS));
+    expect(socket.sentOf("pass")).toEqual([[]]);
+
+    act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS * 2));
+    expect(socket.sentOf("pass")).toEqual([[]]);
+  });
+
   it("does not fire merely because the hand is bad", () => {
     // A 3 and a 5 against a 4: nearly nothing to play, but not nothing.
     const socket = seat(
@@ -325,6 +342,31 @@ describe("auto-pass (§10.7)", () => {
     act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS * 2));
     expect(socket.sentOf("pass")).toEqual([]);
   });
+
+  it("retries after a disconnect cancels the delay and fresh state arrives", () => {
+    const socket = new FakeSocket();
+    render(<App connect={() => socket.asSocket()} />);
+    fireEvent.change(screen.getByLabelText("Your name"), { target: { value: "Will" } });
+    fireEvent.change(screen.getByLabelText("Room code"), { target: { value: "ABC234" } });
+    fireEvent.click(screen.getByRole("button", { name: "Join room" }));
+    const state = table([card("C-3", "C", 3)], { currentTrick: trick });
+    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok" }));
+    act(() => socket.fire("roomState", state));
+
+    act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS / 2));
+    act(() => socket.disconnect());
+    act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS));
+    expect(socket.sentOf("pass")).toEqual([]);
+
+    act(() => socket.connect());
+    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok" }));
+    act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS));
+    expect(socket.sentOf("pass")).toEqual([]);
+
+    act(() => socket.fire("roomState", state));
+    act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS));
+    expect(socket.sentOf("pass")).toEqual([[]]);
+  });
 });
 
 describe("sorting (§10.8)", () => {
@@ -338,17 +380,18 @@ describe("sorting (§10.8)", () => {
     seat(table([card("S-5", "S", 5), card("H-3", "H", 3), card("H-13", "H", 13)]));
     expect(handOrder()).toEqual(["H-3", "S-5", "H-13"]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Sort hand" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sort by suit" }));
     expect(handOrder()).toEqual(["S-5", "H-3", "H-13"]);
     expect(localStorage.getItem("daifugo.handSort")).toBe("suit");
   });
 
   it("labels the toggle with the order a tap gives you, not the current one", () => {
     seat(table([card("S-5", "S", 5)]));
-    const toggle = screen.getByRole("button", { name: "Sort hand" });
-    expect(toggle).toHaveTextContent("Sort by suit");
+    // No aria-label overrides it: the accessible name is the visible action, so a
+    // screen reader hears the destination order change with the button.
+    const toggle = screen.getByRole("button", { name: "Sort by suit" });
     fireEvent.click(toggle);
-    expect(toggle).toHaveTextContent("Sort by rank");
+    expect(screen.getByRole("button", { name: "Sort by rank" })).toBe(toggle);
   });
 
   it("reverses the hand on revolution, because the order itself reversed", () => {

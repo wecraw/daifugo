@@ -281,6 +281,34 @@ describe("Lobby", () => {
     expect(standingsRows()[2]).toEqual(["3", "Will", "Grand Pauper", "0"]);
   });
 
+  it("orders the match-end standings by cumulative points, captioned as the match result", async () => {
+    // Round finish order (Sam, Alex, Will) diverges from cumulative points
+    // (Alex ahead of Sam) — the table must follow points, not the last round's
+    // finish order, once the match is over.
+    await seat(
+      publicState({
+        status: "MATCH_END",
+        roundNumber: 3,
+        roundLimit: 3,
+        players: [
+          player("p_1", "Will", { seatIndex: 0, role: { kind: "DAI_HINMIN" } }),
+          player("p_2", "Alex", { seatIndex: 1, role: { kind: "HINMIN" } }),
+          player("p_3", "Sam", { seatIndex: 2, role: { kind: "DAI_FUGO" } }),
+        ],
+        turnOrder: ["p_1", "p_2", "p_3"],
+        finishedPlayerIds: ["p_3", "p_2", "p_1"],
+        points: { p_1: 1, p_2: 5, p_3: 3 },
+      }),
+    );
+
+    expect(screen.getByText("Match result")).toBeInTheDocument();
+    expect(standingsRows()).toEqual([
+      ["1", "Alex", "Pauper", "5"],
+      ["2", "Sam", "Grand Millionaire", "3"],
+      ["3", "Will", "Grand Pauper", "1"],
+    ]);
+  });
+
   it("offers the next round after a round, and nothing after the match ends", async () => {
     const { socket, user } = await seat(
       publicState({ status: "ROUND_END", roundNumber: 1, roundLimit: 3, players: THREE }),

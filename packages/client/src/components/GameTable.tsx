@@ -40,6 +40,7 @@ import {
 } from "../layout/tableLayout";
 import { ActionBar } from "./ActionBar";
 import { AnimationLayer } from "./AnimationLayer";
+import { ConnectionStatus } from "./ConnectionStatus";
 import { ExchangeScreen } from "./ExchangeScreen";
 import { Hand } from "./Hand";
 import { PendingActionModal, owesPendingAction } from "./PendingActionModal";
@@ -50,7 +51,7 @@ import { TurnTimer } from "./TurnTimer";
 
 export function GameTable({ room }: { room: PublicGameState }) {
   const t = useTranslate();
-  const { leaveRoom } = useSocket();
+  const { status, leaveRoom } = useSocket();
 
   const hand = useHandController(room);
   // Derived from the state that is already on screen (§10.9): what plays over the
@@ -116,14 +117,17 @@ export function GameTable({ room }: { room: PublicGameState }) {
         <HistoryLog room={room} />
         <div className="game-table__clock">
           {inTurn && (
-            <>
-              <span className="game-table__turn">
-                {activeId === room.myPlayerId
-                  ? t("ui.table.yourTurn")
-                  : t("ui.table.turnOf", { player: activeName })}
-              </span>
-              <TurnTimer deadline={room.deadline} durationMs={TURN_DURATION_MS} size="strip" />
-            </>
+            <span className="game-table__turn">
+              {activeId === room.myPlayerId
+                ? t("ui.table.yourTurn")
+                : t("ui.table.turnOf", { player: activeName })}
+            </span>
+          )}
+          {status !== "connected" && (
+            <ConnectionStatus status={status} className="game-table__connection" />
+          )}
+          {inTurn && (
+            <TurnTimer deadline={room.deadline} durationMs={TURN_DURATION_MS} size="strip" />
           )}
         </div>
         {/* The lobby's leave button is out of reach mid-round; §7.7 says a seat
