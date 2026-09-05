@@ -10,6 +10,7 @@
  * holds.
  */
 import { act, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   EXCHANGE_DURATION_MS,
@@ -163,6 +164,24 @@ describe("GameTable", () => {
   it("keeps a leave control on the table, not only in the lobby", async () => {
     await seat(table(3));
     expect(screen.getByRole("button", { name: "Leave room" })).toBeInTheDocument();
+  });
+
+  it("shows a reconnecting notice in the clock cell after a mid-round drop", async () => {
+    const socket = new FakeSocket();
+    render(<App connect={() => socket.asSocket()} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Your name"), "Will");
+    await user.type(screen.getByLabelText("Room code"), "ABC234");
+    await user.click(screen.getByRole("button", { name: "Join room" }));
+    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok" }));
+    act(() => socket.fire("roomState", table(3)));
+    const clock = document.querySelector<HTMLElement>(".game-table__clock") as HTMLElement;
+
+    expect(within(clock).queryByText("Connected")).not.toBeInTheDocument();
+
+    act(() => socket.disconnect());
+
+    expect(within(clock).getByText("Reconnecting…")).toBeInTheDocument();
   });
 
   it("does not render the table for a lobby status", async () => {

@@ -259,13 +259,19 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
     socketRef.current?.disconnect();
   }, []);
 
-  const send = useCallback<SocketContextValue["send"]>((event, ...args) => {
-    const socket = socketRef.current;
-    if (socket === null) return;
-    // socket.io-client's overloads do not narrow through a generic event name;
-    // the contract itself is enforced by `RoomAction` and `Parameters<>` above.
-    (socket.emit as (name: string, ...rest: unknown[]) => void)(event, ...args);
-  }, []);
+  const send = useCallback<SocketContextValue["send"]>(
+    (event, ...args) => {
+      // Socket.IO buffers emits made while disconnected and flushes them after
+      // reconnecting. A turn action is stale by then, so drop it at the source.
+      if (status !== "connected") return;
+      const socket = socketRef.current;
+      if (socket === null) return;
+      // socket.io-client's overloads do not narrow through a generic event name;
+      // the contract itself is enforced by `RoomAction` and `Parameters<>` above.
+      (socket.emit as (name: string, ...rest: unknown[]) => void)(event, ...args);
+    },
+    [status],
+  );
 
   const clearError = useCallback(() => setError(null), []);
 

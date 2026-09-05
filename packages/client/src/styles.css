@@ -463,6 +463,16 @@ button:disabled {
   text-overflow: ellipsis;
 }
 
+.game-table__connection {
+  padding: 0.12rem 0.35rem;
+  border: 1px solid rgba(232, 182, 76, 0.65);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 0.65rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .game-table__leave {
   padding: 0.1rem 0.4rem;
   border-radius: 0.3rem;
