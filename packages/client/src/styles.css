@@ -74,6 +74,1237 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .rotate-prompt__icon {
+    animation: none;
+  }
+}
+
+.main-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  height: 100%;
+  padding: 1rem;
+}
+
+.main-menu__header {
+  text-align: center;
+}
+
+.main-menu__header h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  letter-spacing: 0.08em;
+}
+
+.main-menu__header p {
+  margin: 0.25rem 0 0.5rem;
+  opacity: 0.7;
+  font-size: 0.8rem;
+}
+
+.main-menu__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.field input {
+  width: 10rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid rgba(245, 243, 238, 0.35);
+  border-radius: 0.4rem;
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  font: inherit;
+}
+
+button {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid rgba(245, 243, 238, 0.35);
+  border-radius: 0.4rem;
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.language-toggle {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.language-toggle__option[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.main-menu__actions,
+.main-menu__resume {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.main-menu__notice {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.8rem;
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--danger);
+  font-size: 0.8rem;
+}
+
+.room-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.room-shell__header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.room-shell__header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.room-shell__status {
+  opacity: 0.7;
+  font-size: 0.75rem;
+}
+
+/*
+ * Lobby and host panel (§9, §10.11). The room shell scrolls internally rather
+ * than growing the page: the viewport itself never scrolls (§10.1).
+ */
+.room-shell {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.room-shell__leave {
+  align-self: flex-start;
+}
+
+.lobby {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+}
+
+.lobby h2 {
+  margin: 0 0 0.3rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+
+.lobby__round {
+  margin: 0;
+  color: var(--accent);
+}
+
+.lobby__roster ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lobby__roster li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.lobby__name {
+  font-weight: 600;
+}
+
+.badge {
+  padding: 0.05rem 0.35rem;
+  border: 1px solid rgba(245, 243, 238, 0.35);
+  border-radius: 0.8rem;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge--quiet {
+  border-color: transparent;
+  opacity: 0.5;
+}
+
+.badge--warn {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.lobby__standings table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.lobby__standings caption {
+  padding-bottom: 0.2rem;
+  opacity: 0.6;
+  font-size: 0.7rem;
+  text-align: left;
+}
+
+.lobby__standings th,
+.lobby__standings td {
+  padding: 0.15rem 0.6rem 0.15rem 0;
+  text-align: left;
+}
+
+.lobby__standings th {
+  opacity: 0.6;
+  font-weight: 500;
+  font-size: 0.7rem;
+}
+
+/* §4.5: the demoted player's zero needs its explanation next to it. */
+.lobby__miyako-ochi {
+  margin: 0.3rem 0 0;
+  color: var(--accent);
+  font-size: 0.72rem;
+}
+
+.lobby__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.lobby__note {
+  margin: 0;
+  opacity: 0.7;
+}
+
+.host-panel__summary {
+  font-size: 0.75rem;
+}
+
+.host-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid rgba(245, 243, 238, 0.2);
+  border-radius: 0.4rem;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.host-panel__rules {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(8rem, 1fr));
+  gap: 0.2rem 0.8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.host-panel__rule {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.host-panel__limit {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.host-panel__limit .field input {
+  width: 5rem;
+}
+
+.host-panel__note {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.72rem;
+}
+
+/*
+ * The table (§10.1). The three bands add up to the viewport exactly, so nothing
+ * here may grow: every region gets `min-width: 0` or `min-height: 0` and clips
+ * its own overflow rather than pushing a neighbour off the screen. The px
+ * figures arrive as custom properties from `layout/tableLayout.ts`, which is the
+ * one place they are written down.
+ *
+ * The strip and the hand row keep their heights; the middle band is the one that
+ * gives. The table is a flex sibling of the error banner and the viewport is not
+ * always the reference 390px, so on anything shorter the trick area loses the
+ * difference rather than the hand row falling off the bottom (§10.2).
+ */
+.game-table {
+  /* The pending-action modal covers this frame, not the page (§7.2). */
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.game-table__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) auto auto;
+  align-items: center;
+  flex: 0 0 var(--top-strip-height);
+  gap: 0.4rem;
+  height: var(--top-strip-height);
+  padding: 0.25rem 0.4rem;
+  border-bottom: 1px solid rgba(245, 243, 238, 0.12);
+}
+
+.game-table__middle {
+  display: grid;
+  grid-template-columns: var(--side-column-width) minmax(0, 1fr) var(--side-column-width);
+  flex: 1 1 var(--middle-height);
+  gap: 0.3rem;
+  min-height: 0;
+  padding: 0.3rem 0.4rem;
+}
+
+.game-table__bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--action-column-width);
+  flex: 0 0 var(--hand-row-height);
+  height: var(--hand-row-height);
+  border-top: 1px solid rgba(245, 243, 238, 0.12);
+}
+
+.game-table__hand,
+.game-table__action {
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* The action column is on the right edge, not a bottom bar (§10.1). */
+.game-table__action {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-left: 1px solid rgba(245, 243, 238, 0.12);
+}
+
+.game-table__seats {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  gap: 0.3rem;
+}
+
+/* Ring order runs bottom-to-top on the left edge and top-to-bottom on the right. */
+.game-table__seats--left {
+  flex-direction: column-reverse;
+  justify-content: center;
+}
+
+.game-table__seats--right {
+  flex-direction: column;
+  justify-content: center;
+}
+
+.game-table__seats--top {
+  align-items: center;
+}
+
+.game-table__clock {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.game-table__turn {
+  max-width: 8rem;
+  overflow: hidden;
+  color: var(--accent);
+  font-size: 0.68rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.game-table__leave {
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.3rem;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+/* Seat chips. */
+.player-seat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.1rem;
+  min-width: 0;
+  min-height: 0;
+  /* The bands are fixed heights: a chip clips rather than growing past its edge. */
+  max-height: 100%;
+  overflow: hidden;
+  padding: 0.15rem 0.3rem;
+  border: 1px solid rgba(245, 243, 238, 0.18);
+  border-radius: 0.35rem;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.7rem;
+}
+
+/* Top chips share the strip evenly; side chips are only as tall as they need. */
+.player-seat--top {
+  flex: 1 1 0;
+}
+
+.player-seat--left,
+.player-seat--right {
+  flex: 0 0 auto;
+}
+
+.player-seat--active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.player-seat--finished {
+  border-color: rgba(245, 243, 238, 0.4);
+}
+
+.player-seat--passed,
+.player-seat--dropped,
+.player-seat--offline {
+  opacity: 0.6;
+}
+
+.player-seat__line {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/*
+ * A wrapped badge is what pushes a chip past the 56px strip, so inside a seat
+ * they stay on one line and lose their tail instead.
+ */
+.player-seat .badge {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.player-seat__line--quiet {
+  font-size: 0.62rem;
+  opacity: 0.8;
+}
+
+.player-seat__name {
+  overflow: hidden;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.player-seat__role {
+  color: var(--accent);
+  font-size: 0.6rem;
+  letter-spacing: -0.05em;
+}
+
+.player-seat__count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.player-seat__offline {
+  color: var(--danger);
+  font-size: 0.5rem;
+}
+
+.badge--good {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.badge--rule {
+  border-color: var(--accent);
+  color: var(--accent);
+  text-transform: none;
+}
+
+/* Trick area and banners. */
+.trick-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.trick-area__banners {
+  position: absolute;
+  top: 0;
+  display: flex;
+  gap: 0.3rem;
+}
+
+.trick-area__centre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.trick-area__note {
+  margin: 0;
+  opacity: 0.6;
+  font-size: 0.75rem;
+}
+
+.trick-area__stack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Each play of the trick sits a little behind the one that beat it, so the
+ * whole trick reads at a glance and the top play is unmistakably on top.
+ */
+.trick-area__play {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  /*
+   * How far each play tucks under the one that beat it. `fitTrickStack` widens
+   * it when the trick would otherwise outgrow the band; the resting value here
+   * is the 0.9rem it starts from.
+   */
+  margin-left: calc(var(--trick-overlap, 14.4px) * -1);
+  /*
+   * Each beaten play sits a step higher, so the trick reads as a history — but
+   * only for the first few, or a long trick would climb out of the band.
+   */
+  transform: translateY(calc(min(var(--depth), 4) * -10px));
+}
+
+.trick-area__play:first-child {
+  margin-left: 0;
+}
+
+.trick-area__cards {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.trick-area__player {
+  max-width: 9rem;
+  overflow: hidden;
+  font-size: 0.65rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0.75;
+}
+
+/* Card faces. The hand row sizes them at the full 64x90 of §10.2. */
+.card-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  border-radius: 0.25rem;
+  background: var(--ink);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.card-face--trick {
+  width: calc(var(--card-width) * 0.7);
+  height: calc(var(--card-height) * 0.7);
+  font-size: 0.85rem;
+}
+
+.card-face--hand {
+  width: var(--card-width);
+  height: var(--card-height);
+  font-size: 1.1rem;
+}
+
+.card-face--red {
+  color: #b3261e;
+}
+
+.card-face--black {
+  color: #14110d;
+}
+
+.card-face--joker {
+  background: linear-gradient(140deg, #f7efd8, #e8b64c);
+}
+
+.card-face--bound {
+  border-style: dashed;
+}
+
+/* History log (§11): keys and params, resolved at render time. */
+.history-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  height: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  font-size: 0.62rem;
+  line-height: 1.25;
+  list-style: none;
+  opacity: 0.8;
+}
+
+.history-log__line {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The countdown ring of §10.10. */
+.turn-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.turn-timer__track {
+  stroke: rgba(245, 243, 238, 0.2);
+}
+
+.turn-timer__ring {
+  stroke: var(--accent);
+  stroke-linecap: round;
+}
+
+.turn-timer__seconds {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.7rem;
+}
+
+/*
+ * The hand row (§10.2-§10.5).
+ *
+ * Every px in the fan is inline, from `layout/handLayout.ts` — the stylesheet
+ * owns how a card looks, never where it sits. The button is the exposed strip
+ * and the card box overflows it to the right, under the next card's strip, which
+ * is what makes the hit target the strip rather than the whole card.
+ *
+ * The transition is the spring of §10.4 at stiffness ~400, damping ~30: an
+ * undamped period of about 100ms, so 180ms of a mild overshoot curve lands the
+ * card in about the same time with the same small bounce, and costs no runtime.
+ */
+/*
+ * The row is 116px and a selected card stands 90 + 10 of fan rise + 26 of lift
+ * tall, so the fan sits on the floor of the row and the lift is allowed to paint
+ * up into the middle band. `.game-table__hand` gives up its clip for that; the
+ * table's own `overflow: hidden` still holds the viewport edge, and a lifted
+ * card reaching over the trick area is the card game's own idiom.
+ */
+.game-table__hand {
+  overflow: visible;
+}
+
+.hand {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 100%;
+  padding-bottom: 0.35rem;
+  overflow: visible;
+}
+
+.hand__fan {
+  position: relative;
+  height: var(--card-height);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hand__slot {
+  position: absolute;
+  top: 0;
+  height: var(--card-height);
+}
+
+.hand__card {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  /* The card box overflows the strip; the strip is what takes the tap (§10.2). */
+  overflow: visible;
+  touch-action: none;
+}
+
+.hand__card-box {
+  position: absolute;
+  /* The visual box overflows its strip, but only the strip is a hit target
+     (§10.2) — which stays true however the slots end up stacked. */
+  pointer-events: none;
+  bottom: var(--hand-hit-slop);
+  left: 0;
+  display: block;
+  transform: var(--card-transform);
+  transform-origin: 50% 100%;
+  filter: saturate(var(--card-saturation, 1));
+  transition:
+    transform 180ms cubic-bezier(0.2, 1.5, 0.4, 1),
+    filter 180ms ease,
+    opacity 180ms ease;
+}
+
+.hand__card--selected .hand__card-box {
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+}
+
+/* §10.3: dimming narrows within the turn and never resizes — opacity only. */
+.hand__card--dimmed .hand__card-box {
+  opacity: 0.5;
+}
+
+.hand__card--unplayable .hand__card-box {
+  opacity: 0.75;
+}
+
+.hand__binding {
+  position: absolute;
+  top: -0.35rem;
+  left: 0.15rem;
+  z-index: 1;
+  padding: 0.05rem 0.25rem;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 0.6rem;
+  background: var(--accent);
+  color: #14110d;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* §10.7: the auto-pass card, over the row it is passing for. */
+.hand__auto-pass {
+  position: absolute;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.4rem;
+  background: rgba(10, 59, 37, 0.92);
+  font-size: 0.8rem;
+}
+
+/* The action column (§10.6). */
+.action-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  height: 100%;
+  justify-content: center;
+}
+
+.action-bar button {
+  padding: 0.3rem 0.2rem;
+  border-radius: 0.3rem;
+  font-size: 0.65rem;
+  line-height: 1.15;
+}
+
+.action-bar__play {
+  background: var(--accent);
+  color: #14110d;
+  font-weight: 700;
+}
+
+.action-bar__play:disabled {
+  background: rgba(245, 243, 238, 0.12);
+  color: rgba(245, 243, 238, 0.65);
+  font-weight: 400;
+}
+
+.action-bar .turn-timer {
+  align-self: center;
+}
+
+/*
+ * The exchange row (§4.3) and the pending-action modal (§7.2): a flat tray of
+ * cards, not the fan of §10.2, because neither choice has a legality to show.
+ */
+.card-tray {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-tray__card {
+  padding: 0.1rem;
+  border: 1px solid transparent;
+  border-radius: 0.35rem;
+  background: none;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease;
+}
+
+button.card-tray__card {
+  cursor: pointer;
+}
+
+.card-tray__card--selected {
+  border-color: var(--accent);
+  transform: translateY(-6px);
+}
+
+/* Read-only by rule: the poor side's cards, and a hand the action takes whole. */
+.card-tray__card--fixed {
+  opacity: 0.9;
+}
+
+.exchange {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.25rem;
+}
+
+.exchange__prompt {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.75rem;
+}
+
+.exchange__note {
+  margin: 0;
+  opacity: 0.6;
+  font-size: 0.6rem;
+  text-align: center;
+}
+
+.exchange__send {
+  padding: 0.3rem 0.2rem;
+  border-radius: 0.3rem;
+  background: var(--accent);
+  color: #14110d;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.exchange__send:disabled {
+  background: rgba(245, 243, 238, 0.12);
+  color: rgba(245, 243, 238, 0.65);
+  font-weight: 400;
+}
+
+/* The modal covers the table: while the action is owed, nothing else is (§7.2). */
+.pending-action {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 59, 37, 0.82);
+}
+
+.pending-action__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 90%;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--accent);
+  border-radius: 0.5rem;
+  background: var(--felt);
+}
+
+.pending-action__header,
+.pending-action__footer {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.pending-action__prompt {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.8rem;
+}
+
+.pending-action__note {
+  margin: 0;
+  opacity: 0.6;
+  font-size: 0.6rem;
+}
+
+.pending-action__submit {
+  padding: 0.3rem 0.8rem;
+  border-radius: 0.3rem;
+  background: var(--accent);
+  color: #14110d;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.pending-action__submit:disabled {
+  background: rgba(245, 243, 238, 0.12);
+  color: rgba(245, 243, 238, 0.65);
+  font-weight: 400;
+}
+
+/*
+ * The animation layer (§10.9).
+ *
+ * One overlay across the whole frame, centred on the trick area, taking no
+ * pointer events: what plays here is drawn over a table that is already showing
+ * the authoritative state, and it must never come between a finger and a card.
+ *
+ * Travel is expressed as `--anim-from-*` / `--anim-to-*` offsets from that
+ * centre, which `animation/geometry.ts` computes from the seat ring — the
+ * direction of a seat, not its measured rectangle.
+ */
+.table-anim {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.table-anim > * {
+  position: absolute;
+  top: calc(var(--top-strip-height) + var(--middle-height) / 2);
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.table-anim__title {
+  color: var(--accent);
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+}
+
+.table-anim__caption,
+.table-anim__label {
+  font-size: 0.65rem;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+/* Cards in flight are face down: a count travels, never a hand (§8.5). */
+.card-back {
+  width: calc(var(--card-width) * 0.45);
+  height: calc(var(--card-height) * 0.45);
+  border: 1px solid rgba(245, 243, 238, 0.5);
+  border-radius: 0.2rem;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--felt-dark),
+    var(--felt-dark) 3px,
+    var(--felt) 3px,
+    var(--felt) 6px
+  );
+}
+
+/* 1. Trick clear sweep: the trick slides off to the discard edge (§7.4). */
+.table-anim__sweep {
+  animation-name: anim-sweep;
+}
+
+@keyframes anim-sweep {
+  from {
+    transform: translate(-50%, -50%) translate(var(--anim-from-x), var(--anim-from-y));
+    opacity: 1;
+  }
+  to {
+    transform: translate(-50%, -50%) translate(var(--anim-to-x), var(--anim-to-y)) rotate(-18deg)
+      scale(0.7);
+    opacity: 0;
+  }
+}
+
+/* 2. Revolution: a full-width banner while the hand re-sorts under it (§10.8). */
+.table-anim__revolution {
+  flex-direction: column;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.5rem 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 0, 0, 0.75) 20%,
+    rgba(0, 0, 0, 0.75) 80%,
+    transparent
+  );
+  animation-name: anim-revolution;
+}
+
+@keyframes anim-revolution {
+  0% {
+    transform: translate(-50%, -50%) scaleY(0.2);
+    opacity: 0;
+  }
+  15% {
+    transform: translate(-50%, -50%) scaleY(1);
+    opacity: 1;
+  }
+  80% {
+    transform: translate(-50%, -50%) scaleY(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scaleY(1);
+    opacity: 0;
+  }
+}
+
+/* The hand reverses under that banner: the flip is the point (§10.8). */
+.game-table__hand--revolution .hand__fan {
+  animation: anim-hand-flip 700ms ease-in-out;
+}
+
+@keyframes anim-hand-flip {
+  0% {
+    transform: rotateX(0deg);
+  }
+  50% {
+    transform: rotateX(80deg);
+    filter: brightness(1.6);
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+/* 3. 7-pass: the cards leave for the recipient's seat (§6). */
+.table-anim__travel {
+  flex-direction: column;
+  gap: 0.15rem;
+  animation-name: anim-travel;
+}
+
+.table-anim__cards {
+  display: flex;
+  gap: 0.15rem;
+}
+
+@keyframes anim-travel {
+  0% {
+    transform: translate(-50%, -50%) translate(var(--anim-from-x), var(--anim-from-y)) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--anim-to-x), var(--anim-to-y)) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* Secondary: the 8-giri / 9-giri stamp. */
+.table-anim__stamp {
+  padding: 0.3rem 0.8rem;
+  border: 2px solid var(--accent);
+  border-radius: 0.4rem;
+  animation-name: anim-stamp;
+}
+
+@keyframes anim-stamp {
+  0% {
+    transform: translate(-50%, -50%) scale(2.4) rotate(-12deg);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(-50%, -50%) scale(1) rotate(-12deg);
+    opacity: 1;
+  }
+  75% {
+    transform: translate(-50%, -50%) scale(1) rotate(-12deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.1) rotate(-12deg);
+    opacity: 0;
+  }
+}
+
+/* Secondary: the skip arcing over each seat it passed over (§6). */
+.table-anim__skip {
+  flex-direction: column;
+  gap: 0.1rem;
+  animation-name: anim-skip;
+}
+
+@keyframes anim-skip {
+  0% {
+    transform: translate(-50%, -50%) translate(var(--anim-from-x), var(--anim-from-y)) scale(0.6);
+    opacity: 0;
+  }
+  40% {
+    transform: translate(-50%, -50%)
+      translate(calc(var(--anim-to-x) / 2), calc(var(--anim-to-y) / 2 - 40px)) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--anim-to-x), var(--anim-to-y)) scale(0.9);
+    opacity: 0;
+  }
+}
+
+/* The agari a miyako-ochi waits behind (§4.5). */
+.table-anim__agari {
+  animation-name: anim-agari;
+}
+
+@keyframes anim-agari {
+  0% {
+    transform: translate(-50%, -50%) scale(0.7);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+/*
+ * Miyako-ochi (§4.5): the demoted hand sweeps out of its seat to the graveyard,
+ * with the sentence that says why. It starts only once the winner's agari has
+ * finished playing, which the queue enforces rather than this file.
+ */
+.table-anim__miyako {
+  flex-direction: column;
+  gap: 0.25rem;
+  animation-name: anim-miyako;
+}
+
+.table-anim__miyako .table-anim__title {
+  font-size: 0.8rem;
+}
+
+@keyframes anim-miyako {
+  0% {
+    transform: translate(-50%, -50%) translate(var(--anim-from-x), var(--anim-from-y)) scale(0.8);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  75% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--anim-to-x), var(--anim-to-y)) scale(0.7);
+    opacity: 0;
+  }
+}
+
+/* The chip that just emptied drops, so the fall to last place is visible. */
+.player-seat--demoted {
+  animation: anim-seat-drop 1100ms ease-in forwards;
+}
+
+@keyframes anim-seat-drop {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(14px);
+    opacity: 0.55;
+  }
+}
+
+/*
+ * A player who asked for less motion gets the state changes without the travel:
+ * the banners still say what happened, they simply stop moving to say it.
+ */
+@media (prefers-reduced-motion: reduce) {
   .table-anim > * {
     animation-name: anim-fade;
   }
