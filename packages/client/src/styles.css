@@ -1018,3 +1018,318 @@ button.card-tray__card {
   color: rgba(245, 243, 238, 0.65);
   font-weight: 400;
 }
+
+/*
+ * The animation layer (§10.9).
+ *
+ * One overlay across the whole frame, centred on the trick area, taking no
+ * pointer events: what plays here is drawn over a table that is already showing
+ * the authoritative state, and it must never come between a finger and a card.
+ *
+ * Travel is expressed as `--anim-from-*` / `--anim-to-*` offsets from that
+ * centre, which `animation/geometry.ts` computes from the seat ring — the
+ * direction of a seat, not its measured rectangle.
+ */
+.table-anim {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.table-anim > * {
+  position: absolute;
+  top: calc(var(--top-strip-height) + var(--middle-height) / 2);
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.table-anim__title {
+  color: var(--accent);
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+}
+
+.table-anim__caption,
+.table-anim__label {
+  font-size: 0.65rem;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+/* Cards in flight are face down: a count travels, never a hand (§8.5). */
+.card-back {
+  width: calc(var(--card-width) * 0.45);
+  height: calc(var(--card-height) * 0.45);
+  border: 1px solid rgba(245, 243, 238, 0.5);
+  border-radius: 0.2rem;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--felt-dark),
+    var(--felt-dark) 3px,
+    var(--felt) 3px,
+    var(--felt) 6px
+  );
+}
+
+/* 1. Trick clear sweep: the trick slides off to the discard edge (§7.4). */
+.table-anim__sweep {
+  animation-name: anim-sweep;
+}
+
+@keyframes anim-sweep {
+  from {
+    transform: translate(-50%, -50%) translate(var(--anim-from-x), var(--anim-from-y));
+    opacity: 1;
+  }
+  to {
+    transform: translate(-50%, -50%) translate(var(--anim-to-x), var(--anim-to-y)) rotate(-18deg)
+      scale(0.7);
+    opacity: 0;
+  }
+}
+
+/* 2. Revolution: a full-width banner while the hand re-sorts under it (§10.8). */
+.table-anim__revolution {
+  flex-direction: column;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.5rem 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 0, 0, 0.75) 20%,
+    rgba(0, 0, 0, 0.75) 80%,
+    transparent
+  );
+  animation-name: anim-revolution;
+}
+
+@keyframes anim-revolution {
+  0% {
+    transform: translate(-50%, -50%) scaleY(0.2);
+    opacity: 0;
+  }
+  15% {
+    transform: translate(-50%, -50%) scaleY(1);
+    opacity: 1;
+  }
+  80% {
+    transform: translate(-50%, -50%) scaleY(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scaleY(1);
+    opacity: 0;
+  }
+}
+
+/* The hand reverses under that banner: the flip is the point (§10.8). */
+.game-table__hand--revolution .hand__fan {
+  animation: anim-hand-flip 700ms ease-in-out;
+}
+
+@keyframes anim-hand-flip {
+  0% {
+    transform: rotateX(0deg);
+  }
+  50% {
+    transform: rotateX(80deg);
+    filter: brightness(1.6);
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+/* 3. 7-pass: the cards leave for the recipient's seat (§6). */
+.table-anim__travel {
+  flex-direction: column;
+  gap: 0.15rem;
+  animation-name: anim-travel;
+}
+
+.table-anim__cards {
+  display: flex;
+  gap: 0.15rem;
+}
+
+@keyframes anim-travel {
+  0% {
+    transform: translate(-50%, -50%) translate(var(--anim-from-x), var(--anim-from-y)) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--anim-to-x), var(--anim-to-y)) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* Secondary: the 8-giri / 9-giri stamp. */
+.table-anim__stamp {
+  padding: 0.3rem 0.8rem;
+  border: 2px solid var(--accent);
+  border-radius: 0.4rem;
+  animation-name: anim-stamp;
+}
+
+@keyframes anim-stamp {
+  0% {
+    transform: translate(-50%, -50%) scale(2.4) rotate(-12deg);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(-50%, -50%) scale(1) rotate(-12deg);
+    opacity: 1;
+  }
+  75% {
+    transform: translate(-50%, -50%) scale(1) rotate(-12deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.1) rotate(-12deg);
+    opacity: 0;
+  }
+}
+
+/* Secondary: the skip arcing over each seat it passed over (§6). */
+.table-anim__skip {
+  flex-direction: column;
+  gap: 0.1rem;
+  animation-name: anim-skip;
+}
+
+@keyframes anim-skip {
+  0% {
+    transform: translate(-50%, -50%) translate(var(--anim-from-x), var(--anim-from-y)) scale(0.6);
+    opacity: 0;
+  }
+  40% {
+    transform: translate(-50%, -50%)
+      translate(calc(var(--anim-to-x) / 2), calc(var(--anim-to-y) / 2 - 40px)) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--anim-to-x), var(--anim-to-y)) scale(0.9);
+    opacity: 0;
+  }
+}
+
+/* The agari a miyako-ochi waits behind (§4.5). */
+.table-anim__agari {
+  animation-name: anim-agari;
+}
+
+@keyframes anim-agari {
+  0% {
+    transform: translate(-50%, -50%) scale(0.7);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+/*
+ * Miyako-ochi (§4.5): the demoted hand sweeps out of its seat to the graveyard,
+ * with the sentence that says why. It starts only once the winner's agari has
+ * finished playing, which the queue enforces rather than this file.
+ */
+.table-anim__miyako {
+  flex-direction: column;
+  gap: 0.25rem;
+  animation-name: anim-miyako;
+}
+
+.table-anim__miyako .table-anim__title {
+  font-size: 0.8rem;
+}
+
+@keyframes anim-miyako {
+  0% {
+    transform: translate(-50%, -50%) translate(var(--anim-from-x), var(--anim-from-y)) scale(0.8);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  75% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--anim-to-x), var(--anim-to-y)) scale(0.7);
+    opacity: 0;
+  }
+}
+
+/* The chip that just emptied drops, so the fall to last place is visible. */
+.player-seat--demoted {
+  animation: anim-seat-drop 1100ms ease-in forwards;
+}
+
+@keyframes anim-seat-drop {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(14px);
+    opacity: 0.55;
+  }
+}
+
+/*
+ * A player who asked for less motion gets the state changes without the travel:
+ * the banners still say what happened, they simply stop moving to say it.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .table-anim > * {
+    animation-name: anim-fade;
+  }
+
+  .game-table__hand--revolution .hand__fan {
+    animation: none;
+  }
+
+  .player-seat--demoted {
+    animation: none;
+    opacity: 0.55;
+  }
+
+  @keyframes anim-fade {
+    0% {
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    80% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+}

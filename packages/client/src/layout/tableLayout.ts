@@ -222,3 +222,23 @@ export function tableCssVariables(): Record<string, string> {
     "--card-height": `${CARD_HEIGHT}px`,
   };
 }
+
+/**
+ * Which edge a seat sits on, from the viewer's own point of view.
+ *
+ * The animation layer needs a direction to send cards in — towards the recipient
+ * of a 7-pass, away from a demoted seat — and the ring above is what decides it.
+ * `"self"` is the hand row, which is where the viewer's own cards live rather
+ * than a chip; `null` is a player the ring does not place, which at a table of
+ * three to eight seats means a spectator's id or a stale one.
+ */
+export function seatEdgeOf(
+  room: Pick<PublicGameState, "turnOrder" | "players" | "myPlayerId">,
+  playerId: string,
+): SeatEdge | "self" | null {
+  if (playerId === room.myPlayerId) return "self";
+  const opponents = opponentIds(room);
+  const index = opponents.indexOf(playerId);
+  if (index === -1) return null;
+  return distributeSeats(opponents.length)[index] ?? null;
+}

@@ -173,6 +173,14 @@ export const UI_I18N_KEYS = [
   "ui.select.timeout",
   "ui.select.timeoutChanged",
 
+  // The animation layer (§10.9). The rule banners themselves are `rule.*` keys
+  // and the miyako-ochi banner is `history.miyakoOchi`; what is here is the
+  // caption beside them and the badge on the seat that just emptied (§4.5).
+  "ui.animation.revolutionOn",
+  "ui.animation.revolutionOff",
+  "ui.animation.agari",
+  "ui.animation.miyakoOchiSeat",
+
   "ui.error.dismiss",
 ] as const;
 

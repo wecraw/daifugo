@@ -226,5 +226,10 @@
   "ui.select.timeout": "時間切れになるとこの選択がそのまま送られます",
   "ui.select.timeoutChanged": "時間切れになると、代わりに弱い{count}枚が送られます",
 
+  "ui.animation.revolutionOn": "強さが逆転しました",
+  "ui.animation.revolutionOff": "強さが元に戻りました",
+  "ui.animation.agari": "{player} が上がり — {position}位",
+  "ui.animation.miyakoOchiSeat": "都落ち",
+
   "ui.error.dismiss": "閉じる"
 }
