@@ -136,7 +136,10 @@ export function Lobby({ room }: { room: PublicGameState }) {
               <span className="lobby__name">{seat.name}</span>
               {seat.id === room.hostId && <span className="badge">{t("ui.lobby.host")}</span>}
               {seat.id === playerId && <span className="badge">{t("ui.lobby.you")}</span>}
-              {pending !== null && (
+              {/* A round boundary this promises never comes once the match is over
+                  (§7.7) — a queued join/leave from just before `MATCH_END` still
+                  sits in the arrays with no deal left to consume it. */}
+              {pending !== null && !matchOver && (
                 <span className="badge badge--quiet">
                   {t(pending === "joining" ? "ui.lobby.joining" : "ui.lobby.leaving")}
                 </span>

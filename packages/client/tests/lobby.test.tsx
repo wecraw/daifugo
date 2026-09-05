@@ -93,6 +93,28 @@ describe("Lobby", () => {
     expect(within(leaving).getByText("Leaving after this round")).toBeInTheDocument();
   });
 
+  it("does not promise a round the match cannot deal once it has ended (§7.7)", async () => {
+    // A join accepted in the final round's last moments can still be sitting in
+    // `pendingJoins` when `MATCH_END` lands — the deal that would consume it never
+    // comes, so the roster must not tell them otherwise.
+    await seat(
+      publicState({
+        status: "MATCH_END",
+        players: THREE,
+        turnOrder: THREE.map((seat) => seat.id),
+        pendingJoins: [player("p_9", "Newcomer", { seatIndex: 3 })],
+        pendingLeaves: ["p_3"],
+      }),
+    );
+
+    const roster = screen.getByRole("list");
+    const newcomer = within(roster).getByText("Newcomer").closest("li")!;
+    expect(within(newcomer).queryByText("Joining next round")).not.toBeInTheDocument();
+
+    const leaving = within(roster).getByText("Sam").closest("li")!;
+    expect(within(leaving).queryByText("Leaving after this round")).not.toBeInTheDocument();
+  });
+
   it("holds the deal for a queued join, and says who it is waiting on", async () => {
     await seat(
       publicState({
