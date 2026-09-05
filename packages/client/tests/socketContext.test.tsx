@@ -8,8 +8,27 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import type { PublicGameState } from "@daifugo/core";
 import { App } from "../src/App";
-import { SESSION_STORAGE_KEY, readStoredSession } from "../src/context/SocketContext";
+import {
+  SESSION_STORAGE_KEY,
+  SocketProvider,
+  readStoredSession,
+  useSocket,
+} from "../src/context/SocketContext";
 import { FakeSocket } from "./fakeSocket";
+
+function SendProbe() {
+  const { joinRoom, send } = useSocket();
+  return (
+    <>
+      <button type="button" onClick={() => joinRoom("ABC234", "Will")}>
+        Join
+      </button>
+      <button type="button" onClick={() => send("pass")}>
+        Pass
+      </button>
+    </>
+  );
+}
 
 function publicState(overrides: Partial<PublicGameState> = {}): PublicGameState {
   return {
@@ -75,6 +94,35 @@ async function joinAs(socket: FakeSocket, name: string): Promise<void> {
 }
 
 describe("SocketContext", () => {
+  it("drops room actions until reconnecting has delivered fresh room state", async () => {
+    const socket = new FakeSocket();
+    render(
+      <SocketProvider connect={() => socket.asSocket()}>
+        <SendProbe />
+      </SocketProvider>,
+    );
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Join" }));
+    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok" }));
+    act(() => socket.fire("roomState", publicState()));
+    await user.click(screen.getByRole("button", { name: "Pass" }));
+    expect(socket.sentOf("pass")).toHaveLength(1);
+
+    act(() => socket.disconnect());
+    await user.click(screen.getByRole("button", { name: "Pass" }));
+    act(() => socket.connect());
+    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok" }));
+    await user.click(screen.getByRole("button", { name: "Pass" }));
+
+    expect(socket.sentOf("pass")).toHaveLength(1);
+
+    act(() => socket.fire("roomState", publicState()));
+    await user.click(screen.getByRole("button", { name: "Pass" }));
+
+    expect(socket.sentOf("pass")).toHaveLength(2);
+  });
+
   it("stores the resume token from `joined` and shows the room on `roomState`", async () => {
     const socket = new FakeSocket();
     render(<App connect={() => socket.asSocket()} />);

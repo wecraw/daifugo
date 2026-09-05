@@ -312,6 +312,31 @@ describe("auto-pass (§10.7)", () => {
     act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS * 2));
     expect(socket.sentOf("pass")).toEqual([]);
   });
+
+  it("retries after a disconnect cancels the delay and fresh state arrives", () => {
+    const socket = new FakeSocket();
+    render(<App connect={() => socket.asSocket()} />);
+    fireEvent.change(screen.getByLabelText("Your name"), { target: { value: "Will" } });
+    fireEvent.change(screen.getByLabelText("Room code"), { target: { value: "ABC234" } });
+    fireEvent.click(screen.getByRole("button", { name: "Join room" }));
+    const state = table([card("C-3", "C", 3)], { currentTrick: trick });
+    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok" }));
+    act(() => socket.fire("roomState", state));
+
+    act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS / 2));
+    act(() => socket.disconnect());
+    act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS));
+    expect(socket.sentOf("pass")).toEqual([]);
+
+    act(() => socket.connect());
+    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok" }));
+    act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS));
+    expect(socket.sentOf("pass")).toEqual([]);
+
+    act(() => socket.fire("roomState", state));
+    act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS));
+    expect(socket.sentOf("pass")).toEqual([[]]);
+  });
 });
 
 describe("sorting (§10.8)", () => {
