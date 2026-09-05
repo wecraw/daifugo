@@ -27,6 +27,7 @@ import {
   type PublicGameState,
 } from "@daifugo/core";
 import { useSocket } from "../context/SocketContext";
+import { suitLockGlyphs } from "../glyphs";
 import { comboLabel, type ComboLabel } from "../hand/comboLabel";
 import {
   bindingOptions,
@@ -132,7 +133,12 @@ export function useHandController(room: PublicGameState): HandController {
 
   const blocked = turnBlocker(room);
   const playBlocker = blocked ?? (resolved.ok ? null : resolved.error);
-  const blockerParams: TranslateParams = { count: ctx.top?.cards.length ?? 0 };
+  // Everything a disabled control's reason might need to be specific (§10.6):
+  // the count the trick top demands, and the suits a shibari lock names.
+  const blockerParams: TranslateParams = {
+    count: ctx.top?.cards.length ?? 0,
+    suits: suitLockGlyphs(room.suitLock ?? []),
+  };
 
   const toggle = useCallback((cardId: string) => {
     setSelected((current) =>

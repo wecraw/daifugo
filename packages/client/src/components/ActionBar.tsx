@@ -15,10 +15,25 @@
  * The ring here is the player's own turn clock, so it shows only on their turn;
  * the strip's ring (§10.1) is the table's, and counts down for whoever is up.
  */
-import { TURN_DURATION_MS, errorKey } from "@daifugo/core";
+import { TURN_DURATION_MS, errorKey, type ErrorCode } from "@daifugo/core";
 import type { HandController } from "../hooks/useHandController";
-import { useTranslate } from "../i18n/index";
+import { useTranslate, type I18nKey, type TranslateParams } from "../i18n/index";
 import { TurnTimer } from "./TurnTimer";
+
+/**
+ * The reason a control is disabled, as specifically as §10.6 asks for it.
+ *
+ * `error.*` is the transport's vocabulary (§8.0) and has to read sensibly in the
+ * `gameError` banner too, where no params travel (§8.4) — so it stays generic.
+ * The one blocker with something concrete to name is the shibari lock, and the
+ * client already holds the suits, so it says them here: "Must follow ♠" rather
+ * than "Must follow the locked suits". `ui.*` is where that belongs — it is
+ * presentation text the client owns, and nothing in core emits it (§11).
+ */
+function blockerText(code: ErrorCode, params: TranslateParams): [I18nKey, TranslateParams] {
+  const named = code === "SUIT_LOCK_MISMATCH" && params["suits"] !== "";
+  return [named ? "ui.action.mustFollowSuits" : errorKey(code), params];
+}
 
 export interface ActionBarProps {
   hand: HandController;
@@ -42,7 +57,7 @@ export function ActionBar({ hand, deadline, isMyTurn }: ActionBarProps) {
         onClick={hand.play}
       >
         {playBlocker !== null
-          ? t(errorKey(playBlocker), hand.blockerParams)
+          ? t(...blockerText(playBlocker, hand.blockerParams))
           : t("ui.action.play", {
               combo: playLabel === null ? "" : t(playLabel.key, playLabel.params),
             })}
@@ -56,7 +71,7 @@ export function ActionBar({ hand, deadline, isMyTurn }: ActionBarProps) {
         title={
           hand.passBlocker === null
             ? t("ui.action.pass")
-            : t(errorKey(hand.passBlocker), hand.blockerParams)
+            : t(...blockerText(hand.passBlocker, hand.blockerParams))
         }
       >
         {t("ui.action.pass")}

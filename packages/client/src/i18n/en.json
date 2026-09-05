@@ -141,6 +141,8 @@
   "ui.lobby.unready": "Not ready",
   "ui.lobby.waitingForReady": "Waiting on {count} player(s)",
   "ui.lobby.ready": "Ready",
+  "ui.lobby.joining": "Joining next round",
+  "ui.lobby.leaving": "Leaving after this round",
   "ui.lobby.connected": "Connected",
   "ui.lobby.disconnected": "Disconnected",
   "ui.lobby.round": "Round {round}",
@@ -194,6 +196,7 @@
 
   "ui.action.play": "Play {combo}",
   "ui.action.pass": "Pass",
+  "ui.action.mustFollowSuits": "Must follow {suits}",
   "ui.action.autoPass": "No legal play, passing",
   "ui.action.sortLabel": "Sort hand",
   "ui.action.sortByRank": "By rank",

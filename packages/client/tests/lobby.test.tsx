@@ -71,6 +71,44 @@ describe("Lobby", () => {
     expect(within(samRow).getByText("Ready")).toBeInTheDocument();
   });
 
+  it("shows the roster the deal would take, not just the seated one (§7.7, §8.6)", async () => {
+    // A join between rounds queues rather than seats (§7.7), and core counts it
+    // for readiness (§8.6) — so a roster that listed `players` alone would hold
+    // the deal for someone the table cannot see.
+    await seat(
+      publicState({
+        status: "ROUND_END",
+        players: THREE,
+        turnOrder: THREE.map((seat) => seat.id),
+        pendingJoins: [player("p_9", "Newcomer", { seatIndex: 3 })],
+        pendingLeaves: ["p_3"],
+      }),
+    );
+
+    const roster = screen.getByRole("list");
+    const newcomer = within(roster).getByText("Newcomer").closest("li")!;
+    expect(within(newcomer).getByText("Joining next round")).toBeInTheDocument();
+
+    const leaving = within(roster).getByText("Sam").closest("li")!;
+    expect(within(leaving).getByText("Leaving after this round")).toBeInTheDocument();
+  });
+
+  it("holds the deal for a queued join, and says who it is waiting on", async () => {
+    await seat(
+      publicState({
+        status: "ROUND_END",
+        players: THREE,
+        turnOrder: THREE.map((seat) => seat.id),
+        pendingJoins: [player("p_9", "Newcomer", { seatIndex: 3 })],
+      }),
+    );
+
+    expect(screen.getByRole("button", { name: "Deal the next round" })).toBeDisabled();
+    expect(screen.getByText("Waiting on 1 player(s)")).toBeInTheDocument();
+    // The point of the row: the one seat holding the deal is on screen.
+    expect(within(screen.getByRole("list")).getByText("Newcomer")).toBeInTheDocument();
+  });
+
   it("lets the host start once the table is big enough", async () => {
     const { socket, user } = await seat(publicState({ players: THREE }));
 
