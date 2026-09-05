@@ -854,13 +854,53 @@ button:disabled {
   cursor: pointer;
 }
 
-/* §10.7: the auto-pass card, over the row it is passing for. */
+/*
+ * §10.7: the auto-pass card, over the row it is passing for, with the pass
+ * animation beside it. The card rises into place, holds, and leaves downward as
+ * the pass is sent; the fan settles and desaturates under it for the same beat.
+ * Together they are the turn visibly being given up rather than dropped.
+ *
+ * The duration is `--auto-pass-duration`, set from `AUTO_PASS_DELAY_MS` by
+ * `Hand.tsx`, so the card cannot outlive or undershoot the pass it announces.
+ */
 .hand__auto-pass {
   position: absolute;
+  bottom: calc(var(--card-height) * 0.5);
+  left: 50%;
+  z-index: 1;
   padding: 0.35rem 0.75rem;
   border-radius: 0.4rem;
   background: rgba(10, 59, 37, 0.92);
   font-size: 0.8rem;
+  animation: anim-auto-pass var(--auto-pass-duration, 1200ms) ease both;
+}
+
+@keyframes anim-auto-pass {
+  0% {
+    transform: translate(-50%, 12px) scale(0.9);
+    opacity: 0;
+  }
+  12% {
+    transform: translate(-50%, 0) scale(1);
+    opacity: 1;
+  }
+  78% {
+    transform: translate(-50%, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, 16px) scale(0.94);
+    opacity: 0;
+  }
+}
+
+/* The hand stands down while the card is up: nothing here is playable anyway. */
+.hand__fan--passing {
+  transform: translateY(8px);
+  filter: saturate(0.45);
+  transition:
+    transform 220ms ease,
+    filter 220ms ease;
 }
 
 /* The action column (§10.6). */
@@ -1321,6 +1361,16 @@ button.card-tray__card {
 
   .game-table__hand--revolution .hand__fan {
     animation: none;
+  }
+
+  /* The pass still announces itself, it simply stops travelling to do it. */
+  .hand__auto-pass {
+    animation-name: anim-fade;
+  }
+
+  .hand__fan--passing {
+    transform: none;
+    transition: none;
   }
 
   .player-seat--demoted {

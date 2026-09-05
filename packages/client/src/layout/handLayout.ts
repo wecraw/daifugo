@@ -52,11 +52,14 @@ export const UNPLAYABLE_SCALE = 0.72;
 export const UNPLAYABLE_SATURATION = 0.3;
 export const UNPLAYABLE_DROP = 6;
 
-/** §10.4: what selection does to a card, and the spring that gets it there. */
+/**
+ * §10.4: what selection does to a card. The easing that gets it there is the
+ * overshooting `cubic-bezier` on `.hand__card-box` in `styles.css` — a real
+ * spring is not expressible as a CSS transition, and is not worth a JS animation
+ * loop in the hand row for the difference.
+ */
 export const SELECTION_LIFT = 26;
 export const SELECTION_SCALE = 1.06;
-export const SPRING_STIFFNESS = 400;
-export const SPRING_DAMPING = 30;
 
 /** §10.7: how long the "no legal play, passing" card stays up. */
 export const AUTO_PASS_DELAY_MS = 1200;

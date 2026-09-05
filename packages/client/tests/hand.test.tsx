@@ -292,6 +292,19 @@ describe("auto-pass (§10.7)", () => {
     expect(socket.sentOf("pass")).toEqual([[]]);
   });
 
+  it("carries the pass animation, timed to the pass it announces", () => {
+    seat(table([card("C-3", "C", 3)], { currentTrick: trick }));
+    const announcement = document.querySelector<HTMLElement>(".hand__auto-pass");
+    expect(announcement?.style.getPropertyValue("--auto-pass-duration")).toBe(
+      `${AUTO_PASS_DELAY_MS}ms`,
+    );
+    // The fan stands down under the card, and stands back up once it is gone.
+    expect(document.querySelector(".hand__fan--passing")).not.toBeNull();
+    act(() => void vi.advanceTimersByTime(AUTO_PASS_DELAY_MS));
+    expect(document.querySelector(".hand__fan--passing")).toBeNull();
+    expect(document.querySelector(".hand__auto-pass")).toBeNull();
+  });
+
   // React 19 StrictMode double-invokes mount effects: the first run schedules the
   // delay and is torn down, the second re-runs from scratch. The guard only marks
   // the turn once the pass is actually sent, so the second run still fires — and
@@ -367,9 +380,18 @@ describe("sorting (§10.8)", () => {
     seat(table([card("S-5", "S", 5), card("H-3", "H", 3), card("H-13", "H", 13)]));
     expect(handOrder()).toEqual(["H-3", "S-5", "H-13"]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Sort hand" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sort by suit" }));
     expect(handOrder()).toEqual(["S-5", "H-3", "H-13"]);
     expect(localStorage.getItem("daifugo.handSort")).toBe("suit");
+  });
+
+  it("labels the toggle with the order a tap gives you, not the current one", () => {
+    seat(table([card("S-5", "S", 5)]));
+    // No aria-label overrides it: the accessible name is the visible action, so a
+    // screen reader hears the destination order change with the button.
+    const toggle = screen.getByRole("button", { name: "Sort by suit" });
+    fireEvent.click(toggle);
+    expect(screen.getByRole("button", { name: "Sort by rank" })).toBe(toggle);
   });
 
   it("reverses the hand on revolution, because the order itself reversed", () => {

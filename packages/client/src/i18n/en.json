@@ -200,9 +200,8 @@
   "ui.action.mustFollowSuits": "Must follow {suits}",
   "ui.action.mustPlayCount": "Must play {count} card(s)",
   "ui.action.autoPass": "No legal play, passing",
-  "ui.action.sortLabel": "Sort hand",
-  "ui.action.sortByRank": "By rank",
-  "ui.action.sortBySuit": "By suit",
+  "ui.action.sortByRank": "Sort by rank",
+  "ui.action.sortBySuit": "Sort by suit",
 
   "ui.combo.single": "{rank}",
   "ui.combo.pair": "Pair of {rank}s",

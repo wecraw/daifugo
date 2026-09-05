@@ -143,7 +143,6 @@ export const UI_I18N_KEYS = [
   "ui.action.mustFollowSuits",
   "ui.action.mustPlayCount",
   "ui.action.autoPass",
-  "ui.action.sortLabel",
   "ui.action.sortByRank",
   "ui.action.sortBySuit",
 

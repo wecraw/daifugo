@@ -26,6 +26,7 @@ import { JOKER_GLYPH, bindingGlyph } from "../glyphs";
 import type { HandController } from "../hooks/useHandController";
 import { useTranslate } from "../i18n/index";
 import {
+  AUTO_PASS_DELAY_MS,
   CARD_HEIGHT,
   CARD_WIDTH,
   HIT_SLOP_Y,
@@ -42,7 +43,10 @@ export function Hand({ hand }: { hand: HandController }) {
 
   return (
     <div className="hand">
-      <ul className="hand__fan" style={{ width: `${hand.layout.width}px` }}>
+      <ul
+        className={`hand__fan${hand.autoPassing ? " hand__fan--passing" : ""}`}
+        style={{ width: `${hand.layout.width}px` }}
+      >
         {hand.cards.map((card, index) => {
           const slot = hand.layout.cards[index];
           if (slot === undefined) return null;
@@ -136,9 +140,19 @@ export function Hand({ hand }: { hand: HandController }) {
         })}
       </ul>
 
-      {/* §10.7: the pass the player did not have to make still gets its beat. */}
+      {/*
+        §10.7: the pass the player did not have to make still gets its beat. The
+        card rises, holds, and leaves on the same 1.2s the controller waits before
+        sending the pass, and the fan stands down under it — the animation is what
+        stops the turn from feeling dropped, so its duration comes from the same
+        constant the timer does rather than being typed twice.
+      */}
       {hand.autoPassing && (
-        <p className="hand__auto-pass" role="status">
+        <p
+          className="hand__auto-pass"
+          role="status"
+          style={{ "--auto-pass-duration": `${AUTO_PASS_DELAY_MS}ms` } as CSSProperties}
+        >
           {t("ui.action.autoPass")}
         </p>
       )}
