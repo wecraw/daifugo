@@ -8,9 +8,13 @@
  * cannot be reached. The other seats need no modal: their Play button already
  * carries the reason it is disabled (§10.6).
  *
- * **The weakest `count` start selected**, because that is what the turn clock
- * submits for a player who never answers (§7.6): a timeout then plays out on
- * screen as the selection the player was already looking at.
+ * **Nothing starts selected.** The turn clock still submits the weakest `count`
+ * cards for a player who never answers (§7.6), but that is the clock's fallback,
+ * not a suggestion the modal makes on the player's behalf: a pre-filled tray
+ * turns "choose which cards to give away" into "notice and undo a choice already
+ * made for you", and the note under the tray says what expiry would do anyway —
+ * in that rule's own words, because a timed-out 10 discards to the graveyard
+ * rather than sending anything to another seat (§7.6).
  *
  * **The transfer can empty the hand, and that is an agari** (§7.3): playing a
  * single 7 with two cards leaves one, `k = 1`, and passing it wins the round.
@@ -18,16 +22,10 @@
  * the tray goes read-only and says what is about to happen rather than offering a
  * selection with exactly one answer.
  */
-import {
-  TURN_DURATION_MS,
-  invertedIn,
-  trickContextOf,
-  weakestSelection,
-  type PublicGameState,
-} from "@daifugo/core";
+import { TURN_DURATION_MS, invertedIn, trickContextOf, type PublicGameState } from "@daifugo/core";
 import { useSocket } from "../context/SocketContext";
 import { sortHand } from "../hand/sort";
-import { selectionKey, timeoutNote, useCardSelection } from "../hooks/useCardSelection";
+import { selectionKey, useCardSelection } from "../hooks/useCardSelection";
 import { useTranslate } from "../i18n/index";
 import { CardTray } from "./CardTray";
 import { TurnTimer } from "./TurnTimer";
@@ -63,7 +61,7 @@ export function PendingActionModal({ room }: { room: PublicGameState }) {
 
   const selection = useCardSelection(
     count,
-    takesWholeHand ? hand.map((card) => card.id) : weakestSelection(hand, count),
+    takesWholeHand ? hand.map((card) => card.id) : [],
     selectionKey(
       pending?.type ?? "none",
       count,
@@ -110,7 +108,7 @@ export function PendingActionModal({ room }: { room: PublicGameState }) {
           <p className="pending-action__note">
             {takesWholeHand
               ? t("ui.pending.lastCards")
-              : t(...timeoutNote(selection.isDefault, count))}
+              : t(isSevenPass ? "ui.pending.timeoutPass" : "ui.pending.timeoutDiscard", { count })}
           </p>
           <button
             type="button"

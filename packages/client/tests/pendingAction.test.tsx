@@ -3,15 +3,14 @@
  *
  * A pending action is the one moment the table waits on a player who is not
  * choosing a play, so the modal has to do three things: block the rest of the
- * table's input while it is owed, default to the selection the deadline would
- * submit (§7.6), and stay honest when the transfer empties the hand — that is a
- * normal agari (§7.3), not a bug to hide.
+ * table's input while it is owed, open with nothing selected and say what the
+ * deadline would send instead (§7.6), and stay honest when the transfer empties
+ * the hand — that is a normal agari (§7.3), not a bug to hide.
  */
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import {
   parseCombo,
-  weakestSelection,
   type Card,
   type PendingAction,
   type PublicGameState,
@@ -104,18 +103,21 @@ describe("RESOLVE_7_PASS (§7.2)", () => {
     expect(play).toBeDisabled();
   });
 
-  it("defaults to what the deadline would submit (§7.6)", () => {
+  it("opens with nothing selected and cannot be submitted yet", () => {
     seat(owed(SEVEN_PASS));
-    expect(selectedIds()).toEqual(weakestSelection(HAND, 1));
+    expect(selectedIds()).toEqual([]);
+    expect(submitButton()).toBeDisabled();
+    expect(submitButton()).toHaveTextContent("Select 1 more");
   });
 
-  it("says the weakest cards go once the selection is no longer the default (§7.6)", () => {
+  it("names the weakest cards as what the clock would send (§7.6)", () => {
     seat(owed(SEVEN_PASS));
-    expect(screen.getByText("If the clock runs out, this selection is sent")).toBeInTheDocument();
+    const note = "If the clock runs out, your weakest 1 card(s) are passed";
+    expect(screen.getByText(note)).toBeInTheDocument();
+    // It is the clock's fallback, not a description of the tray, so choosing
+    // cards does not change it.
     fireEvent.click(trayCard("H-9"));
-    expect(
-      screen.getByText("If the clock runs out, your weakest 1 card(s) go instead"),
-    ).toBeInTheDocument();
+    expect(screen.getByText(note)).toBeInTheDocument();
   });
 
   it("makes the covered table inert, not merely hidden", () => {
@@ -123,7 +125,10 @@ describe("RESOLVE_7_PASS (§7.2)", () => {
     for (const band of ["top", "middle", "bottom"]) {
       expect(document.querySelector(`.game-table__${band}`)).toHaveAttribute("inert");
     }
-    // The dialog's own control is still reachable — it is not inside the bands.
+    // The dialog's own controls are still reachable — they are not inside the
+    // bands, and choosing a card there enables the submit.
+    expect(trayCard("H-9").closest("[inert]")).toBeNull();
+    fireEvent.click(trayCard("H-9"));
     expect(submitButton()).not.toBeDisabled();
   });
 
@@ -145,10 +150,20 @@ describe("RESOLVE_10_DISCARD (§7.2)", () => {
   it("names the count and submits a discard", () => {
     const socket = seat(owed(TEN_DISCARD));
     expect(screen.getByText("Ten: discard 2 card(s)")).toBeInTheDocument();
+    // The fallback discards to the graveyard; it must not read as a transfer.
+    expect(
+      screen.getByText("If the clock runs out, your weakest 2 card(s) are discarded"),
+    ).toBeInTheDocument();
+    expect(selectedIds()).toEqual([]);
+    fireEvent.click(submitButton());
+    expect(socket.sentOf("submit10Discard")).toEqual([]);
+
+    fireEvent.click(trayCard("C-4"));
+    fireEvent.click(trayCard("H-9"));
     fireEvent.click(submitButton());
     expect(socket.sentOf("submit10Discard")).toHaveLength(1);
     const sent = socket.sentOf("submit10Discard")[0]?.[0] as string[];
-    expect([...sent].sort()).toEqual([...weakestSelection(HAND, 2)].sort());
+    expect([...sent].sort()).toEqual(["C-4", "H-9"]);
   });
 });
 
