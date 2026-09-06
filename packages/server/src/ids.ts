@@ -13,12 +13,13 @@
 import { randomBytes, randomInt, randomUUID } from "node:crypto";
 
 /**
- * Join-code alphabet: digits and uppercase letters with the visually ambiguous
- * ones removed (`0/O`, `1/I`, no `L`). A code is read aloud and typed on a phone,
- * so legibility matters more than entropy density here.
+ * Join-code alphabet: uppercase letters only, 3 characters. This is a private
+ * game for a dozen friends with few concurrent rooms, so usability (short,
+ * easy to read aloud and type on a phone) beats collision-space — the
+ * repository enforces uniqueness among live rooms regardless.
  */
-const JOIN_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-const JOIN_CODE_LENGTH = 6;
+const JOIN_CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const JOIN_CODE_LENGTH = 3;
 
 /** A short, human-friendly room code (§8). Uniqueness is enforced by the repository. */
 export function generateJoinCode(): string {

@@ -15,13 +15,13 @@ import { useSocket } from "../context/SocketContext";
 import { LanguageToggle } from "./LanguageToggle";
 
 const NAME_MAX_LENGTH = 16;
-const CODE_MAX_LENGTH = 6;
+const CODE_MAX_LENGTH = 3;
 
-/** The server's join codes are uppercase and alphanumeric (no O/0, I/1, L). */
+/** The server's join codes are 3 uppercase letters. */
 function normalizeCode(raw: string): string {
   return raw
     .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
+    .replace(/[^A-Z]/g, "")
     .slice(0, CODE_MAX_LENGTH);
 }
 

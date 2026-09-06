@@ -114,7 +114,7 @@
   "ui.menu.joinRoom": "ルームに参加",
   "ui.menu.joining": "参加中…",
   "ui.menu.roomCodeLabel": "ルームコード",
-  "ui.menu.roomCodePlaceholder": "ABC234",
+  "ui.menu.roomCodePlaceholder": "ABC",
   "ui.menu.rejoin": "{code} に戻る",
   "ui.menu.forget": "ルームを忘れる",
   "ui.menu.nameRequired": "先に名前を入力してください",

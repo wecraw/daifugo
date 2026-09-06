@@ -114,7 +114,7 @@
   "ui.menu.joinRoom": "Join room",
   "ui.menu.joining": "Joining…",
   "ui.menu.roomCodeLabel": "Room code",
-  "ui.menu.roomCodePlaceholder": "ABC234",
+  "ui.menu.roomCodePlaceholder": "ABC",
   "ui.menu.rejoin": "Rejoin {code}",
   "ui.menu.forget": "Forget that room",
   "ui.menu.nameRequired": "Enter a name first",
