@@ -1127,9 +1127,8 @@ List revisions newest-first to find `$GOOD_REVISION`:
 gcloud run revisions list --service daifugo --region "$REGION" --sort-by "~createTime"
 ```
 
-A rollback restarts the process, so in-flight rooms survive on Firestore state and
-their deadlines are re-armed on boot (§14). Players reconnect with the `resumeToken`
-already in localStorage (§8.1).
+A rollback restarts the process. Whoever is connected reconnects; don't roll back
+mid-match and there is nothing else to think about.
 
 ---
 
@@ -1146,12 +1145,9 @@ broadcast, no Pub/Sub adapter, no session-affinity problem, and no cross-instanc
 timer contention, because in steady state there is never more than one instance.
 
 One caveat, since the flag does not quite mean what its name suggests:
-`max-instances` is per *revision*, so a deploy briefly overlaps two instances —
-the old revision keeps serving sockets already open on it. State and timers are
-unaffected (both sides commit through the same CAS, and an early `TICK` is a
-no-op), but the in-memory Socket.IO adapters do not see each other, so anyone
-connected across the deploy sees a frozen table until they reconnect. Don't
-deploy mid-match and it never comes up.
+`max-instances` is per *revision*, so a deploy briefly overlaps two instances and
+anyone connected across it sees a frozen table until they reconnect. Don't deploy
+mid-match. Nothing is built to handle this and nothing should be.
 
 `min-instances=0` is the companion cost decision, not an architectural one: with
 nobody connected the service scales to zero, and the first player of a session pays
@@ -1195,17 +1191,13 @@ Firestore and the boot re-arm restores pending deadlines on startup.
   networking for long-lived Socket.IO connections, and a faster cold start),
   `--max-instances=1`, and `--no-session-affinity`.
 
-  **CPU throttling stays at its default (on).** An earlier draft of this section
-  called `--no-cpu-throttling` required. It is not. CPU is throttled only while an
-  instance has no request in flight, and an open WebSocket counts as an in-flight
-  request for its whole life — so any instance with a connected player has full CPU,
-  and every armed deadline fires on time. The only throttled window is one with zero
-  sockets open service-wide, and nobody is waiting on a timer then. On the next
-  connect CPU returns and the stalled `setTimeout` fires late, which is harmless
-  because the `TICK` carries the deadline that expired rather than the wall clock at
-  firing (§7.6), and because `join` re-arms the room's deadline on every reconnect.
-  The flag would cost roughly the entire hosting budget for a case that self-heals
-  on the next connect.
+  **CPU throttling stays at its default (on).** An earlier draft called
+  `--no-cpu-throttling` required. It is not: an open WebSocket counts as an
+  in-flight request for its whole life, so any instance with a connected player
+  already has full CPU. The only throttled window is one with zero sockets open
+  service-wide, and nobody is waiting on a timer then. The flag would cost roughly
+  the entire hosting budget. The full reasoning and the measured cost are in
+  `cloudbuild.yaml`; read them before adding it back.
 * **The client is served as static assets off the same Cloud Run service.** One
   origin, so there is no CORS allowlist and no separate static host to deploy, and
   the client's socket connects to its own origin rather than a configured URL.

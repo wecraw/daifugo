@@ -14,12 +14,12 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/socket.io": {
-        target: "https://daifugo-213193123522.us-west1.run.app",
+        target: "http://localhost:4000",
         ws: true,
         changeOrigin: true,
       },
       "/rooms": {
-        target: "https://daifugo-213193123522.us-west1.run.app",
+        target: "http://localhost:4000",
         changeOrigin: true,
       },
     },

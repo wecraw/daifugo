@@ -57,12 +57,15 @@ export function buildServer(options: BuildServerOptions): BuiltServer {
     options.scheduler ??
     new RealScheduler((error) => app.log.error(error, "scheduled task failed"));
 
+  // No `cors` option: the client is served off this same service (§14), so the
+  // socket connects back to its own origin and there is nothing cross-origin to
+  // allow. Dev goes through the Vite proxy, which is same-origin too.
   const io = new Server<
     ClientToServerEvents,
     ServerToClientEvents,
     Record<string, never>,
     SocketData
-  >(app.server, { cors: { origin: "*" }, transports: ["websocket"] });
+  >(app.server, { transports: ["websocket"] });
 
   const hub = new RoomHub(io);
   const manager = new RoomManager({
