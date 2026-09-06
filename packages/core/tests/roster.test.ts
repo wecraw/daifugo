@@ -75,6 +75,16 @@ describe("the lobby roster (§7.7)", () => {
     expect(left.history.map((entry) => entry.key)).toContain("history.hostTransferred");
   });
 
+  it("vacates the host seat when the last player leaves (§8.2)", () => {
+    // A room everyone walked out of is reusable: the next table to gather in it
+    // has to be able to deal, and only an empty `hostId` lets the server hand the
+    // seat to the first arrival.
+    const empty = leave(leave(lobby(2), "p1"), "p0");
+
+    expect(empty.players).toEqual([]);
+    expect(empty.hostId).toBe("");
+  });
+
   it("refuses a leave from someone who was never in the room", () => {
     expect(queueLeave(lobby(3), "ghost")).toMatchObject({ error: "PLAYER_NOT_FOUND" });
   });

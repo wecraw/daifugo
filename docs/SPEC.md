@@ -698,7 +698,9 @@ forgotten, whose `ROOM_NOT_FOUND` drops the seat and falls back without retrying
 The first player to join a room is host, recorded as `hostId`. `updateRules`,
 `setRoundLimit`, and `startGame` are host-only and rejected otherwise. Host transfers
 to the longest-seated connected player if the host disconnects and does not return
-within the grace period.
+within the grace period. If the last player leaves, `hostId` goes back to empty:
+the room is vacant, and the next player to join it is host, exactly as in a room
+that was just created.
 
 ### 8.3 Disconnect grace
 30 seconds, governing **seat removal only**. Turn timers continue to run for

@@ -197,15 +197,28 @@ export class RoomManager {
     const joined = queueJoin(doc.state, player);
     if (!joined.ok) return { next: null, outcome: joined };
 
-    // The first player to seat is host (§8.2). A fresh room carries `hostId ""`.
+    // The first player to seat is host (§8.2). A fresh room carries `hostId ""`,
+    // and so does one everyone has left. A room whose `hostId` names nobody on the
+    // roster is neither: it is a doc written before the engine learned to vacate
+    // the seat, and it would otherwise stay unstartable forever, so the arrival
+    // takes the seat there too.
     let state = joined.value;
-    if (state.hostId === "") state = { ...state, hostId: playerId };
+    if (!this.holdsHost(doc.state)) state = { ...state, hostId: playerId };
 
     const next: RoomDoc = {
       ...withState(doc, state, now),
       tokens: { ...doc.tokens, [token]: playerId },
     };
     return { next, outcome: ok({ playerId, resumeToken: token, reconnected: false }) };
+  }
+
+  /** Whether anyone on the roster is the host the state names (§8.2). */
+  private holdsHost(state: GameState): boolean {
+    if (state.hostId === "") return false;
+    return (
+      state.players.some((p) => p.id === state.hostId) ||
+      state.pendingJoins.some((p) => p.id === state.hostId)
+    );
   }
 
   /** A seat is reclaimable while its player is still seated and not leaving (§8.1). */

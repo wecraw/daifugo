@@ -1231,7 +1231,14 @@ function transferHost(next: GameState, departingId: string): void {
   if (next.hostId !== departingId) return;
   const leaving = new Set([...next.pendingLeaves, departingId]);
   const heir = next.players.find((player) => !leaving.has(player.id));
-  if (heir === undefined) return;
+  // Nobody left to hand it to: the room is vacant again, so it carries the same
+  // empty `hostId` a freshly created one does (§8.2). Leaving the departed id in
+  // place would point the host seat at a player who is not in the roster, and the
+  // next table to gather in this room would have nobody who could deal.
+  if (heir === undefined) {
+    next.hostId = "";
+    return;
+  }
   next.hostId = heir.id;
   log(next, history("history.hostTransferred", { player: heir.id }));
 }

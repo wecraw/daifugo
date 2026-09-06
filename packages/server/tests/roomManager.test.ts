@@ -208,6 +208,43 @@ describe("RoomManager acceptance (§12.4)", () => {
     expect(doc.state.players).toHaveLength(2);
   });
 
+  it("hands the host seat to the first arrival after the room empties (§8.2)", async () => {
+    // A room outlives the table that gathered in it: everyone drops, their graces
+    // expire, and the code gets reused later. If the departed host's id stayed in
+    // `hostId` nobody in the next table would be host, and the deal button would
+    // be gone from every screen.
+    const roomId = await manager.createRoom();
+    const first = await seatPlayer(manager, roomId, "Will");
+    await manager.disconnect(roomId, first.playerId);
+    await scheduler.advance(DISCONNECT_GRACE_MS);
+
+    const empty = await docOf(roomId);
+    expect(empty.state.players).toHaveLength(0);
+    expect(empty.state.hostId).toBe("");
+
+    const next = await seatPlayer(manager, roomId, "Alex");
+    await seatPlayer(manager, roomId, "Sam");
+    expect((await docOf(roomId)).state.hostId).toBe(next.playerId);
+  });
+
+  it("claims the host seat when the stored one names nobody on the roster (§8.2)", async () => {
+    // A doc written before the engine vacated the seat: `hostId` is a player who
+    // is no longer anywhere in the room. Such a room can never be dealt again, so
+    // an arrival takes the seat rather than inheriting the dead id.
+    const roomId = await manager.createRoom();
+    await repo.mutate(roomId, (current) => ({
+      ...current,
+      state: { ...current.state, hostId: "p_ghost", stateVersion: current.state.stateVersion + 1 },
+      stateVersion: current.stateVersion + 1,
+    }));
+
+    const first = await seatPlayer(manager, roomId, "Will");
+    await seatPlayer(manager, roomId, "Alex");
+    const doc = await docOf(roomId);
+    expect(doc.state.hostId).toBe(first.playerId);
+    expect(unreadyPlayerIds(doc.state)).not.toContain(first.playerId);
+  });
+
   /* ---------------------------------------------------------------------- */
   /* Test 28: the turn timeout fires for a disconnected player               */
   /* ---------------------------------------------------------------------- */
