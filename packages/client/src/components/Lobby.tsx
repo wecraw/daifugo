@@ -32,6 +32,7 @@
  * house rules, the way out — and the right column carries the table: who is in it,
  * and the one action this seat can take.
  */
+import { useState } from "react";
 import {
   MIN_PLAYERS,
   matchStandings,
@@ -93,10 +94,33 @@ function rosterRows(room: PublicGameState): { seat: Player; pending: PendingChan
 export function Lobby({ room }: { room: PublicGameState }) {
   const t = useTranslate();
   const { playerId, status, leaveRoom } = useSocket();
+  const [copied, setCopied] = useState(false);
 
   const betweenRounds = room.status === "ROUND_END" || room.status === "MATCH_END";
   const matchOver = room.status === "MATCH_END";
   const size = rosterSize(room);
+
+  // The room code is already in the URL (the client route joins it on load), so
+  // the current location is the whole invite — nothing to build server-side.
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ url });
+      } catch {
+        // A cancelled share sheet is not an error worth surfacing.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard permission denied — nothing more to offer than the room code
+      // already on screen.
+    }
+  };
 
   // The demotion of the round just ended (§4.5). Read off the redacted history
   // this seat already has; `miyakoOchi` names a count, never a card, so every seat
@@ -128,6 +152,9 @@ export function Lobby({ room }: { room: PublicGameState }) {
             <span className="lobby__code-label">{t("ui.room.codeLabel")}</span>{" "}
             <span className="lobby__code-value">{room.roomId}</span>
           </h1>
+          <button type="button" className="lobby__share" onClick={handleShare}>
+            {copied ? t("ui.room.linkCopied") : t("ui.room.share")}
+          </button>
           <hr className="lobby__rule" />
           <p className="lobby__round">
             {room.roundLimit === null

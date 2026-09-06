@@ -135,6 +135,8 @@
 
   "ui.room.codeLabel": "Room",
   "ui.room.leave": "Leave room",
+  "ui.room.share": "Share invite",
+  "ui.room.linkCopied": "Link copied",
 
   "ui.lobby.roster": "Players",
   "ui.lobby.host": "Host",

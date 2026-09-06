@@ -53,6 +53,8 @@ export const UI_I18N_KEYS = [
   // for a mid-round exit (§7.7).
   "ui.room.codeLabel",
   "ui.room.leave",
+  "ui.room.share",
+  "ui.room.linkCopied",
 
   // Lobby (§10.11, §9): the roster, the round line, and the start control.
   "ui.lobby.roster",

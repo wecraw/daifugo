@@ -104,6 +104,9 @@ export function GameTable({ room }: { room: PublicGameState }) {
       });
 
   const activeName = room.players.find((seat) => seat.id === activeId)?.name ?? "";
+  // Somebody else is up: the hand is covered and cannot be touched until it
+  // comes back round.
+  const waitingOnOther = inTurn && activeId !== null && activeId !== room.myPlayerId;
 
   return (
     <div className="game-table" style={tableCssVariables() as CSSProperties}>
@@ -173,7 +176,21 @@ export function GameTable({ room }: { room: PublicGameState }) {
               className={`game-table__hand${revolving ? " game-table__hand--revolution" : ""}`}
               aria-label={t("ui.table.handArea")}
             >
-              <Hand hand={hand} />
+              {/* Off-turn the hand is covered rather than merely ignored: the
+                  scrim is what says the wait is the table's, not a dead tap
+                  (§10.9). `inert` goes on the cards and not the section, so the
+                  scrim's own status line stays in the a11y tree. */}
+              <div className="game-table__hand-cards" inert={waitingOnOther}>
+                <Hand hand={hand} />
+              </div>
+              {waitingOnOther && (
+                <div className="hand-wait" role="status">
+                  <span className="hand-wait__spinner" aria-hidden="true" />
+                  <span className="hand-wait__label">
+                    {t("ui.table.waitingFor", { player: activeName })}
+                  </span>
+                </div>
+              )}
             </section>
             <section className="game-table__action" aria-label={t("ui.table.actionArea")}>
               <ActionBar

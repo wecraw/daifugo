@@ -409,6 +409,24 @@ button:disabled {
   line-height: 1.05;
 }
 
+.lobby__share {
+  align-self: flex-start;
+  margin-top: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: none;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.lobby__share:hover {
+  background: var(--accent);
+  color: var(--felt-dark);
+}
+
 .lobby__rule {
   width: 2.75rem;
   height: 2px;
@@ -1013,34 +1031,6 @@ button:disabled {
  * The wait, off-turn: an unadorned line under (or in place of) the trick, with
  * a ring that turns so a slow opponent never reads as a frozen table.
  */
-.trick-area__waiting {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.5rem;
-}
-
-.trick-area__spinner {
-  width: 0.75rem;
-  height: 0.75rem;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: trick-waiting-spin 900ms linear infinite;
-}
-
-@keyframes trick-waiting-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .trick-area__spinner {
-    animation: none;
-  }
-}
-
 .trick-area__stack {
   position: relative;
   display: flex;
@@ -1213,7 +1203,58 @@ button:disabled {
  * card reaching over the trick area is the card game's own idiom.
  */
 .game-table__hand {
+  position: relative;
   overflow: visible;
+}
+
+.game-table__hand-cards {
+  height: 100%;
+}
+
+/*
+ * Off-turn the hand row wears a scrim: dark enough to read as "not yours right
+ * now", sheer enough that the cards behind it are still legible — planning the
+ * next play while somebody else thinks is half the game. It also takes the
+ * pointer events the cards would have had, and the `inert` on the fan takes the
+ * keyboard's.
+ */
+.hand-wait {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  background: rgba(10, 22, 16, 0.62);
+  color: rgba(245, 243, 238, 0.92);
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+
+.hand-wait__spinner {
+  width: 1.4rem;
+  height: 1.4rem;
+  border: 3px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  /* Slower than a progress spinner on purpose: nothing is loading, the table is
+     simply somebody else's for a moment. */
+  animation: hand-wait-spin 2s linear infinite;
+}
+
+@keyframes hand-wait-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hand-wait__spinner {
+    animation: none;
+  }
 }
 
 .hand {
