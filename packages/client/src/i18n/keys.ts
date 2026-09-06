@@ -4,8 +4,8 @@
  * Core owns `rule.*`, `role.*`, `history.*` and `error.*` and exports them as
  * `CoreI18nKey`; `ui.*` is client-only presentation text and must never move into
  * core — nothing in core emits it. The client composes the union here, and
- * `en.json` / `ja.json` are typechecked against `I18nBundle`, so adding a key on
- * either side is a compile error until both bundles carry a translation.
+ * `en.json` is typechecked against `CopyBundle`, so adding a key is a compile
+ * error until the English copy exists.
  */
 import { CORE_I18N_KEYS, type CoreI18nKey } from "@daifugo/core";
 
@@ -38,10 +38,10 @@ export const UI_I18N_KEYS = [
   "ui.menu.roomCodeRequired",
   "ui.menu.createFailed",
 
-  // Language toggle (§11): client-side only, persisted to localStorage
-  "ui.language.label",
-  "ui.language.en",
-  "ui.language.ja",
+  // Role-name terminology (§11): client-side only, persisted to localStorage
+  "ui.terminology.label",
+  "ui.terminology.grandMillionaire",
+  "ui.terminology.daifugo",
 
   // Connection status
   "ui.connection.connecting",
@@ -203,17 +203,16 @@ export type I18nKey = CoreI18nKey | UiI18nKey;
 export const I18N_KEYS: readonly I18nKey[] = [...CORE_I18N_KEYS, ...UI_I18N_KEYS];
 
 /**
- * A complete translation bundle. `en.json` and `ja.json` are both asserted to
- * this type, so a missing or unknown key fails `tsc` rather than rendering as a
- * raw key at runtime.
+ * The complete English copy. A missing or unknown key fails `tsc` rather than
+ * rendering as a raw key at runtime.
  */
-export type I18nBundle = Record<I18nKey, string>;
+export type CopyBundle = Record<I18nKey, string>;
 
-/** The two languages of §0. Persisted to localStorage, never sent to the server. */
-export const LANGUAGES = ["en", "ja"] as const;
+/** The two naming conventions of §0. Persisted locally, never sent to the server. */
+export const TERMINOLOGIES = ["grandMillionaire", "daifugo"] as const;
 
-export type Language = (typeof LANGUAGES)[number];
+export type Terminology = (typeof TERMINOLOGIES)[number];
 
-export function isLanguage(value: unknown): value is Language {
-  return typeof value === "string" && (LANGUAGES as readonly string[]).includes(value);
+export function isTerminology(value: unknown): value is Terminology {
+  return typeof value === "string" && (TERMINOLOGIES as readonly string[]).includes(value);
 }

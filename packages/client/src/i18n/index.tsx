@@ -1,30 +1,36 @@
 /**
- * The i18n runtime (§11): the two bundles, the language preference, and `t`.
+ * English copy rendering (§11), with one small preference for role terminology.
  *
  * Every user-visible string in the client resolves through a key here — the
- * bundles are typed `I18nBundle`, so a key that exists on one side and not the
- * other fails `tsc` rather than rendering raw at runtime.
+ * copy is typed `CopyBundle`, so a missing key fails `tsc` rather than rendering
+ * raw at runtime.
  *
- * The language is client state only. It is chosen on the main menu, persisted to
- * localStorage, and never reaches the server: history entries arrive as keys with
- * params (§8.5) and are rendered here, so two players can read the same table in
- * different languages.
+ * Everything is English. The main-menu toggle only chooses between descriptive
+ * English role names and their romanized Daifugo equivalents.
  */
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import enBundle from "./en.json";
-import jaBundle from "./ja.json";
-import { isLanguage, type I18nBundle, type I18nKey, type Language } from "./keys";
+import englishCopy from "./en.json";
+import { isTerminology, type CopyBundle, type I18nKey, type Terminology } from "./keys";
 
 export * from "./keys";
 
-/** `resolveJsonModule` types these as their literal shape; this is the check. */
-export const BUNDLES: Record<Language, I18nBundle> = {
-  en: enBundle satisfies I18nBundle,
-  ja: jaBundle satisfies I18nBundle,
-};
+/** `resolveJsonModule` types the JSON as its literal shape; this is the check. */
+export const COPY = englishCopy satisfies CopyBundle;
 
-export const LANGUAGE_STORAGE_KEY = "daifugo.language";
+/** The complete set of text that the Daifugo naming choice changes. */
+export const TERMINOLOGY_OVERRIDES = {
+  "ui.app.title": "Daifugo",
+  "ui.orientation.rotateBody": "Daifugo is played in landscape.",
+  "role.DAI_FUGO": "Daifugo",
+  "role.FUGO": "Fugo",
+  "role.HEIMIN": "Heimin",
+  "role.HINMIN": "Hinmin",
+  "role.DAI_HINMIN": "Daihinmin",
+  "history.miyakoOchi": "{player} won from Daihinmin — {target} falls to last with {count} card(s)",
+} as const satisfies Partial<CopyBundle>;
+
+export const TERMINOLOGY_STORAGE_KEY = "daifugo.terminology";
 
 export type TranslateParams = Record<string, string | number>;
 
@@ -42,74 +48,71 @@ export function interpolate(template: string, params: TranslateParams = {}): str
   });
 }
 
-export function translate(language: Language, key: I18nKey, params?: TranslateParams): string {
-  return interpolate(BUNDLES[language][key], params);
+export function translate(
+  terminology: Terminology,
+  key: I18nKey,
+  params?: TranslateParams,
+): string {
+  const overrides: Partial<CopyBundle> = TERMINOLOGY_OVERRIDES;
+  const template =
+    terminology === "daifugo" ? (overrides[key] ?? COPY[key]) : COPY[key];
+  return interpolate(template, params);
 }
 
-/** The preferred language: a stored choice, else the browser's, else English. */
-export function detectLanguage(): Language {
-  const stored = readStoredLanguage();
-  if (stored !== null) return stored;
-  const navigatorLanguage = globalThis.navigator?.language ?? "";
-  return navigatorLanguage.toLowerCase().startsWith("ja") ? "ja" : "en";
-}
-
-function readStoredLanguage(): Language | null {
+function readStoredTerminology(): Terminology {
   try {
-    const stored = globalThis.localStorage?.getItem(LANGUAGE_STORAGE_KEY);
-    return isLanguage(stored) ? stored : null;
+    const stored = globalThis.localStorage?.getItem(TERMINOLOGY_STORAGE_KEY);
+    return isTerminology(stored) ? stored : "grandMillionaire";
   } catch {
-    // Private-mode localStorage throws on access; the default is fine.
-    return null;
+    return "grandMillionaire";
   }
 }
 
-export interface I18nContextValue {
-  language: Language;
-  setLanguage: (language: Language) => void;
+interface CopyContextValue {
+  terminology: Terminology;
+  setTerminology: (terminology: Terminology) => void;
   t: Translate;
 }
 
-const I18nContext = createContext<I18nContextValue | null>(null);
+const CopyContext = createContext<CopyContextValue | null>(null);
 
-export function I18nProvider({
+export function CopyProvider({
   children,
-  initialLanguage,
+  initialTerminology,
 }: {
   children: ReactNode;
-  initialLanguage?: Language;
+  initialTerminology?: Terminology;
 }) {
-  const [language, setLanguage] = useState<Language>(() => initialLanguage ?? detectLanguage());
+  const [terminology, setTerminology] = useState<Terminology>(
+    () => initialTerminology ?? readStoredTerminology(),
+  );
 
   useEffect(() => {
     try {
-      globalThis.localStorage?.setItem(LANGUAGE_STORAGE_KEY, language);
+      globalThis.localStorage?.setItem(TERMINOLOGY_STORAGE_KEY, terminology);
     } catch {
       // Persistence is a convenience; the toggle still works without it.
     }
     const documentRef = globalThis.document;
     if (documentRef !== undefined) {
-      documentRef.documentElement.setAttribute("lang", language);
-      // The `<title>` in index.html is the pre-mount placeholder; the tab title
-      // is a user-visible string like any other and resolves through its key.
-      documentRef.title = translate(language, "ui.app.title");
+      documentRef.documentElement.setAttribute("lang", "en");
+      documentRef.title = translate(terminology, "ui.app.title");
     }
-  }, [language]);
+  }, [terminology]);
 
-  const t = useCallback<Translate>((key, params) => translate(language, key, params), [language]);
+  const t: Translate = (key, params) => translate(terminology, key, params);
+  const value: CopyContextValue = { terminology, setTerminology, t };
 
-  const value = useMemo<I18nContextValue>(() => ({ language, setLanguage, t }), [language, t]);
-
-  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+  return <CopyContext.Provider value={value}>{children}</CopyContext.Provider>;
 }
 
-export function useI18n(): I18nContextValue {
-  const value = useContext(I18nContext);
-  if (value === null) throw new Error("useI18n must be used inside an I18nProvider");
+export function useCopy(): CopyContextValue {
+  const value = useContext(CopyContext);
+  if (value === null) throw new Error("useCopy must be used inside a CopyProvider");
   return value;
 }
 
 /** Sugar for the common case: `const t = useTranslate()`. */
 export function useTranslate(): Translate {
-  return useI18n().t;
+  return useCopy().t;
 }
