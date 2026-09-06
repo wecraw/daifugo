@@ -45,6 +45,35 @@ completes — GitHub installs the app, the console lists the repo as connected, 
 its settings page 500s. Worth enabling up front; the symptoms point nowhere near
 the cause.
 
+Rooms expire, so attach the TTL policy (§14). Every write sets `expiresAt` to
+six hours out; this is what makes Firestore act on it:
+
+```bash
+gcloud firestore fields ttls update expiresAt --collection-group=rooms --enable-ttl --project "$PROJECT_ID"
+```
+
+Two things to know. The field must hold a `Timestamp` — pointing a policy at any
+other type does not error, it silently disables the TTL for that document, which
+is why `serialize` in `firestore.ts` exempts `expiresAt` from its JSON round
+trip. And deletion is not punctual: an expired document keeps answering queries
+until the sweeper reaches it, typically within 24 hours, so a six-hour TTL means
+"gone somewhere between 6 and ~30 hours".
+
+Confirm it took:
+
+```bash
+gcloud firestore fields ttls list --collection-group=rooms --project "$PROJECT_ID"
+```
+
+Rooms written before the policy existed have no `expiresAt`, and TTL ignores a
+document whose field is missing — those stay until something mutates them. A
+backfill is not worth writing for a handful of dead rooms: enable the policy
+while nobody is playing, and clear the collection out once.
+
+```bash
+gcloud firestore bulk-delete --collection-ids=rooms --project "$PROJECT_ID"
+```
+
 ### 2. Artifact Registry
 
 ```bash

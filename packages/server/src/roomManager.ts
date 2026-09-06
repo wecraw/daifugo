@@ -38,6 +38,7 @@ import {
   RoomExistsError,
   RoomNotFoundError,
   withState,
+  expiresAtFrom,
   type RoomDoc,
   type RoomRepository,
 } from "./repository.js";
@@ -101,6 +102,7 @@ export class RoomManager {
         deadline: state.deadline,
         stateVersion: state.stateVersion,
         updatedAt: now,
+        expiresAt: expiresAtFrom(now),
       };
       try {
         await this.repo.create(doc);

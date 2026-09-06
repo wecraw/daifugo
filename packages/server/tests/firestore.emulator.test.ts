@@ -10,9 +10,16 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { applyAction, createGameState, type GameState, type Player } from "@daifugo/core";
-import { RoomExistsError, RoomNotFoundError, withState, type RoomDoc } from "../src/repository.js";
+import {
+  ROOM_TTL_MS,
+  RoomExistsError,
+  RoomNotFoundError,
+  expiresAtFrom,
+  withState,
+  type RoomDoc,
+} from "../src/repository.js";
 import { createFirestore, FirestoreRoomRepository } from "../src/firestore.js";
-import type { Firestore } from "@google-cloud/firestore";
+import { Timestamp, type Firestore } from "@google-cloud/firestore";
 
 const emulatorOn = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
 // The client requires an explicit project id even against the emulator (§14).
@@ -34,6 +41,7 @@ function seedDoc(roomId: string): RoomDoc {
     deadline: state.deadline,
     stateVersion: state.stateVersion,
     updatedAt: 0,
+    expiresAt: expiresAtFrom(0),
   };
 }
 
@@ -149,6 +157,21 @@ describe.skipIf(!emulatorOn)("FirestoreRoomRepository against the emulator (§14
     expect(stored.history.length).toBe(state.history.length);
     expect(stored.history[0]!.key).toBe(state.history[0]!.key);
     expect(read!.status).toBe("IN_PROGRESS");
+  });
+
+  it("stores expiresAt as a real Timestamp on both write paths (§14)", async () => {
+    // The TTL policy only honours a `Timestamp`; anything else silently disables
+    // the TTL for that document, so the type surviving the write is the whole
+    // assertion. `create` and `mutate` both go through `serialize`, hence both.
+    await repo.create(seedDoc("ALPHA7"));
+    const created = await repo.get("ALPHA7");
+    expect(created?.expiresAt).toBeInstanceOf(Timestamp);
+    expect(created?.expiresAt.toMillis()).toBe(ROOM_TTL_MS);
+
+    await repo.mutate("ALPHA7", (d) => withState(d, bump(d.state), 5));
+    const mutated = await repo.get("ALPHA7");
+    expect(mutated?.expiresAt).toBeInstanceOf(Timestamp);
+    expect(mutated?.expiresAt.toMillis()).toBe(5 + ROOM_TTL_MS);
   });
 
   it("lists exactly the rooms with a live deadline, for the boot re-arm (§14)", async () => {

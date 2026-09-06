@@ -37,6 +37,15 @@ export const ROOMS_COLLECTION = "rooms";
 export const DEADLINE_FIELD = "deadline";
 
 /**
+ * The field the Firestore TTL policy is attached to (§14).
+ *
+ * The policy itself is provisioning, not code — `gcloud firestore fields ttls
+ * update expiresAt --collection-group=rooms --enable-ttl`, documented in
+ * `docs/DEPLOY.md`. This constant only names the field the doc writes.
+ */
+export const EXPIRES_AT_FIELD = "expiresAt";
+
+/**
  * The minimum of Firestore's `Query` the boot re-arm query needs, so
  * {@link armedRoomsQuery} can be built and asserted against a recording double
  * in a unit test rather than a live Firestore.
@@ -153,9 +162,16 @@ export class FirestoreRoomRepository implements RoomRepository {
  * Firestore stores plain data; the `RoomDoc` already is plain, but history
  * entries are frozen and `structuredClone`-hostile spots do not exist here, so a
  * shallow structured copy is enough to hand the driver an unfrozen, plain object.
+ *
+ * `expiresAt` is the one field that must *not* go through the JSON round trip: a
+ * `Timestamp` comes out the far side as a plain `{_seconds, _nanoseconds}`
+ * object, and a TTL policy pointed at a non-timestamp field is silently disabled
+ * per document rather than erroring. So it is lifted out and re-attached by
+ * reference.
  */
 function serialize(doc: RoomDoc): RoomDoc {
-  return JSON.parse(JSON.stringify(doc)) as RoomDoc;
+  const { expiresAt, ...rest } = doc;
+  return { ...(JSON.parse(JSON.stringify(rest)) as Omit<RoomDoc, "expiresAt">), expiresAt };
 }
 
 interface GrpcError {

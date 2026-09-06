@@ -1211,6 +1211,21 @@ Firestore and the boot re-arm restores pending deadlines on startup.
   Re-arming is safe to run unconditionally because a `TICK` arriving before its
   deadline is a no-op (Section 7.6) and the commit is a `stateVersion` CAS, so a
   re-armed timer racing a live one lands at most one transition.
+* **Room docs expire six hours after their last write.** Every write sets a sibling
+  `expiresAt` field to `updatedAt + 6h`, and a Firestore TTL policy on that field
+  sweeps the document — bounded storage, and a join code from a past session stops
+  resolving. `expiresAt` must be a real `Timestamp`: a TTL policy pointed at any other
+  type is silently disabled per document rather than erroring, which is why the
+  Firestore repository exempts the field from its JSON serialization round trip. The
+  policy is provisioning, not code — a `gcloud firestore fields ttls update` documented
+  in `docs/DEPLOY.md`.
+
+  Expiry is eligibility, not deletion: an expired doc keeps answering queries until the
+  sweeper reaches it, typically within 24 hours, so six hours means "gone somewhere
+  between 6 and ~30 hours". Deletion is safe because every read goes to Firestore — a
+  missing doc is `RoomNotFoundError` → `ROOM_NOT_FOUND`, and the client falls back to
+  the menu. One edge worth knowing: an idle `LOBBY` writes nothing, so a room sat in
+  for six hours expires under its occupants.
 * **Cloud Run flags that must not drift**: `--execution-environment=gen2` (faster
   networking for long-lived Socket.IO connections, and a faster cold start),
   `--max-instances=1`, and `--no-session-affinity`.

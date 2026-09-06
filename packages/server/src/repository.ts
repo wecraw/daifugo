@@ -13,7 +13,33 @@
  * This module defines the contract and an in-memory implementation used by tests
  * and local runs without a Firestore. `firestore.ts` provides the deployed one.
  */
+import { Timestamp } from "@google-cloud/firestore";
 import type { GameState, GameStatus } from "@daifugo/core";
+
+/**
+ * How long after its last write a room document stays alive (§14).
+ *
+ * Firestore TTL only makes a document *eligible* for deletion — expired
+ * documents keep answering queries until the sweeper gets to them, typically
+ * within 24 hours. Six hours therefore means "gone somewhere between 6 and ~30
+ * hours", which is wide enough to survive a session that pauses for dinner and
+ * narrow enough that a join code from last week no longer resolves.
+ *
+ * Note the idle-lobby edge: a `LOBBY` with no live deadline writes nothing, so
+ * a room left open for six hours expires even though someone is nominally
+ * sitting in it.
+ */
+export const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * The TTL field's value for a write happening at `now` (epoch ms).
+ *
+ * It has to be a real Firestore `Timestamp`: pointing a TTL policy at any other
+ * type does not error, it silently disables the TTL for that document.
+ */
+export function expiresAtFrom(now: number): Timestamp {
+  return Timestamp.fromMillis(now + ROOM_TTL_MS);
+}
 
 /**
  * One room's document.
@@ -41,6 +67,14 @@ export interface RoomDoc {
   stateVersion: number;
   /** Epoch ms of the last write. Diagnostics only. */
   updatedAt: number;
+  /**
+   * `updatedAt + ROOM_TTL_MS`, as the Firestore TTL policy's field (§14).
+   *
+   * A `Timestamp` rather than epoch ms because the policy only honours that
+   * type. Nothing reads it: it exists for the server-side sweeper, which the
+   * `gcloud firestore fields ttls update` command in `docs/DEPLOY.md` attaches.
+   */
+  expiresAt: Timestamp;
 }
 
 /** Rebuild the denormalized top-level fields from the state a mutation produced. */
@@ -52,6 +86,7 @@ export function withState(doc: RoomDoc, state: GameState, now: number): RoomDoc 
     deadline: state.deadline,
     stateVersion: state.stateVersion,
     updatedAt: now,
+    expiresAt: expiresAtFrom(now),
   };
 }
 
@@ -210,6 +245,10 @@ export class InMemoryRoomRepository implements RoomRepository {
   }
 }
 
-function clone<T>(value: T): T {
-  return structuredClone(value);
+/**
+ * `structuredClone` strips prototypes, which would turn `expiresAt` into a plain
+ * object. It is an immutable value, so it rides across by reference instead.
+ */
+function clone(doc: RoomDoc): RoomDoc {
+  return { ...structuredClone({ ...doc, expiresAt: null }), expiresAt: doc.expiresAt };
 }
