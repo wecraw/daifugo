@@ -173,12 +173,24 @@ export function GameTable({ room }: { room: PublicGameState }) {
           <ExchangeScreen room={room} />
         ) : (
           <>
-            <section className="game-table__action" aria-label={t("ui.table.actionArea")}>
+            {/* Floated clear of the hand row rather than carved out of it: one
+                band over the felt that says whose turn it is — the controls when
+                it is yours, the wait when it is not — so nothing is ever written
+                across the cards (§10.9). */}
+            <section className="game-table__turn-actions" aria-label={t("ui.table.actionArea")}>
               <ActionBar
                 hand={hand}
                 deadline={room.deadline}
                 isMyTurn={inTurn && activeId === room.myPlayerId}
               />
+              {waitingOnOther && (
+                <div className="turn-wait" role="status">
+                  <span className="turn-wait__spinner" aria-hidden="true" />
+                  <span className="turn-wait__label">
+                    {t("ui.table.waitingFor", { player: activeName })}
+                  </span>
+                </div>
+              )}
             </section>
             <section
               className={`game-table__hand${revolving ? " game-table__hand--revolution" : ""}`}
@@ -186,19 +198,13 @@ export function GameTable({ room }: { room: PublicGameState }) {
             >
               {/* Off-turn the hand is covered rather than merely ignored: the
                   scrim is what says the wait is the table's, not a dead tap
-                  (§10.9). `inert` goes on the cards and not the section, so the
-                  scrim's own status line stays in the a11y tree. */}
+                  (§10.9). It carries no text of its own — the wait is announced
+                  above the row, where it is not written over the cards the
+                  player is reading ahead with. */}
               <div className="game-table__hand-cards" inert={waitingOnOther}>
                 <Hand hand={hand} />
               </div>
-              {waitingOnOther && (
-                <div className="hand-wait" role="status">
-                  <span className="hand-wait__spinner" aria-hidden="true" />
-                  <span className="hand-wait__label">
-                    {t("ui.table.waitingFor", { player: activeName })}
-                  </span>
-                </div>
-              )}
+              {waitingOnOther && <div className="hand-wait" aria-hidden="true" />}
             </section>
           </>
         )}

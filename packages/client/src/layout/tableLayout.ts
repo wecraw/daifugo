@@ -22,17 +22,18 @@ export const VIEWPORT_HEIGHT = 390;
 export const TOP_STRIP_HEIGHT = 56;
 /** Trick area and banners, flanked by the left and right seat columns. */
 export const MIDDLE_HEIGHT = 218;
-/** The single fanned row of §10.2, plus the action column beside it. */
+/** The single fanned row of §10.2. */
 export const HAND_ROW_HEIGHT = 116;
 
 /**
- * The action bar is a row above the hand rather than a column beside it
- * (§10.1), carved out of the top of the hand row rather than costing the hand
- * any width — the hand claims the full frame.
+ * The exchange row's own controls (§4.3), which sit under the tray in flow.
+ *
+ * The turn controls of §10.6 no longer cost a row: they float over the felt
+ * above the hand, so the hand row is the fan's alone and the hand still claims
+ * the full frame width.
  */
 export const ACTION_ROW_HEIGHT = 30;
 export const HAND_REGION_WIDTH = VIEWPORT_WIDTH;
-export const HAND_CARDS_HEIGHT = HAND_ROW_HEIGHT - ACTION_ROW_HEIGHT;
 
 /** The left and right seat columns of the middle band: two chips each, stacked. */
 export const SIDE_COLUMN_WIDTH = 108;

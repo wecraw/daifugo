@@ -816,6 +816,8 @@ button:disabled {
 }
 
 .game-table__bottom {
+  /* The turn controls hang off the top edge of this row (§10.6). */
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 0 0 var(--hand-row-height);
@@ -1151,6 +1153,9 @@ button:disabled {
 
 .card-face--joker {
   background: linear-gradient(140deg, #f7efd8, #e8b64c);
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .card-face--bound {
@@ -1251,43 +1256,72 @@ button:disabled {
  * now", sheer enough that the cards behind it are still legible — planning the
  * next play while somebody else thinks is half the game. It also takes the
  * pointer events the cards would have had, and the `inert` on the fan takes the
- * keyboard's.
+ * keyboard's. The wait itself is announced in the band above the row, so the
+ * scrim is a tint and nothing more: no text over the cards being read.
  */
 .hand-wait {
   position: absolute;
   inset: 0;
   z-index: 40;
+  background: rgba(10, 22, 16, 0.62);
+}
+
+/* The wait, in the band the Play and Pass buttons vacate (§10.9). It is the
+   same weight as they are, so the band reads as one line of turn status. */
+.turn-wait {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.7rem;
-  background: rgba(10, 22, 16, 0.62);
+  gap: 0.6rem;
+  padding: 0.55rem 1.4rem;
+  border-radius: 0.6rem;
+  background: rgba(10, 22, 16, 0.72);
   color: rgba(245, 243, 238, 0.92);
-  font-size: 1.35rem;
+  font-size: 1.05rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  animation: turn-wait-in 200ms ease both;
 }
 
-.hand-wait__spinner {
-  width: 1.4rem;
-  height: 1.4rem;
+@keyframes turn-wait-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem);
+  }
+}
+
+.turn-wait__label {
+  max-width: 26ch;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.turn-wait__spinner {
+  flex: 0 0 auto;
+  width: 1.2rem;
+  height: 1.2rem;
   border: 3px solid currentColor;
   border-top-color: transparent;
   border-radius: 50%;
   /* Slower than a progress spinner on purpose: nothing is loading, the table is
      simply somebody else's for a moment. */
-  animation: hand-wait-spin 2s linear infinite;
+  animation: turn-wait-spin 2s linear infinite;
 }
 
-@keyframes hand-wait-spin {
+@keyframes turn-wait-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hand-wait__spinner {
+  .turn-wait {
+    animation: none;
+  }
+
+  .turn-wait__spinner {
     animation: none;
   }
 }
@@ -1423,25 +1457,81 @@ button:disabled {
     filter 220ms ease;
 }
 
-/* The action row above the hand (§10.6): Play primary on the left, Pass
-   secondary on the right. Each button sizes to its own label rather than
-   stretching to fill the row — Pass sticks to the right edge via its own
-   left margin instead of the row splitting evenly. */
+/*
+ * The turn controls float clear of the hand row (§10.6).
+ *
+ * They used to be a 30px strip carved out of the top of the hand row, which put
+ * them in the same band as the off-turn scrim and its "waiting for…" line — two
+ * things saying opposite things in one strip. Now the row is the hand's alone
+ * and the controls hang over the felt above it, anchored to the top edge of the
+ * hand row so they clear the fan's lift.
+ *
+ * Off-turn they are gone rather than greyed: nothing here is actionable while
+ * somebody else is up, and the scrim underneath already carries the message.
+ */
+.game-table__turn-actions {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  z-index: 45;
+  display: grid;
+  width: 100%;
+  padding: 0 0.6rem 0.5rem;
+  /* The felt above the hand belongs to the trick area; only the buttons
+     themselves take a tap out of it. */
+  pointer-events: none;
+}
+
+/* The controls and the wait share one cell: only one of them is ever showing,
+   and the band should not change height as the turn moves round the table. The
+   row stretches so the buttons' widths resolve against the frame rather than
+   against their own labels; the wait sizes to its text. */
+.game-table__turn-actions > * {
+  grid-area: 1 / 1;
+}
+
+.game-table__turn-actions > .turn-wait {
+  justify-self: center;
+}
+
 .action-bar {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 0.5rem;
-  height: 100%;
+  justify-content: center;
+  gap: 0.75rem;
+  opacity: 0;
+  transform: translateY(0.5rem);
+  transition:
+    opacity 200ms ease,
+    transform 200ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.action-bar--active {
+  opacity: 1;
+  transform: none;
+}
+
+.action-bar--active button {
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action-bar {
+    transform: none;
+    transition: opacity 200ms ease;
+  }
 }
 
 .action-bar button {
   flex: 0 0 auto;
-  max-width: 65%;
-  padding: 0.3rem 0.9rem;
+  max-width: 45%;
+  padding: 0.55rem 1.6rem;
   overflow: hidden;
-  border-radius: 0.35rem;
-  font-size: 0.72rem;
+  border-radius: 0.6rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  font-size: 1.05rem;
+  font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -1450,17 +1540,24 @@ button:disabled {
 .action-bar__play {
   background: var(--accent);
   color: #14110d;
-  font-weight: 700;
 }
 
 .action-bar__play:disabled {
-  background: rgba(245, 243, 238, 0.12);
-  color: rgba(245, 243, 238, 0.65);
-  font-weight: 400;
+  box-shadow: none;
+  background: rgba(245, 243, 238, 0.14);
+  color: rgba(245, 243, 238, 0.7);
+  font-weight: 500;
 }
 
 .action-bar__pass {
-  margin-left: auto;
+  background: rgba(10, 22, 16, 0.85);
+  color: var(--ink);
+  border: 1px solid rgba(245, 243, 238, 0.35);
+}
+
+.action-bar__pass:disabled {
+  box-shadow: none;
+  opacity: 0.5;
 }
 
 .action-bar .turn-timer {

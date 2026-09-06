@@ -65,7 +65,12 @@ export function ActionBar({ hand, deadline, isMyTurn }: ActionBarProps) {
   const { playBlocker, playLabel } = hand;
 
   return (
-    <div className="action-bar">
+    // Off-turn the row is not merely disabled, it is gone: nothing here is
+    // actionable while somebody else is up (§10.9), and the hand's own scrim is
+    // already saying so. It fades rather than cuts so the turn arriving reads as
+    // the controls coming to you. `inert` keeps the faded-out buttons out of the
+    // tab order and the a11y tree, which `opacity: 0` alone would not.
+    <div className={`action-bar${isMyTurn ? " action-bar--active" : ""}`} inert={!isMyTurn}>
       {isMyTurn && <TurnTimer deadline={deadline} durationMs={TURN_DURATION_MS} size="seat" />}
 
       <button
