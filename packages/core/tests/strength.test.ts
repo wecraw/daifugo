@@ -7,6 +7,7 @@ import {
   compareStrength,
   effectiveInverted,
   isStronger,
+  rankOfStrength,
   sortByStrength,
   strengthOf,
 } from "../src/strength.js";
@@ -117,5 +118,21 @@ describe("sortByStrength", () => {
     const twice = sortByStrength([...hand].reverse(), false).map((c) => c.id);
     expect(once).toEqual(twice);
     expect(hand.map((c) => c.id)).toEqual(before);
+  });
+});
+
+describe("rankOfStrength (§6, the Kaidan lock's badge)", () => {
+  it("round-trips every rank through its strength index", () => {
+    for (const rank of SPEC_ORDER) {
+      expect(rankOfStrength(strengthOf(rank))).toBe(rank);
+    }
+  });
+
+  it("has no rank for the pure joker or for an out-of-range index", () => {
+    // A lock stepped past either end of the range (§6) lands here, and is meant
+    // to come back undefined rather than be guessed at.
+    expect(rankOfStrength(JOKER_STRENGTH)).toBeUndefined();
+    expect(rankOfStrength(-1)).toBeUndefined();
+    expect(rankOfStrength(99)).toBeUndefined();
   });
 });

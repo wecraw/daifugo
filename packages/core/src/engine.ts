@@ -70,6 +70,7 @@ import {
   spade3BeatsJoker,
   tenDiscardPending,
 } from "./rules/index.js";
+import { effectiveInverted } from "./strength.js";
 import {
   eligiblePlayerIds,
   hasDropped,
@@ -597,7 +598,16 @@ function playCards(
     log(next, history("history.shibariLocked", { player: playerId, suits: lock.join("") }));
   }
 
-  const kLock = kaidanLock(previousTop, combo, state.kaidanLock, invertedIn(ctx), state.config);
+  // The advance uses the post-toggle orientation: revolution and 11-back fired
+  // above apply to the *next* play, which is exactly what the lock constrains.
+  const kLock = kaidanLock(
+    previousTop,
+    combo,
+    state.kaidanLock,
+    invertedIn(ctx),
+    effectiveInverted(next.isRevolution, next.trickInverted),
+    state.config,
+  );
   next.kaidanLock = kLock;
   if (kLock !== null && state.kaidanLock === null) {
     log(next, history("history.kaidanLocked", { player: playerId }));

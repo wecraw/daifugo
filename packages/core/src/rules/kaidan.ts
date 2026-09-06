@@ -26,19 +26,29 @@ import type { HouseRulesConfig, PlayCombo } from "../types.js";
  *
  * `previous` is the play `current` landed on — the trick top before this play, or
  * null when `current` is leading. `existing` is the lock already in force.
+ *
+ * The two orientations are deliberately different. `inverted` is the pre-play
+ * `effectiveInverted`, the direction under which `current` had to beat
+ * `previous`, so it is what decides whether the pair is one step apart.
+ * `nextInverted` is the orientation *after* Phase A's revolution and 11-back
+ * toggles, which is the direction the next play will be judged in, so it is what
+ * decides which way the requirement advances. A Jack that satisfies the lock and
+ * flips 11-back must ask for a 10 next, not a Queen: a Queen could not beat it.
  */
 export function kaidanLock(
   previous: PlayCombo | null,
   current: PlayCombo,
   existing: number | null,
   inverted: boolean,
+  nextInverted: boolean,
   config: Readonly<HouseRulesConfig>,
 ): number | null {
   if (!config.kaidan) return null;
 
   const currentIndex = strengthOf(current.resolvedRank);
+  const advanced = currentIndex + (nextInverted ? -1 : 1);
 
-  if (existing !== null) return currentIndex + (inverted ? -1 : 1);
+  if (existing !== null) return advanced;
   if (previous === null) return null;
   if (previous.cards.length !== current.cards.length) return null;
 
@@ -46,5 +56,5 @@ export function kaidanLock(
   const step = inverted ? previousIndex - currentIndex : currentIndex - previousIndex;
   if (step !== 1) return null;
 
-  return currentIndex + (inverted ? -1 : 1);
+  return advanced;
 }

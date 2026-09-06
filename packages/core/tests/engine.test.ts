@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import { DECK_SIZE, openingLeaderId } from "../src/deck.js";
 import { createGameState } from "../src/engine.js";
+import { strengthOf } from "../src/strength.js";
 import type { ClientAction, Player } from "../src/types.js";
 import { activeId, handIds, table } from "./fixtures.js";
 import { act, assertInvariants, countCards, reject } from "./invariants.js";
@@ -326,6 +327,34 @@ describe("kaidan through the pipeline (§6)", () => {
     let cleared = locked;
     for (const id of ["p2", "p3"]) cleared = act(cleared, { type: "PASS" }, id);
     expect(cleared.kaidanLock).toBeNull();
+  });
+
+  it("advances the lock in the direction the accepted play leaves behind (§7.1 Phase A)", () => {
+    // 9 then 10 locks the trick to Jacks. The Jack satisfies the lock and fires
+    // 11-back, so the trick is inverted for whoever plays next: the requirement
+    // has to step *down* to a 10. Stepping up to a Queen would demand a card that
+    // cannot beat a Jack under inversion, stranding the trick.
+    const state = table({
+      hands: {
+        p0: ["S-9", "C-3"],
+        p1: ["H-10", "C-4"],
+        p2: ["C-11", "S-6"],
+        p3: ["D-10", "S-2"],
+      },
+      config: { tenDiscard: false },
+    });
+
+    const led = act(state, { type: "PLAY_CARDS", cardIds: ["S-9"] }, "p0");
+    const locked = act(led, { type: "PLAY_CARDS", cardIds: ["H-10"] }, "p1");
+    expect(locked.kaidanLock).toBe(strengthOf(11));
+
+    const flipped = act(locked, { type: "PLAY_CARDS", cardIds: ["C-11"] }, "p2");
+    expect(flipped.trickInverted).toBe(true);
+    expect(flipped.kaidanLock).toBe(strengthOf(10));
+
+    // And the required card is actually playable: a 10 beats a Jack while inverted.
+    const followed = act(flipped, { type: "PLAY_CARDS", cardIds: ["D-10"] }, "p3");
+    expect(followed.kaidanLock).toBe(strengthOf(9));
   });
 
   it("does not lock with the rule off", () => {

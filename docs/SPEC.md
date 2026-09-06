@@ -486,7 +486,7 @@ combo's card count: a pair of 5s skips 2, a triple of 7s passes up to 3.
 | **11-Back** | Resolved rank is 11. | `J` = combo count. Odd toggles `trickInverted`. Even is a no-op. Resets on trick clear. |
 | **Revolution** | **Four or more cards of the same rank** played simultaneously. | Toggles `isRevolution` for the rest of the round. |
 | **Shibari** | Consecutive plays in a trick share an identical suit multiset. | Sets `suitLock` to that exact multiset. Subsequent plays must match it exactly. Overlap is not a partial lock. Mixed sets lock too: hearts+spades followed by hearts+spades locks to {H,S}. Pure jokers satisfy any lock and maintain an existing one. |
-| **Kaidan** | Two consecutive plays in a trick are exactly one strength-index step apart (§5.1), in the winning direction under `effectiveInverted` (§5.2), with matching count. | Sets `kaidanLock` to the strength index that would continue the step (the second play's index, ±1 toward the winning direction). Every later play in the trick must land on exactly that index — not merely beat it — and each accepted play advances the lock by one more step. A step that would run past the ends of the strength range (below a 3, or past a pure joker) sets a lock no real play can ever match, which simply ends the trick the way any other unbeatable top does. 3-3 then 4-4 locks the trick to 5s; the player after that may play 5-5 and nothing else. Resets on trick clear, same as `suitLock`. |
+| **Kaidan** | Two consecutive plays in a trick are exactly one strength-index step apart (§5.1), in the winning direction under `effectiveInverted` (§5.2), with matching count. | Sets `kaidanLock` to the strength index that would continue the step (the second play's index, ±1 toward the winning direction; the step *into* the lock is read under the pre-play inversion, the step *out* of it under the post-play inversion, so a Jack that fires 11-back asks for a 10 next, §7.1). Every later play in the trick must land on exactly that index — not merely beat it — and each accepted play advances the lock by one more step. A step that would run past the ends of the strength range (below a 3, or past a pure joker) sets a lock no real play can ever match, which simply ends the trick the way any other unbeatable top does. 3-3 then 4-4 locks the trick to 5s; the player after that may play 5-5 and nothing else. Resets on trick clear, same as `suitLock`. |
 
 ---
 
@@ -520,11 +520,14 @@ PHASE A - IMMEDIATE STATE EFFECTS (applied in this order)
   ├── 11-Back: if resolved rank is 11 and count is odd -> toggle trickInverted
   ├── Shibari: if suit multiset equals the previous play's -> set suitLock
   └── Kaidan: if kaidanLock was already set, or this play's index is exactly one
-      step from the previous play's index (toward the winning direction) with
-      matching count -> set kaidanLock to the index one further step on
+      step from the previous play's index (toward the winning direction under the
+      PRE-play inversion) with matching count -> set kaidanLock to the index one
+      further step on, stepping toward the winning direction under the POST-play
+      inversion, i.e. after the revolution and 11-back toggles above
 
   Note: Phase 0 validates against the PRE-play inversion state. Revolution and
-  11-back apply only to subsequent plays.
+  11-back apply only to subsequent plays - which is why the Kaidan lock, being a
+  requirement on the next play, advances under the post-toggle orientation.
 
 PHASE B - INTERACTIVE RULE (halts the pipeline)
   ├── Resolved rank is 7 and k > 0 -> pendingAction = RESOLVE_7_PASS, return
@@ -1022,7 +1025,7 @@ server involvement. It never changes the interface language or the document's
 6. `tenDiscard.test.ts` - pair of 10s discards 2 to graveyard; non-active players rejected.
 7. `elevenBack.test.ts` - 1, 2, 3 Jacks parity; reset on trick clear.
 8. `shibari.test.ts` - two hearts plays lock; mixed {H,S} locks; overlapping but unequal sets do not lock; non-matching play rejected; pure joker satisfies and maintains.
-9. `kaidan.test.ts` - two consecutive +1 plays lock; a jump of 2+ does not; the lock advances step by step; a non-matching play (even a stronger one) is rejected; reset on trick clear; direction follows `effectiveInverted`.
+9. `kaidan.test.ts` - two consecutive +1 plays lock; a jump of 2+ does not; the lock advances step by step; a non-matching play (even a stronger one) is rejected; reset on trick clear; direction follows `effectiveInverted`, with the advance following the post-play orientation when the accepted play toggles revolution or 11-back.
 10. `kakumei.test.ts` - 4 of a kind toggles; a triple does not; wildcard joker counts toward the four.
 10. `combo.test.ts` - mixed ranks rejected (no sequences); count must match the top exactly; pair of pure jokers legal; pure joker cannot pair with a non-joker; both jokers bound to the combo's rank.
 
