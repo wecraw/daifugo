@@ -93,6 +93,50 @@ describe("Lobby", () => {
     expect(within(leaving).getByText("Leaving after this round")).toBeInTheDocument();
   });
 
+  it("drops a seat whose disconnect grace already queued its departure (§8.3)", async () => {
+    // The shape of an expired grace: still in `players` so the sleeping browser's
+    // token can reclaim the seat (§8.1), but counted out of the roster the deal
+    // would take. Drawn as a row it reads as a player at the table, which is how
+    // the host ends up looking at three names under "a deal needs at least 3
+    // players".
+    await seat(
+      publicState({
+        status: "ROUND_END",
+        players: [
+          THREE[0]!,
+          player("p_2", "Alex", { seatIndex: 1, isConnected: false, isReady: true }),
+          player("p_3", "Sam", { seatIndex: 2, isConnected: false, isReady: true }),
+        ],
+        turnOrder: THREE.map((seat) => seat.id),
+        pendingLeaves: ["p_2", "p_3"],
+      }),
+    );
+
+    const roster = screen.getByRole("list");
+    expect(within(roster).queryByText("Alex")).not.toBeInTheDocument();
+    expect(within(roster).queryByText("Sam")).not.toBeInTheDocument();
+    // One real seat, and the table says so: two open chairs, not two ghosts.
+    expect(within(roster).getAllByText("Open seat")).toHaveLength(2);
+    expect(screen.getByText("A deal needs at least 3 players")).toBeInTheDocument();
+    // The round they played is still theirs: the standings are the record of it.
+    expect(screen.getByRole("table").textContent).toContain("Sam");
+  });
+
+  it("keeps the row of a connected player who queued their own leave (§7.7)", async () => {
+    await seat(
+      publicState({
+        status: "ROUND_END",
+        players: THREE,
+        turnOrder: THREE.map((seat) => seat.id),
+        pendingLeaves: ["p_3"],
+      }),
+    );
+
+    const roster = screen.getByRole("list");
+    const leaving = within(roster).getByText("Sam").closest("li")!;
+    expect(within(leaving).getByText("Leaving after this round")).toBeInTheDocument();
+  });
+
   it("does not promise a round the match cannot deal once it has ended (§7.7)", async () => {
     // A join accepted in the final round's last moments can still be sitting in
     // `pendingJoins` when `MATCH_END` lands — the deal that would consume it never

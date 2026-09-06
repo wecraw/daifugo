@@ -6,6 +6,10 @@
  * A seat this browser already holds is offered as a rejoin, which replays the
  * stored `resumeToken` instead of taking a new seat (§8.1).
  *
+ * A page loaded on `/ABC` arrives with that code already in the field: the
+ * provider auto-joins it when it knows a name, and lands here when it does not,
+ * so the only thing left to type is the name (`roomUrl.ts`).
+ *
  * Every string here resolves through a key; nothing is written inline.
  */
 import { useState, type FormEvent } from "react";
@@ -26,9 +30,10 @@ function normalizeCode(raw: string): string {
 
 export function MainMenu() {
   const t = useTranslate();
-  const { createRoom, joinRoom, leaveRoom, status, storedSession } = useSocket();
+  const { createRoom, joinRoom, leaveRoom, status, storedSession, initialRoomCode } =
+    useSocket();
   const [name, setName] = useState(() => storedSession?.playerName ?? "");
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(() => initialRoomCode ?? "");
   const [notice, setNotice] = useState<I18nKey | null>(null);
   const [creating, setCreating] = useState(false);
 

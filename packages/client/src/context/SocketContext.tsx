@@ -27,6 +27,13 @@
  * two ways out stay what they were: `leaveRoom` clears the seat, and a room the
  * server has forgotten answers `ROOM_NOT_FOUND`, which drops the seat and falls
  * back to the menu without retrying.
+ *
+ * **The address bar carries the room code** (`roomUrl.ts`): `/ABC` once seated,
+ * `/` once not. A load that arrives on `/ABC` auto-joins that code when this
+ * browser already knows a name to join under — a stored seat's name, whatever
+ * room it was for — and otherwise hands the code to `MainMenu` to prefill, since
+ * a join without a name is not one the server would accept (§8.1). The captured
+ * `initialRoomCode` is read once, before the sync effect below can rewrite it.
  */
 import {
   createContext,
@@ -39,6 +46,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import { io, type Socket } from "socket.io-client";
+import { readRoomCodeFromLocation, syncRoomCodeToUrl } from "../roomUrl";
 import type {
   ClientToServerEvents,
   GameErrorPayload,
@@ -129,6 +137,8 @@ export interface SocketContextValue {
   error: GameErrorPayload | null;
   /** A seat this browser can reclaim without re-entering a name. */
   storedSession: StoredSession | null;
+  /** The room code the page was loaded on, for `MainMenu` to prefill. */
+  initialRoomCode: string | null;
   /** `POST /rooms` (§8: the code must exist before anyone can join it), then join. */
   createRoom: (playerName: string) => Promise<string>;
   joinRoom: (roomId: string, playerName: string) => void;
@@ -161,6 +171,9 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
   const [storedSession, setStoredSession] = useState<StoredSession | null>(() =>
     readStoredSession(),
   );
+  // Captured at first render: the sync effect below rewrites the path as soon as
+  // it runs, so the loaded-on code has to be read before that.
+  const [initialRoomCode] = useState<string | null>(() => readRoomCodeFromLocation());
 
   const socketRef = useRef<DaifugoClientSocket | null>(null);
   // The join to replay on `connect`, whether that is the first connect or a
@@ -280,9 +293,30 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
   // forgotten ends at the menu instead of starting a retry loop.
   useEffect(() => {
     const stored = readStoredSession();
+    // A URL code is an explicit, just-expressed intent, so it outranks both the
+    // stored seat's room and the freshness guard — a link pasted into a browser
+    // that has been idle for a week is still a link to *this* room. The token is
+    // replayed only when the stored seat is for that same room; `joinRoom`
+    // decides that on its own.
+    if (initialRoomCode !== null) {
+      const name = stored?.playerName ?? "";
+      if (name !== "") joinRoom(initialRoomCode, name);
+      return;
+    }
     if (stored === null || !isSessionFresh(stored, Date.now())) return;
     joinRoom(stored.roomId, stored.playerName);
-  }, [joinRoom]);
+  }, [joinRoom, initialRoomCode]);
+
+  // The address bar follows the seat. It is left alone while a join is in flight
+  // — clearing it mid-connect would throw away the code a reload needs — and only
+  // returns to `/` once there is no room and no join outstanding. `pendingJoin`
+  // rather than `status` is what says "outstanding": the mount-time auto-join
+  // sets it during the effect above, one render before `status` catches up.
+  const activeRoomCode = room?.roomId ?? null;
+  useEffect(() => {
+    if (activeRoomCode !== null) syncRoomCodeToUrl(activeRoomCode);
+    else if (pendingJoin.current === null) syncRoomCodeToUrl(null);
+  }, [activeRoomCode, status]);
 
   const createRoom = useCallback(
     async (playerName: string): Promise<string> => {
@@ -334,6 +368,7 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
       roomId,
       error,
       storedSession,
+      initialRoomCode,
       createRoom,
       joinRoom,
       leaveRoom,
@@ -347,6 +382,7 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
       roomId,
       error,
       storedSession,
+      initialRoomCode,
       createRoom,
       joinRoom,
       leaveRoom,

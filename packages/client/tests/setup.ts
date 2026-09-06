@@ -31,6 +31,10 @@ beforeEach(() => {
   if (!hasDom) return;
   localStorage.clear();
   setOrientation(false);
+  // The room code lives in the path (`roomUrl.ts`), and jsdom keeps one window
+  // per file: without this, a test that seats a room leaves `/ABC` behind for
+  // the next one to auto-join.
+  history.replaceState(null, "", "/");
 });
 
 afterEach(() => {

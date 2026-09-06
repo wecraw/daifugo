@@ -70,15 +70,31 @@ type PendingChange = "joining" | "leaving" | null;
  *
  * The order is seated first, arrivals after, which is the order they will hold
  * once the boundary applies.
+ *
+ * A seat that is *both* queued to leave and disconnected is dropped from the list
+ * entirely: that is the shape of a grace expiry (§8.3), and the only reason the
+ * seat still exists in state is so the sleeping browser's token can reclaim it
+ * (§8.1). Drawing it as a row makes a table that cannot be dealt look full — the
+ * host reads three names and a note saying they need three players — because the
+ * row is a chair nobody counts. The one who queued their own leave and is still
+ * connected keeps their row: "leaving after this round" is news.
  */
 function rosterRows(room: PublicGameState): { seat: Player; pending: PendingChange }[] {
   const leaving = new Set(room.pendingLeaves);
+  const gone = (seat: Player): boolean => leaving.has(seat.id) && !seat.isConnected;
   return [
-    ...room.players.map((seat) => ({
-      seat,
-      pending: (leaving.has(seat.id) ? "leaving" : null) as PendingChange,
-    })),
-    ...room.pendingJoins.map((seat) => ({ seat, pending: "joining" as PendingChange })),
+    ...room.players
+      .filter((seat) => !gone(seat))
+      .map((seat) => ({
+        seat,
+        pending: (leaving.has(seat.id) ? "leaving" : null) as PendingChange,
+      })),
+    ...room.pendingJoins
+      .filter((seat) => !gone(seat))
+      .map((seat) => ({
+        seat,
+        pending: "joining" as PendingChange,
+      })),
   ];
 }
 

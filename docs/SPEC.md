@@ -694,6 +694,15 @@ not a lost seat: the menu still offers it as a Rejoin button. The two ways back 
 the menu are leaving, which clears the stored seat, and a room the server has
 forgotten, whose `ROOM_NOT_FOUND` drops the seat and falls back without retrying.
 
+The room code is also the client's URL path: `/ABC` while seated in a lobby or a
+game, `/` otherwise, written with `replaceState` so a room is not a history entry.
+Sharing that URL is the same act as reading the code aloud. A page loaded on `/ABC`
+joins ABC when the browser already holds a stored session to take a name from —
+outranking both that session's own room and the six-hour freshness guard above,
+since an opened link is an intent expressed just now — and otherwise lands on the
+menu with the code prefilled and only the name left to type. The stored
+`resumeToken` is replayed only when the stored seat is for that same room.
+
 ### 8.2 Host
 The first player to join a room is host, recorded as `hostId`. `updateRules`,
 `setRoundLimit`, and `startGame` are host-only and rejected otherwise. Host transfers
@@ -1119,6 +1128,15 @@ Firestore and the boot re-arm restores pending deadlines on startup.
 * **Broadcast is in-process.** Socket.IO's default in-memory adapter is sufficient;
   every socket in a room is connected to the same instance. Do not add
   `@socket.io/gcp-pubsub-adapter`.
+* **The client is served by the same service.** The Vite build is copied into the
+  runtime image and served as static files by the Fastify process, so there is no
+  second origin, no CORS story, and no `VITE_SERVER_URL`: the socket connects back
+  to the page's own origin. Because the room code is a URL path (`/ABC`, §8.1) and
+  the client's whole router is `location.pathname`, the server answers any
+  unmatched `GET`/`HEAD` with `index.html` — the SPA fallback. Other methods still
+  get a real 404, and `/health`, `/rooms` and `/socket.io` are ordinary routes that
+  match first. An image without a client build serves the API alone rather than
+  refusing to start.
 * **Transport is WebSocket-only.** Not for affinity — long-polling across a
   cold-started instance is simply worse, and there is no fallback case worth
   supporting for a known set of modern browsers.

@@ -7,7 +7,17 @@
  * clock in production — the pieces are identical, only the edges differ. Callers
  * register nothing further and simply `listen`; every route and Socket.IO handler
  * is already attached (Fastify locks routes at `listen`).
+ *
+ * The built client is served off this same service (§14), which makes this an SPA
+ * host as well as an API: the room code is a URL path (`/ABC`, §8.1), so a deep
+ * link has to answer with `index.html` rather than a 404. That is the whole of the
+ * routing story — there is no server-side router, and the client reads the code
+ * back out of `location.pathname`.
  */
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance } from "fastify";
 import { Server } from "socket.io";
 import type { ClientToServerEvents, ServerToClientEvents, SocketData } from "@daifugo/core";
@@ -23,6 +33,13 @@ export interface BuildServerOptions {
   scheduler?: Scheduler;
   /** Fastify logging. Off by default so tests stay quiet. */
   logger?: boolean;
+  /**
+   * Where the built client lives. Defaults to where the Docker image puts it;
+   * pass `null` for an API-only server. A root without an `index.html` — an image
+   * built before the client shipped, a dev process running behind Vite — is not an
+   * error: the HTTP API and the socket serve as they always did.
+   */
+  clientRoot?: string | null;
   config?: Readonly<HouseRulesConfig>;
 }
 
@@ -63,6 +80,8 @@ export function buildServer(options: BuildServerOptions): BuiltServer {
   // is swallowed. Renaming it back would silently break every external check.
   app.get("/health", async () => ({ ok: true }));
 
+  serveClient(app, options.clientRoot === undefined ? defaultClientRoot() : options.clientRoot);
+
   // Room creation is an HTTP call, not a socket event: the code has to exist
   // before anyone can `joinRoom` it (§8.1). The first joiner becomes host (§8.2).
   app.post("/rooms", async () => ({ roomId: await manager.createRoom() }));
@@ -70,4 +89,46 @@ export function buildServer(options: BuildServerOptions): BuiltServer {
   io.on("connection", (socket) => hub.register(socket));
 
   return { app, io, manager, hub, scheduler };
+}
+
+/**
+ * `packages/client/dist` as the runtime image lays it out, resolved from this
+ * file rather than from `process.cwd()` so it does not depend on where the
+ * process was started.
+ */
+function defaultClientRoot(): string {
+  return resolve(dirname(fileURLToPath(import.meta.url)), "../../client/dist");
+}
+
+/**
+ * Static assets plus the SPA fallback, when there is a client to serve.
+ *
+ * `index.html` is read once, at boot: it changes only with a deploy, and holding
+ * it in memory keeps the fallback out of `@fastify/static`'s encapsulation — a
+ * `reply.sendFile` from a root-scope handler would not see the decorator the
+ * plugin installs in its own child context.
+ *
+ * Only GET and HEAD fall back. Anything else reaching the 404 handler is a real
+ * 404 — answering a mistyped `POST /room` with a page of HTML would be a worse
+ * answer than the error.
+ */
+function serveClient(app: FastifyInstance, clientRoot: string | null): void {
+  if (clientRoot === null) return;
+  const indexPath = join(clientRoot, "index.html");
+  if (!existsSync(indexPath)) {
+    app.log.warn(`no client build at ${clientRoot}; serving the API only`);
+    return;
+  }
+  const indexHtml = readFileSync(indexPath, "utf8");
+
+  // `wildcard: false` keeps the plugin from claiming `/*`, which would swallow
+  // every unmatched path before the fallback below could see it.
+  void app.register(fastifyStatic, { root: clientRoot, wildcard: false });
+
+  app.setNotFoundHandler((request, reply) => {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      return reply.code(404).send({ error: "Not Found" });
+    }
+    return reply.code(200).type("text/html; charset=utf-8").send(indexHtml);
+  });
 }
