@@ -65,6 +65,15 @@ Confirm it took:
 gcloud firestore fields ttls list --collection-group=rooms --project "$PROJECT_ID"
 ```
 
+Rooms written before the policy existed have no `expiresAt`, and TTL ignores a
+document whose field is missing — those stay until something mutates them. A
+backfill is not worth writing for a handful of dead rooms: enable the policy
+while nobody is playing, and clear the collection out once.
+
+```bash
+gcloud firestore bulk-delete --collection-ids=rooms --project "$PROJECT_ID"
+```
+
 ### 2. Artifact Registry
 
 ```bash
