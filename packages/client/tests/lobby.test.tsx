@@ -126,7 +126,7 @@ describe("Lobby", () => {
     );
 
     expect(screen.getByRole("button", { name: "Deal the next round" })).toBeDisabled();
-    expect(screen.getByText("Waiting on 1 player(s)")).toBeInTheDocument();
+    expect(screen.getByText("Waiting on one player to ready up")).toBeInTheDocument();
     // The point of the row: the one seat holding the deal is on screen.
     expect(within(screen.getByRole("list")).getByText("Newcomer")).toBeInTheDocument();
   });
@@ -147,7 +147,7 @@ describe("Lobby", () => {
     const { socket, user } = await seat(publicState({ players: unready }));
 
     expect(screen.getByRole("button", { name: "Start match" })).toBeDisabled();
-    expect(screen.getByText("Waiting on 1 player(s)")).toBeInTheDocument();
+    expect(screen.getByText("Waiting on one player to ready up")).toBeInTheDocument();
     // The host gets no ready toggle of their own.
     expect(screen.queryByRole("button", { name: "Ready up" })).not.toBeInTheDocument();
     expect(socket.sentOf("setReady")).toEqual([]);
@@ -218,7 +218,7 @@ describe("Lobby", () => {
     await seat(publicState({ players: THREE.slice(0, 2) }));
 
     expect(screen.getByRole("button", { name: "Start match" })).toBeDisabled();
-    expect(screen.getByText("Needs at least 3 players")).toBeInTheDocument();
+    expect(screen.getByText("A deal needs at least 3 players")).toBeInTheDocument();
   });
 
   it("gives a non-host no start button at all", async () => {
@@ -250,9 +250,9 @@ describe("Lobby", () => {
     );
 
     expect(standingsRows()).toEqual([
-      ["1", "Sam", "Grand Millionaire", "2"],
-      ["2", "Alex", "Commoner", "1"],
-      ["3", "Will", "Grand Pauper", "1"],
+      ["1", "Sam", "Daifugo", "2"],
+      ["2", "Alex", "Heimin", "1"],
+      ["3", "Will", "Daihinmin", "1"],
     ]);
   });
 
@@ -276,9 +276,9 @@ describe("Lobby", () => {
     // Rendered through the core key, with the ids in its params resolved to the
     // names on the roster (§11: entries carry ids, never bare strings).
     expect(
-      screen.getByText("Sam won from Grand Pauper — Will falls to last with 9 card(s)"),
+      screen.getByText("Sam won from Daihinmin — Will falls to last with 9 card(s)"),
     ).toBeInTheDocument();
-    expect(standingsRows()[2]).toEqual(["3", "Will", "Grand Pauper", "0"]);
+    expect(standingsRows()[2]).toEqual(["3", "Will", "Daihinmin", "0"]);
   });
 
   it("orders the match-end standings by cumulative points, captioned as the match result", async () => {
@@ -303,9 +303,9 @@ describe("Lobby", () => {
 
     expect(screen.getByText("Match result")).toBeInTheDocument();
     expect(standingsRows()).toEqual([
-      ["1", "Alex", "Pauper", "5"],
-      ["2", "Sam", "Grand Millionaire", "3"],
-      ["3", "Will", "Grand Pauper", "1"],
+      ["1", "Alex", "Hinmin", "5"],
+      ["2", "Sam", "Daifugo", "3"],
+      ["3", "Will", "Daihinmin", "1"],
     ]);
   });
 

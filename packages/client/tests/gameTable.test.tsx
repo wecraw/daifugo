@@ -242,7 +242,7 @@ describe("PlayerSeat", () => {
     const room = table(3);
     room.players[1] = player("p_2", "Seat2", { seatIndex: 1, role: { kind: "DAI_HINMIN" } });
     await seat(room);
-    expect(screen.getByLabelText("Grand Pauper")).toBeInTheDocument();
+    expect(screen.getByLabelText("Daihinmin")).toBeInTheDocument();
   });
 });
 

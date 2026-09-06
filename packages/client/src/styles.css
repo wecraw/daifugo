@@ -354,87 +354,218 @@ button:disabled {
   font-size: 0.8rem;
 }
 
-.room-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 1rem;
+/*
+ * The lobby (§9, §10.11). Landscape is the only orientation the game has (§0), so
+ * the lobby takes the same split the main menu does and the two screens read as
+ * one room: what the table *is* on the left — the code to read out, the round, the
+ * rules, the way out — and the table itself on the right.
+ *
+ * It scrolls internally rather than growing the page: the viewport never scrolls.
+ */
+.lobby {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 19rem) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(1.5rem, 5vw, 3.5rem);
+  width: min(52rem, 100%);
+  height: 100%;
+  margin: 0 auto;
+  padding: clamp(0.85rem, 4vh, 1.5rem) clamp(1.25rem, 5vw, 2.5rem) 2.4rem;
+  font-size: 0.8rem;
 }
 
-.room-shell__header {
+.lobby__rail {
+  display: flex;
+  max-height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+}
+
+/* The join code is what this screen is for before the first deal: the thing one
+   player reads aloud so the rest can sit down. It gets the wordmark's face. */
+.lobby__code {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-weight: 400;
+}
+
+.lobby__code-label {
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  opacity: 0.55;
+}
+
+.lobby__code-value {
+  color: var(--accent);
+  font-family: var(--display);
+  font-size: clamp(2rem, 8vh, 3rem);
+  letter-spacing: 0.14em;
+  line-height: 1.05;
+}
+
+.lobby__rule {
+  width: 2.75rem;
+  height: 2px;
+  margin: 0.7rem 0 0.6rem;
+  border: 0;
+  background: var(--accent);
+}
+
+.lobby__round {
+  margin: 0;
+  opacity: 0.7;
+}
+
+.lobby h2 {
+  margin: 0 0 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  opacity: 0.55;
+}
+
+/* The way out sits on the floor of the screen, clear of both columns: it is the
+   one control here that is not about starting a round. */
+.lobby__exit {
+  position: absolute;
+  bottom: 0.7rem;
+  left: clamp(1.25rem, 5vw, 2.5rem);
   display: flex;
   align-items: baseline;
   gap: 0.75rem;
 }
 
-.room-shell__header h1 {
-  margin: 0;
-  font-size: 1.25rem;
-}
-
-.room-shell__status {
-  opacity: 0.7;
+.lobby__leave {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
   font-size: 0.75rem;
+  opacity: 0.7;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
-/*
- * Lobby and host panel (§9, §10.11). The room shell scrolls internally rather
- * than growing the page: the viewport itself never scrolls (§10.1).
- */
-.room-shell {
-  min-height: 0;
-  overflow-y: auto;
+.lobby__leave:hover {
+  opacity: 0.85;
 }
 
-.room-shell__leave {
-  align-self: flex-start;
+.lobby__connection {
+  font-size: 0.7rem;
+  opacity: 0.6;
 }
 
-.lobby {
+/* The right column: the table. Seats scroll, the action stays put under them. */
+.lobby__roster {
   display: flex;
+  max-height: 100%;
+  min-height: 0;
   flex-direction: column;
-  gap: 0.6rem;
-  font-size: 0.8rem;
-}
-
-.lobby h2 {
-  margin: 0 0 0.3rem;
-  font-size: 0.85rem;
-  letter-spacing: 0.04em;
-  opacity: 0.8;
-}
-
-.lobby__round {
-  margin: 0;
-  color: var(--accent);
 }
 
 .lobby__roster ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1rem;
+  min-height: 0;
   margin: 0;
   padding: 0;
   list-style: none;
+  overflow-y: auto;
 }
 
-.lobby__roster li {
+/*
+ * One chair. The seat number is the row's anchor — it is an index of places at a
+ * table, which is why it is set in the code face and why the open ones keep
+ * counting.
+ */
+.seat-row {
   display: flex;
-  align-items: center;
-  gap: 0.3rem;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.5rem 0.25rem 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--rule);
+  border-left: 2px solid transparent;
+}
+
+.seat-row__index {
+  width: 1.1rem;
+  flex: none;
+  font-family: var(--code);
+  font-size: 0.7rem;
+  opacity: 0.55;
 }
 
 .lobby__name {
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* Your own row, so you find yourself without reading the names. */
+.seat-row--me {
+  border-left-color: var(--accent);
+  background: linear-gradient(to right, rgba(232, 182, 76, 0.09), transparent 60%);
+}
+
+.seat-row--offline .lobby__name {
+  opacity: 0.5;
+}
+
+/* A chair nobody has taken: the table is short, and it looks short. */
+.seat-row--open {
+  border-bottom-style: dashed;
+  border-bottom-color: rgba(245, 243, 238, 0.12);
+}
+
+.seat-row--open .seat-row__index {
+  opacity: 0.3;
+}
+
+.seat-row__open {
+  font-size: 0.85rem;
+  font-style: italic;
+  opacity: 0.5;
+}
+
+/* State reads down the right edge, so a glance answers "who is holding this up". */
+.seat-row__state {
+  display: flex;
+  gap: 0.6rem;
+  margin-left: auto;
+  padding-left: 0.75rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.seat-row__ready {
+  color: var(--accent);
+}
+
+.seat-row__offline {
+  color: #e08b84;
 }
 
 .badge {
-  padding: 0.05rem 0.35rem;
-  border: 1px solid rgba(245, 243, 238, 0.35);
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--rule);
   border-radius: 0.8rem;
   font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em;
+  opacity: 0.75;
+}
+
+.badge--host {
+  border-color: rgba(232, 182, 76, 0.5);
+  color: var(--accent);
+  opacity: 1;
+}
+
+.badge--you {
+  border-color: transparent;
+  background: rgba(245, 243, 238, 0.1);
 }
 
 .badge--quiet {
@@ -447,46 +578,135 @@ button:disabled {
   color: var(--danger);
 }
 
+/* Standings (§9) between rounds, in the rail where the code was the loud thing. */
 .lobby__standings table {
+  width: 100%;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }
 
 .lobby__standings caption {
-  padding-bottom: 0.2rem;
-  opacity: 0.6;
+  padding-bottom: 0.35rem;
+  opacity: 0.55;
   font-size: 0.7rem;
   text-align: left;
 }
 
 .lobby__standings th,
 .lobby__standings td {
-  padding: 0.15rem 0.6rem 0.15rem 0;
+  padding: 0.28rem 0.6rem 0.28rem 0;
+  border-bottom: 1px solid var(--rule);
   text-align: left;
 }
 
 .lobby__standings th {
-  opacity: 0.6;
+  border-bottom-color: rgba(245, 243, 238, 0.28);
+  opacity: 0.55;
   font-weight: 500;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
+}
+
+.lobby__standings tbody tr:first-child td {
+  color: var(--accent);
+}
+
+.lobby__standings td:last-child,
+.lobby__standings th:last-child {
+  padding-right: 0;
+  text-align: right;
 }
 
 /* §4.5: the demoted player's zero needs its explanation next to it. */
 .lobby__miyako-ochi {
-  margin: 0.3rem 0 0;
+  margin: 0.45rem 0 0;
   color: var(--accent);
   font-size: 0.72rem;
+  line-height: 1.4;
 }
 
 .lobby__actions {
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-top: 0.9rem;
+}
+
+.lobby__deal,
+.lobby__ready {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--felt-dark);
+  font-weight: 600;
+}
+
+/* Not yet ready is a state, not a disabled control: it stays outlined until the
+   click that fills it in. */
+.lobby__ready--waiting {
+  background: none;
+  color: var(--ink);
+}
+
+.lobby__deal:disabled {
+  border-color: var(--rule);
+  background: none;
+  color: var(--ink);
 }
 
 .lobby__note {
   margin: 0;
-  opacity: 0.7;
+  font-size: 0.75rem;
+  opacity: 0.72;
+}
+
+.lobby :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Portrait is blocked by the orientation gate; this is only for a narrow desktop. */
+@media (max-width: 44rem) {
+  .lobby {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow-y: auto;
+  }
+
+  .lobby__rail {
+    overflow: visible;
+  }
+}
+
+/* A disclosure, not a button: it belongs to the rail's text, and the caret is
+   what says it opens. */
+.lobby .host-panel__summary {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0;
+  border: 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  font-size: 0.8rem;
+}
+
+.lobby .host-panel__summary::after {
+  border: 0.28rem solid transparent;
+  border-top-color: currentcolor;
+  border-bottom-width: 0;
+  content: "";
+  opacity: 0.6;
+  transform: translateY(0.15rem);
+}
+
+.lobby .host-panel__summary[aria-expanded="true"]::after {
+  border-top-width: 0;
+  border-bottom: 0.28rem solid currentcolor;
+  transform: translateY(-0.15rem);
 }
 
 .host-panel__summary {
@@ -506,7 +726,7 @@ button:disabled {
 
 .host-panel__rules {
   display: grid;
-  grid-template-columns: repeat(3, minmax(8rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
   gap: 0.2rem 0.8rem;
   margin: 0;
   padding: 0;

@@ -24,6 +24,15 @@
  * Who the deal is still waiting on comes from core's `unreadyPlayerIds` — the same
  * answer `START_GAME` checks — so the start button is disabled exactly when the
  * engine would refuse it and `PLAYERS_NOT_READY` never reaches a banner (§10.11).
+ *
+ * **The roster is a table with chairs.** Below `MIN_PLAYERS` the list is padded out
+ * with open seats, so a table that cannot be dealt says so by looking short rather
+ * than only by the note under a disabled button.
+ *
+ * **Layout is the landscape split of the main menu** (§0: landscape only). The left
+ * rail carries what the room *is* — the join code to read aloud, the round, the
+ * house rules, the way out — and the right column carries the table: who is in it,
+ * and the one action this seat can take.
  */
 import {
   MAX_PLAYERS,
@@ -38,6 +47,7 @@ import {
 import { useSocket } from "../context/SocketContext";
 import { historyLine } from "../history";
 import { useTranslate } from "../i18n/index";
+import { ConnectionStatus } from "./ConnectionStatus";
 import { HostPanel } from "./HostPanel";
 
 /** The round a `startGame` would deal to (§7.7): queued joins and leaves land there. */
@@ -74,7 +84,7 @@ function rosterRows(room: PublicGameState): { seat: Player; pending: PendingChan
 
 export function Lobby({ room }: { room: PublicGameState }) {
   const t = useTranslate();
-  const { playerId, send } = useSocket();
+  const { playerId, send, status, leaveRoom } = useSocket();
 
   const isHost = room.hostId === playerId;
   const betweenRounds = room.status === "ROUND_END" || room.status === "MATCH_END";
@@ -109,56 +119,85 @@ export function Lobby({ room }: { room: PublicGameState }) {
         points: room.points[result.playerId] ?? 0,
       }));
 
+  const seats = rosterRows(room);
+  // The chairs nobody is in yet. Only ever drawn short of the minimum: past it
+  // the table is dealable, and eight dotted rows would be decoration.
+  const openSeats = Math.max(0, MIN_PLAYERS - size);
+
   return (
     <div className="lobby">
-      <p className="lobby__round">
-        {room.roundLimit === null
-          ? t("ui.lobby.round", { round: room.roundNumber })
-          : t("ui.lobby.roundOfLimit", { round: room.roundNumber, limit: room.roundLimit })}
-      </p>
+      <div className="lobby__rail">
+        <div className="lobby__identity">
+          <h1 className="lobby__code">
+            <span className="lobby__code-label">{t("ui.room.codeLabel")}</span>{" "}
+            <span className="lobby__code-value">{room.roomId}</span>
+          </h1>
+          <hr className="lobby__rule" />
+          <p className="lobby__round">
+            {room.roundLimit === null
+              ? t("ui.lobby.round", { round: room.roundNumber })
+              : t("ui.lobby.roundOfLimit", { round: room.roundNumber, limit: room.roundLimit })}
+          </p>
+        </div>
 
-      {betweenRounds && (
-        <section className="lobby__standings">
-          <h2>{t("ui.standings.title")}</h2>
-          <table>
-            <caption>
-              {matchOver
-                ? t("ui.standings.matchResult")
-                : t("ui.standings.roundRoles", { round: room.roundNumber })}
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">{t("ui.standings.position")}</th>
-                <th scope="col">{t("ui.standings.player")}</th>
-                <th scope="col">{t("ui.standings.role")}</th>
-                <th scope="col">{t("ui.standings.points")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {standingsRows.map((row, index) => (
-                <tr key={row.playerId}>
-                  <td>{index + 1}</td>
-                  <td>{nameOf(room, row.playerId)}</td>
-                  <td>{row.role === null ? "" : t(`role.${row.role.kind}`)}</td>
-                  <td>{row.points}</td>
+        {betweenRounds && (
+          <section className="lobby__standings" aria-label={t("ui.standings.title")}>
+            <table>
+              <caption>
+                {matchOver
+                  ? t("ui.standings.matchResult")
+                  : t("ui.standings.roundRoles", { round: room.roundNumber })}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">{t("ui.standings.position")}</th>
+                  <th scope="col">{t("ui.standings.player")}</th>
+                  <th scope="col">{t("ui.standings.role")}</th>
+                  <th scope="col">{t("ui.standings.points")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          {miyakoOchi !== undefined && (
-            <p className="lobby__miyako-ochi">{historyLine(t, miyakoOchi, room.players)}</p>
-          )}
-        </section>
-      )}
+              </thead>
+              <tbody>
+                {standingsRows.map((row, index) => (
+                  <tr key={row.playerId}>
+                    <td>{index + 1}</td>
+                    <td>{nameOf(room, row.playerId)}</td>
+                    <td>{row.role === null ? "" : t(`role.${row.role.kind}`)}</td>
+                    <td>{row.points}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {miyakoOchi !== undefined && (
+              <p className="lobby__miyako-ochi">{historyLine(t, miyakoOchi, room.players)}</p>
+            )}
+          </section>
+        )}
+
+        <HostPanel room={room} />
+      </div>
 
       <section className="lobby__roster">
         <h2>{t("ui.lobby.roster")}</h2>
         <ul>
-          {rosterRows(room).map(({ seat, pending }) => (
-            <li key={seat.id}>
+          {seats.map(({ seat, pending }, index) => (
+            <li
+              key={seat.id}
+              className={[
+                "seat-row",
+                seat.id === playerId ? "seat-row--me" : "",
+                seat.isConnected ? "" : "seat-row--offline",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <span className="seat-row__index">{index + 1}</span>
               <span className="lobby__name">{seat.name}</span>
-              {seat.id === room.hostId && <span className="badge">{t("ui.lobby.host")}</span>}
-              {seat.id === playerId && <span className="badge">{t("ui.lobby.you")}</span>}
+              {seat.id === room.hostId && (
+                <span className="badge badge--host">{t("ui.lobby.host")}</span>
+              )}
+              {seat.id === playerId && (
+                <span className="badge badge--you">{t("ui.lobby.you")}</span>
+              )}
               {/* A round boundary this promises never comes once the match is over
                   (§7.7) — a queued join/leave from just before `MATCH_END` still
                   sits in the arrays with no deal left to consume it. */}
@@ -167,45 +206,67 @@ export function Lobby({ room }: { room: PublicGameState }) {
                   {t(pending === "joining" ? "ui.lobby.joining" : "ui.lobby.leaving")}
                 </span>
               )}
-              {seat.isReady && <span className="badge">{t("ui.lobby.ready")}</span>}
-              <span className={seat.isConnected ? "badge badge--quiet" : "badge badge--warn"}>
-                {t(seat.isConnected ? "ui.lobby.connected" : "ui.lobby.disconnected")}
+              <span className="seat-row__state">
+                {/* A seat that is simply connected says nothing: on a full table
+                    that chip repeated itself once per row and carried no news. */}
+                {!seat.isConnected && (
+                  <span className="seat-row__offline">{t("ui.lobby.disconnected")}</span>
+                )}
+                {seat.isReady && <span className="seat-row__ready">{t("ui.lobby.ready")}</span>}
               </span>
             </li>
           ))}
+          {Array.from({ length: openSeats }, (_, index) => (
+            <li key={`open-${index}`} className="seat-row seat-row--open">
+              <span className="seat-row__index">{seats.length + index + 1}</span>
+              <span className="seat-row__open">{t("ui.lobby.openSeat")}</span>
+            </li>
+          ))}
         </ul>
+
+        <div className="lobby__actions">
+          {matchOver && <p className="lobby__note">{t("ui.lobby.matchOver")}</p>}
+          {!matchOver && isHost && (
+            <button
+              type="button"
+              className="lobby__deal"
+              disabled={tooFew || tooMany || waitingOn.length > 0}
+              onClick={() => send("startGame")}
+            >
+              {t(betweenRounds ? "ui.lobby.nextRound" : "ui.lobby.start")}
+            </button>
+          )}
+          {!matchOver && !isHost && (
+            <button
+              type="button"
+              className={iAmReady ? "lobby__ready" : "lobby__ready lobby__ready--waiting"}
+              onClick={() => send("setReady", !iAmReady)}
+            >
+              {t(iAmReady ? "ui.lobby.unready" : "ui.lobby.readyUp")}
+            </button>
+          )}
+          {!matchOver && !isHost && <p className="lobby__note">{t("ui.lobby.waitingForHost")}</p>}
+          {!matchOver && isHost && !tooFew && !tooMany && waitingOn.length > 0 && (
+            <p className="lobby__note">
+              {waitingOn.length === 1
+                ? t("ui.lobby.waitingForReadyOne")
+                : t("ui.lobby.waitingForReady", { count: waitingOn.length })}
+            </p>
+          )}
+          {!matchOver && isHost && tooFew && (
+            <p className="lobby__note">{t("ui.lobby.needMorePlayers", { min: MIN_PLAYERS })}</p>
+          )}
+          {!matchOver && isHost && tooMany && (
+            <p className="lobby__note">{t("ui.lobby.tooManyPlayers", { max: MAX_PLAYERS })}</p>
+          )}
+        </div>
       </section>
 
-      <HostPanel room={room} />
-
-      <div className="lobby__actions">
-        {matchOver && <p className="lobby__note">{t("ui.lobby.matchOver")}</p>}
-        {!matchOver && isHost && (
-          <button
-            type="button"
-            disabled={tooFew || tooMany || waitingOn.length > 0}
-            onClick={() => send("startGame")}
-          >
-            {t(betweenRounds ? "ui.lobby.nextRound" : "ui.lobby.start")}
-          </button>
-        )}
-        {!matchOver && !isHost && (
-          <button type="button" onClick={() => send("setReady", !iAmReady)}>
-            {t(iAmReady ? "ui.lobby.unready" : "ui.lobby.readyUp")}
-          </button>
-        )}
-        {!matchOver && !isHost && <p className="lobby__note">{t("ui.lobby.waitingForHost")}</p>}
-        {!matchOver && isHost && !tooFew && !tooMany && waitingOn.length > 0 && (
-          <p className="lobby__note">
-            {t("ui.lobby.waitingForReady", { count: waitingOn.length })}
-          </p>
-        )}
-        {!matchOver && isHost && tooFew && (
-          <p className="lobby__note">{t("ui.lobby.needMorePlayers", { min: MIN_PLAYERS })}</p>
-        )}
-        {!matchOver && isHost && tooMany && (
-          <p className="lobby__note">{t("ui.lobby.tooManyPlayers", { max: MAX_PLAYERS })}</p>
-        )}
+      <div className="lobby__exit">
+        <button type="button" className="lobby__leave" onClick={leaveRoom}>
+          {t("ui.room.leave")}
+        </button>
+        <ConnectionStatus status={status} className="lobby__connection" />
       </div>
     </div>
   );

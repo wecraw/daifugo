@@ -360,7 +360,7 @@ describe("the animation layer (§10.9)", () => {
     // The sentence is `history.miyakoOchi` itself — there is no `rule.*` key for
     // a rule that is always on (§4.5) — so the log carries the same line.
     expect(sweep?.textContent).toContain(
-      "Seat2 won from Grand Pauper — Seat4 falls to last with 6 card(s)",
+      "Seat2 won from Daihinmin — Seat4 falls to last with 6 card(s)",
     );
     // The seat that emptied says so while it drops.
     const demoted = document.querySelector('[data-player-id="p_4"]');

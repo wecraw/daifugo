@@ -51,8 +51,7 @@ export const UI_I18N_KEYS = [
 
   // The seated shell: the lobby header, and the leave control the table borrows
   // for a mid-round exit (§7.7).
-  "ui.room.code",
-  "ui.room.players",
+  "ui.room.codeLabel",
   "ui.room.leave",
 
   // Lobby (§10.11, §9): the roster, the round line, and the start control.
@@ -67,8 +66,9 @@ export const UI_I18N_KEYS = [
   "ui.lobby.leaving",
   "ui.lobby.unready",
   "ui.lobby.waitingForReady",
-  "ui.lobby.connected",
+  "ui.lobby.waitingForReadyOne",
   "ui.lobby.disconnected",
+  "ui.lobby.openSeat",
   "ui.lobby.round",
   "ui.lobby.roundOfLimit",
   "ui.lobby.start",

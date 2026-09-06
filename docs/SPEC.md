@@ -933,13 +933,17 @@ already in the public graveyard (§8.5).
 There is one English copy record. A small override map changes only the game name,
 the five role names, and role wording embedded in a history line:
 
-| Default | Daifugo terminology |
+| Descriptive | Daifugo terminology |
 | :--- | :--- |
 | Grand Millionaire | Daifugo |
 | Millionaire | Fugo |
 | Commoner | Heimin |
 | Pauper | Hinmin |
 | Grand Pauper | Daihinmin |
+
+Daifugo terminology is what an unset preference gets; the toggle switches to the
+descriptive names. The stored copy record holds the descriptive names and the
+override map carries the Daifugo ones, so the default applies the overrides.
 
 The terminology toggle is on the main menu, persisted to localStorage, and has no
 server involvement. It never changes the interface language or the document's

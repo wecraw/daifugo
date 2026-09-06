@@ -86,19 +86,22 @@ describe("terminology toggle", () => {
     const user = userEvent.setup();
     renderApp();
 
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Grand Millionaire");
-    await user.click(screen.getByRole("button", { name: "Daifugo" }));
-
+    // Daifugo is the default (§11), so the toggle's job is the other direction.
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Daifugo");
+    await user.click(screen.getByRole("button", { name: "Grand Millionaire" }));
+
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Grand Millionaire");
     expect(screen.getByRole("button", { name: "Create room" })).toBeInTheDocument();
-    await waitFor(() => expect(localStorage.getItem(TERMINOLOGY_STORAGE_KEY)).toBe("daifugo"));
+    await waitFor(() =>
+      expect(localStorage.getItem(TERMINOLOGY_STORAGE_KEY)).toBe("grandMillionaire"),
+    );
     expect(document.documentElement.getAttribute("lang")).toBe("en");
-    expect(document.title).toBe("Daifugo");
+    expect(document.title).toBe("Grand Millionaire");
   });
 
   it("starts from the stored terminology", () => {
-    localStorage.setItem(TERMINOLOGY_STORAGE_KEY, "daifugo");
+    localStorage.setItem(TERMINOLOGY_STORAGE_KEY, "grandMillionaire");
     renderApp();
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Daifugo");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Grand Millionaire");
   });
 });
