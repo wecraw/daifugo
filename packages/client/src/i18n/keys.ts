@@ -178,7 +178,8 @@ export const UI_I18N_KEYS = [
   "ui.pending.submitPass",
   "ui.pending.submitDiscard",
   "ui.pending.lastCards",
-  "ui.pending.timeout",
+  "ui.pending.timeoutPass",
+  "ui.pending.timeoutDiscard",
 
   // Shared by both: how many more cards a selection needs. What the clock will
   // do is worded per screen — the exchange pre-selects the weakest cards and so

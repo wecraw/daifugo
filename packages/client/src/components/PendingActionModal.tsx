@@ -12,7 +12,9 @@
  * cards for a player who never answers (§7.6), but that is the clock's fallback,
  * not a suggestion the modal makes on the player's behalf: a pre-filled tray
  * turns "choose which cards to give away" into "notice and undo a choice already
- * made for you", and the note under the tray says what expiry would send anyway.
+ * made for you", and the note under the tray says what expiry would do anyway —
+ * in that rule's own words, because a timed-out 10 discards to the graveyard
+ * rather than sending anything to another seat (§7.6).
  *
  * **The transfer can empty the hand, and that is an agari** (§7.3): playing a
  * single 7 with two cards leaves one, `k = 1`, and passing it wins the round.
@@ -104,7 +106,9 @@ export function PendingActionModal({ room }: { room: PublicGameState }) {
 
         <footer className="pending-action__footer">
           <p className="pending-action__note">
-            {takesWholeHand ? t("ui.pending.lastCards") : t("ui.pending.timeout", { count })}
+            {takesWholeHand
+              ? t("ui.pending.lastCards")
+              : t(isSevenPass ? "ui.pending.timeoutPass" : "ui.pending.timeoutDiscard", { count })}
           </p>
           <button
             type="button"

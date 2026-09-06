@@ -112,7 +112,7 @@ describe("RESOLVE_7_PASS (§7.2)", () => {
 
   it("names the weakest cards as what the clock would send (§7.6)", () => {
     seat(owed(SEVEN_PASS));
-    const note = "If the clock runs out, your weakest 1 card(s) are sent";
+    const note = "If the clock runs out, your weakest 1 card(s) are passed";
     expect(screen.getByText(note)).toBeInTheDocument();
     // It is the clock's fallback, not a description of the tray, so choosing
     // cards does not change it.
@@ -150,6 +150,10 @@ describe("RESOLVE_10_DISCARD (§7.2)", () => {
   it("names the count and submits a discard", () => {
     const socket = seat(owed(TEN_DISCARD));
     expect(screen.getByText("Ten: discard 2 card(s)")).toBeInTheDocument();
+    // The fallback discards to the graveyard; it must not read as a transfer.
+    expect(
+      screen.getByText("If the clock runs out, your weakest 2 card(s) are discarded"),
+    ).toBeInTheDocument();
     expect(selectedIds()).toEqual([]);
     fireEvent.click(submitButton());
     expect(socket.sentOf("submit10Discard")).toEqual([]);
