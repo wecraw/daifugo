@@ -14,7 +14,7 @@
   /* A Didone for the wordmark and the room code — the face card boxes and chips
      are set in: high contrast, and it holds its own on felt. UI text stays on
      the system stack, which is what stays legible at 12px on a phone. */
-  --display: "Bodoni Moda", "Bodoni 72", Didot, "Bodoni MT", Georgia, serif;
+  --display: "Fraunces", "Cormorant Garamond", Georgia, serif;
   --code: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
   color-scheme: dark;
 }
