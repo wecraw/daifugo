@@ -2,8 +2,9 @@
  * The 844x390 landscape frame of §10.1, as numbers rather than as CSS.
  *
  * The three bands — 56px top strip, ~218px middle, 116px hand row — have to add
- * up to the viewport exactly, and the hand region has to be the `W ≈ 780` that
- * §10.2's step formula is derived from. Keeping the figures here rather than in
+ * up to the viewport exactly, and the hand region has to be the full 844px width
+ * that §10.2's step formula is derived from, now that the action bar sits above
+ * the hand rather than beside it. Keeping the figures here rather than in
  * `styles.css` makes both of those arithmetic a test can assert; `GameTable`
  * pushes them into CSS custom properties so there is still only one source.
  *
@@ -25,11 +26,13 @@ export const MIDDLE_HEIGHT = 218;
 export const HAND_ROW_HEIGHT = 116;
 
 /**
- * The action column is on the right edge rather than a bottom bar (§10.1), and
- * its width is what leaves the hand the `W ≈ 780` of §10.2.
+ * The action bar is a row above the hand rather than a column beside it
+ * (§10.1), carved out of the top of the hand row rather than costing the hand
+ * any width — the hand claims the full frame.
  */
-export const ACTION_COLUMN_WIDTH = 64;
-export const HAND_REGION_WIDTH = VIEWPORT_WIDTH - ACTION_COLUMN_WIDTH;
+export const ACTION_ROW_HEIGHT = 30;
+export const HAND_REGION_WIDTH = VIEWPORT_WIDTH;
+export const HAND_CARDS_HEIGHT = HAND_ROW_HEIGHT - ACTION_ROW_HEIGHT;
 
 /** The left and right seat columns of the middle band: two chips each, stacked. */
 export const SIDE_COLUMN_WIDTH = 108;
@@ -215,7 +218,7 @@ export function tableCssVariables(): Record<string, string> {
     "--top-strip-height": `${TOP_STRIP_HEIGHT}px`,
     "--middle-height": `${MIDDLE_HEIGHT}px`,
     "--hand-row-height": `${HAND_ROW_HEIGHT}px`,
-    "--action-column-width": `${ACTION_COLUMN_WIDTH}px`,
+    "--action-row-height": `${ACTION_ROW_HEIGHT}px`,
     "--side-column-width": `${SIDE_COLUMN_WIDTH}px`,
     "--card-width": `${CARD_WIDTH}px`,
     "--card-height": `${CARD_HEIGHT}px`,

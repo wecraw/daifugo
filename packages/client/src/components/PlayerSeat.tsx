@@ -72,11 +72,13 @@ export function PlayerSeat({
       </div>
       <div className="player-seat__line player-seat__line--quiet">
         <span
-          className="player-seat__count"
+          className="player-seat__stack"
           title={t("ui.seat.cards", { count: cardCount })}
           aria-label={t("ui.seat.cards", { count: cardCount })}
         >
-          {cardCount}
+          {Array.from({ length: cardCount }, (_, index) => (
+            <span key={index} className="player-seat__stack-card" aria-hidden="true" />
+          ))}
         </span>
         {!player.isConnected && (
           <span

@@ -816,8 +816,8 @@ button:disabled {
 }
 
 .game-table__bottom {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--action-column-width);
+  display: flex;
+  flex-direction: column;
   flex: 0 0 var(--hand-row-height);
   height: var(--hand-row-height);
   border-top: 1px solid rgba(245, 243, 238, 0.12);
@@ -829,15 +829,16 @@ button:disabled {
   overflow: hidden;
 }
 
-/* The action column is on the right edge, not a bottom bar (§10.1). */
+/* The action bar is a row above the hand, not a bottom bar (§10.1). */
 .game-table__action {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   justify-content: center;
-  gap: 0.25rem;
-  padding: 0.25rem;
-  border-left: 1px solid rgba(245, 243, 238, 0.12);
+  flex: 0 0 var(--action-row-height);
+  height: var(--action-row-height);
+  padding: 0 0.4rem;
+  border-bottom: 1px solid rgba(245, 243, 238, 0.12);
 }
 
 .game-table__seats {
@@ -973,10 +974,32 @@ button:disabled {
   letter-spacing: -0.05em;
 }
 
-.player-seat__count {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  white-space: nowrap;
+.player-seat__stack {
+  display: flex;
+  align-items: center;
+}
+
+/*
+ * Each opponent's remaining cards, drawn as an overlapping fan of tiny
+ * card-backs so the chip reads as their actual stack rather than a digit.
+ */
+.player-seat__stack-card {
+  width: 0.6rem;
+  height: 0.85rem;
+  flex: 0 0 auto;
+  border: 1px solid rgba(245, 243, 238, 0.5);
+  border-radius: 0.12rem;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--felt-dark),
+    var(--felt-dark) 2px,
+    var(--felt) 2px,
+    var(--felt) 4px
+  );
+}
+
+.player-seat__stack-card + .player-seat__stack-card {
+  margin-left: -0.2rem;
 }
 
 .player-seat__offline {
@@ -1204,6 +1227,8 @@ button:disabled {
  */
 .game-table__hand {
   position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: visible;
 }
 
@@ -1388,21 +1413,28 @@ button:disabled {
     filter 220ms ease;
 }
 
-/* The action column (§10.6). */
+/* The action row above the hand (§10.6): Play primary on the left, Pass
+   secondary on the right. Each button sizes to its own label rather than
+   stretching to fill the row — Pass sticks to the right edge via its own
+   left margin instead of the row splitting evenly. */
 .action-bar {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.25rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
   height: 100%;
-  justify-content: center;
 }
 
 .action-bar button {
-  padding: 0.3rem 0.2rem;
-  border-radius: 0.3rem;
-  font-size: 0.65rem;
-  line-height: 1.15;
+  flex: 0 0 auto;
+  max-width: 65%;
+  padding: 0.3rem 0.9rem;
+  overflow: hidden;
+  border-radius: 0.35rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .action-bar__play {
@@ -1417,7 +1449,12 @@ button:disabled {
   font-weight: 400;
 }
 
+.action-bar__pass {
+  margin-left: auto;
+}
+
 .action-bar .turn-timer {
+  flex: 0 0 auto;
   align-self: center;
 }
 

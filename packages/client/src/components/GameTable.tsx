@@ -5,13 +5,14 @@
  * ┌──────────────────────────────────────────────────────────┐
  * │  [seat] [seat] [seat]        history log       [timer]   │  56px
  * │ [seat]          TRICK AREA / BANNERS          [seat]     │  218px
- * │              HAND (single row, fanned)          [ACTION] │  116px
+ * │                    [ Play ]           [ Pass ]           │
+ * │              HAND (single row, fanned)                   │  116px
  * └──────────────────────────────────────────────────────────┘
  * ```
  *
- * Three fixed bands that add up to the viewport exactly, with the action column
- * on the right edge of the hand row rather than a bottom bar — which is what
- * leaves the hand the `W ≈ 780` §10.2's step formula assumes. The numbers live in
+ * Three fixed bands that add up to the viewport exactly, with the action bar a
+ * row above the hand rather than a column beside it — which is what leaves the
+ * hand the full 844px width §10.2's step formula assumes. The numbers live in
  * `layout/tableLayout.ts` and reach the stylesheet as custom properties, so the
  * arithmetic has one home and a test can check it.
  *
@@ -19,9 +20,9 @@
  * travels, and the seat that would be the viewer's own is the hand row. Who sits
  * where is `distributeSeats`; what each chip says is `PlayerSeat`.
  *
- * The hand row and the action column fill that frame (§10.2-§10.8). They are one
- * interaction — what is selected decides what the Play button says — so their
- * state is `useHandController`, held here and handed to both.
+ * The hand row and the action bar above it fill that frame (§10.2-§10.8). They
+ * are one interaction — what is selected decides what the Play button says — so
+ * their state is `useHandController`, held here and handed to both.
  */
 import type { CSSProperties } from "react";
 import { TURN_DURATION_MS, seatingOf, type Player, type PublicGameState } from "@daifugo/core";
@@ -172,6 +173,13 @@ export function GameTable({ room }: { room: PublicGameState }) {
           <ExchangeScreen room={room} />
         ) : (
           <>
+            <section className="game-table__action" aria-label={t("ui.table.actionArea")}>
+              <ActionBar
+                hand={hand}
+                deadline={room.deadline}
+                isMyTurn={inTurn && activeId === room.myPlayerId}
+              />
+            </section>
             <section
               className={`game-table__hand${revolving ? " game-table__hand--revolution" : ""}`}
               aria-label={t("ui.table.handArea")}
@@ -191,13 +199,6 @@ export function GameTable({ room }: { room: PublicGameState }) {
                   </span>
                 </div>
               )}
-            </section>
-            <section className="game-table__action" aria-label={t("ui.table.actionArea")}>
-              <ActionBar
-                hand={hand}
-                deadline={room.deadline}
-                isMyTurn={inTurn && activeId === room.myPlayerId}
-              />
             </section>
           </>
         )}

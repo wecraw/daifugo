@@ -5,9 +5,9 @@
  * The acceptance criterion is "layout holds at 3 and 8 players without overflow
  * on a 844x390 viewport". jsdom has no layout engine, so it is checked in the two
  * halves that can be: the frame's arithmetic — the three bands adding up to 390,
- * the hand region leaving §10.2 its `W ≈ 780` — and the seat distribution, which
- * places every opponent exactly once and never puts more chips on an edge than it
- * holds.
+ * the hand claiming the full 844px width §10.2's step formula assumes now that
+ * the action bar sits above it — and the seat distribution, which places every
+ * opponent exactly once and never puts more chips on an edge than it holds.
  */
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -22,7 +22,6 @@ import {
 } from "@daifugo/core";
 import { App } from "../src/App";
 import {
-  ACTION_COLUMN_WIDTH,
   HAND_REGION_WIDTH,
   HAND_ROW_HEIGHT,
   MAX_OPPONENTS,
@@ -94,9 +93,8 @@ describe("table frame (§10.1)", () => {
     expect(TOP_STRIP_HEIGHT + MIDDLE_HEIGHT + HAND_ROW_HEIGHT).toBe(VIEWPORT_HEIGHT);
   });
 
-  it("leaves the hand the W ≈ 780 that §10.2's step formula assumes", () => {
-    expect(HAND_REGION_WIDTH + ACTION_COLUMN_WIDTH).toBe(VIEWPORT_WIDTH);
-    expect(HAND_REGION_WIDTH).toBe(780);
+  it("leaves the hand the full viewport width now the action bar sits above it", () => {
+    expect(HAND_REGION_WIDTH).toBe(VIEWPORT_WIDTH);
   });
 
   it("has room for the seven opponents of an eight-player table", () => {

@@ -827,16 +827,17 @@ finish order.
 │ [seat]          TRICK AREA / BANNERS          [seat]     │  ~218px
 │                                                          │
 ├──────────────────────────────────────────────────────────┤
-│              HAND (single row, fanned)          [ACTION] │  116px
+│                 [ Play ]              [ Pass ]           │
+│              HAND (single row, fanned)                   │  116px
 └──────────────────────────────────────────────────────────┘
 ```
 
 Opponent seats distribute along the left, top, and right edges. The action bar is a
-vertical column on the right edge rather than a bottom bar, buying vertical room.
-Lock orientation to landscape.
+row above the hand rather than a column beside it, so the hand claims the full
+frame width. Lock orientation to landscape.
 
 ### 10.2 Hand geometry
-Card 64 x 90. Hand region width `W ≈ 780` after the action column.
+Card 64 x 90. Hand region width `W ≈ 844`, the full frame.
 
 ```
 step = min(cardWidth * 0.62, (W - cardWidth) / (n - 1))
@@ -879,13 +880,15 @@ cycle bindings. The default is the strongest legal binding. The Play button labe
 always reflects the resolved combo.
 
 ### 10.6 Action bar
+A row above the hand: Play (primary) on the left, Pass (secondary) on the right.
+
 The Play button names the resolved combo from its count and rank: "Play Pair of 8s",
 "Play Four 3s".
 When a selection is illegal the button is disabled with the reason inline, for
 example "Must follow Hearts" or "Not high enough". Never surface a validation error
 the player could have seen coming as a toast.
 
-Also in the bar: Pass, Sort toggle, and the turn timer ring.
+Also in the bar: Sort toggle, and the turn timer ring.
 
 ### 10.7 Auto-pass
 Fires only when the legal move set is empty, never merely when the player has nothing
