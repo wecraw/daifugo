@@ -21,7 +21,7 @@ function SendProbe() {
   const { joinRoom, send } = useSocket();
   return (
     <>
-      <button type="button" onClick={() => joinRoom("ABC234", "Will")}>
+      <button type="button" onClick={() => joinRoom("ABC", "Will")}>
         Join
       </button>
       <button type="button" onClick={() => send("pass")}>
@@ -33,7 +33,7 @@ function SendProbe() {
 
 function publicState(overrides: Partial<PublicGameState> = {}): PublicGameState {
   return {
-    roomId: "ABC234",
+    roomId: "ABC",
     hostId: "p_1",
     config: {
       spade3BeatsJoker: true,
@@ -89,7 +89,7 @@ function publicState(overrides: Partial<PublicGameState> = {}): PublicGameState 
 async function joinAs(socket: FakeSocket, name: string): Promise<void> {
   const user = userEvent.setup();
   await user.type(screen.getByLabelText("Your name"), name);
-  await user.type(screen.getByLabelText("Room code"), "ABC234");
+  await user.type(screen.getByLabelText("Room code"), "ABC");
   await user.click(screen.getByRole("button", { name: "Join room" }));
   await waitFor(() => expect(socket.sentOf("joinRoom").length).toBeGreaterThan(0));
 }
@@ -105,7 +105,7 @@ describe("SocketContext", () => {
     const user = userEvent.setup();
 
     await user.click(screen.getByRole("button", { name: "Join" }));
-    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok" }));
+    act(() => socket.fire("joined", { roomId: "ABC", playerId: "p_1", resumeToken: "tok" }));
     act(() => socket.fire("roomState", publicState()));
     await user.click(screen.getByRole("button", { name: "Pass" }));
     expect(socket.sentOf("pass")).toHaveLength(1);
@@ -113,7 +113,7 @@ describe("SocketContext", () => {
     act(() => socket.disconnect());
     await user.click(screen.getByRole("button", { name: "Pass" }));
     act(() => socket.connect());
-    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok" }));
+    act(() => socket.fire("joined", { roomId: "ABC", playerId: "p_1", resumeToken: "tok" }));
     await user.click(screen.getByRole("button", { name: "Pass" }));
 
     expect(socket.sentOf("pass")).toHaveLength(1);
@@ -129,16 +129,16 @@ describe("SocketContext", () => {
     render(<App connect={() => socket.asSocket()} />);
     await joinAs(socket, "Will");
 
-    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok-1" }));
+    act(() => socket.fire("joined", { roomId: "ABC", playerId: "p_1", resumeToken: "tok-1" }));
     act(() => socket.fire("roomState", publicState()));
 
     expect(readStoredSession()).toEqual({
-      roomId: "ABC234",
+      roomId: "ABC",
       playerName: "Will",
       resumeToken: "tok-1",
       savedAt: expect.any(Number) as unknown as number,
     });
-    expect(await screen.findByRole("heading", { name: "Room ABC234" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Room ABC" })).toBeInTheDocument();
     expect(screen.getByText("Will")).toBeInTheDocument();
   });
 
@@ -147,7 +147,7 @@ describe("SocketContext", () => {
     render(<App connect={() => socket.asSocket()} />);
     await joinAs(socket, "Will");
 
-    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok-1" }));
+    act(() => socket.fire("joined", { roomId: "ABC", playerId: "p_1", resumeToken: "tok-1" }));
     act(() => socket.fire("roomState", publicState()));
 
     act(() => socket.disconnect());
@@ -155,29 +155,29 @@ describe("SocketContext", () => {
 
     act(() => socket.connect());
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(2));
-    expect(socket.sentOf("joinRoom")[1]).toEqual(["ABC234", "Will", "tok-1"]);
+    expect(socket.sentOf("joinRoom")[1]).toEqual(["ABC", "Will", "tok-1"]);
   });
 
   it("replays a token stored by an earlier page load", async () => {
     localStorage.setItem(
       SESSION_STORAGE_KEY,
-      JSON.stringify({ roomId: "ABC234", playerName: "Will", resumeToken: "tok-old" }),
+      JSON.stringify({ roomId: "ABC", playerName: "Will", resumeToken: "tok-old" }),
     );
     const socket = new FakeSocket();
     render(<App connect={() => socket.asSocket()} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Rejoin ABC234" }));
+    await user.click(screen.getByRole("button", { name: "Rejoin ABC" }));
 
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(1));
-    expect(socket.sentOf("joinRoom")[0]).toEqual(["ABC234", "Will", "tok-old"]);
+    expect(socket.sentOf("joinRoom")[0]).toEqual(["ABC", "Will", "tok-old"]);
   });
 
   it("replays a fresh stored session on mount without a click", async () => {
     localStorage.setItem(
       SESSION_STORAGE_KEY,
       JSON.stringify({
-        roomId: "ABC234",
+        roomId: "ABC",
         playerName: "Will",
         resumeToken: "tok-old",
         savedAt: Date.now() - 60_000,
@@ -187,11 +187,11 @@ describe("SocketContext", () => {
     render(<App connect={() => socket.asSocket()} />);
 
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(1));
-    expect(socket.sentOf("joinRoom")[0]).toEqual(["ABC234", "Will", "tok-old"]);
+    expect(socket.sentOf("joinRoom")[0]).toEqual(["ABC", "Will", "tok-old"]);
 
-    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok-old" }));
+    act(() => socket.fire("joined", { roomId: "ABC", playerId: "p_1", resumeToken: "tok-old" }));
     act(() => socket.fire("roomState", publicState()));
-    expect(await screen.findByRole("heading", { name: "Room ABC234" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Room ABC" })).toBeInTheDocument();
   });
 
   // StrictMode remounts the provider, which tears the first socket down and builds
@@ -201,7 +201,7 @@ describe("SocketContext", () => {
     localStorage.setItem(
       SESSION_STORAGE_KEY,
       JSON.stringify({
-        roomId: "ABC234",
+        roomId: "ABC",
         playerName: "Will",
         resumeToken: "tok-old",
         savedAt: Date.now() - 60_000,
@@ -221,18 +221,18 @@ describe("SocketContext", () => {
 
     const live = sockets[sockets.length - 1];
     await waitFor(() => expect(live.sentOf("joinRoom").length).toBe(1));
-    expect(live.sentOf("joinRoom")[0]).toEqual(["ABC234", "Will", "tok-old"]);
+    expect(live.sentOf("joinRoom")[0]).toEqual(["ABC", "Will", "tok-old"]);
 
-    act(() => live.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok-old" }));
+    act(() => live.fire("joined", { roomId: "ABC", playerId: "p_1", resumeToken: "tok-old" }));
     act(() => live.fire("roomState", publicState()));
-    expect(await screen.findByRole("heading", { name: "Room ABC234" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Room ABC" })).toBeInTheDocument();
   });
 
   it("does not auto-rejoin a session older than six hours", async () => {
     localStorage.setItem(
       SESSION_STORAGE_KEY,
       JSON.stringify({
-        roomId: "ABC234",
+        roomId: "ABC",
         playerName: "Will",
         resumeToken: "tok-old",
         savedAt: Date.now() - 6 * 60 * 60 * 1000 - 1000,
@@ -241,19 +241,19 @@ describe("SocketContext", () => {
     const socket = new FakeSocket();
     render(<App connect={() => socket.asSocket()} />);
 
-    expect(await screen.findByRole("button", { name: "Rejoin ABC234" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Rejoin ABC" })).toBeInTheDocument();
     expect(socket.sentOf("joinRoom")).toHaveLength(0);
   });
 
   it("treats a session written without `savedAt` as stale", async () => {
     localStorage.setItem(
       SESSION_STORAGE_KEY,
-      JSON.stringify({ roomId: "ABC234", playerName: "Will", resumeToken: "tok-old" }),
+      JSON.stringify({ roomId: "ABC", playerName: "Will", resumeToken: "tok-old" }),
     );
     const socket = new FakeSocket();
     render(<App connect={() => socket.asSocket()} />);
 
-    expect(await screen.findByRole("button", { name: "Rejoin ABC234" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Rejoin ABC" })).toBeInTheDocument();
     expect(socket.sentOf("joinRoom")).toHaveLength(0);
   });
 
@@ -261,7 +261,7 @@ describe("SocketContext", () => {
     localStorage.setItem(
       SESSION_STORAGE_KEY,
       JSON.stringify({
-        roomId: "ABC234",
+        roomId: "ABC",
         playerName: "Will",
         resumeToken: "tok-old",
         savedAt: Date.now() - 60_000,
@@ -275,7 +275,7 @@ describe("SocketContext", () => {
 
     expect(await screen.findByRole("button", { name: "Create room" })).toBeInTheDocument();
     expect(readStoredSession()).toBeNull();
-    expect(screen.queryByRole("button", { name: "Rejoin ABC234" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Rejoin ABC" })).not.toBeInTheDocument();
     expect(socket.connected).toBe(false);
     expect(socket.sentOf("joinRoom")).toHaveLength(1);
   });
@@ -285,7 +285,7 @@ describe("SocketContext", () => {
     const before = Date.now();
     render(<App connect={() => socket.asSocket()} />);
     await joinAs(socket, "Will");
-    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok-1" }));
+    act(() => socket.fire("joined", { roomId: "ABC", playerId: "p_1", resumeToken: "tok-1" }));
 
     const savedAt = readStoredSession()?.savedAt;
     expect(savedAt).toBeGreaterThanOrEqual(before);
@@ -321,9 +321,9 @@ describe("SocketContext", () => {
     render(<App connect={() => socket.asSocket()} />);
     await joinAs(socket, "Will");
 
-    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok-1" }));
+    act(() => socket.fire("joined", { roomId: "ABC", playerId: "p_1", resumeToken: "tok-1" }));
     act(() => socket.fire("roomState", publicState()));
-    expect(await screen.findByRole("heading", { name: "Room ABC234" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Room ABC" })).toBeInTheDocument();
 
     act(() => socket.disconnect());
     act(() => socket.connect());
@@ -331,35 +331,35 @@ describe("SocketContext", () => {
     act(() => socket.fire("gameError", { code: "ROOM_NOT_FOUND" }));
 
     expect(await screen.findByRole("button", { name: "Create room" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Room ABC234" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Room ABC" })).not.toBeInTheDocument();
     expect(readStoredSession()).toBeNull();
   });
 
   it("keeps a stored seat for another room when a join elsewhere fails", async () => {
     localStorage.setItem(
       SESSION_STORAGE_KEY,
-      JSON.stringify({ roomId: "ABC234", playerName: "Will", resumeToken: "tok-old" }),
+      JSON.stringify({ roomId: "ABC", playerName: "Will", resumeToken: "tok-old" }),
     );
     const socket = new FakeSocket();
     render(<App connect={() => socket.asSocket()} />);
 
     // The name is already prefilled from the stored session.
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText("Room code"), "ZZZ999");
+    await user.type(screen.getByLabelText("Room code"), "ZZZ");
     await user.click(screen.getByRole("button", { name: "Join room" }));
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(1));
     // No token was replayed for the room we mistyped, so none of it was at stake.
-    expect(socket.sentOf("joinRoom")[0]).toEqual(["ZZZ999", "Will", undefined]);
+    expect(socket.sentOf("joinRoom")[0]).toEqual(["ZZZ", "Will", undefined]);
 
     act(() => socket.fire("gameError", { code: "ROOM_NOT_FOUND" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Room not found");
     expect(readStoredSession()).toEqual({
-      roomId: "ABC234",
+      roomId: "ABC",
       playerName: "Will",
       resumeToken: "tok-old",
     });
-    expect(screen.getByRole("button", { name: "Rejoin ABC234" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rejoin ABC" })).toBeInTheDocument();
   });
 
   it("keeps the seat when an error arrives after being seated", async () => {
@@ -367,7 +367,7 @@ describe("SocketContext", () => {
     render(<App connect={() => socket.asSocket()} />);
     await joinAs(socket, "Will");
 
-    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok-1" }));
+    act(() => socket.fire("joined", { roomId: "ABC", playerId: "p_1", resumeToken: "tok-1" }));
     act(() => socket.fire("roomState", publicState()));
     act(() => socket.fire("gameError", { code: "NOT_HOST" }));
 
@@ -379,7 +379,7 @@ describe("SocketContext", () => {
     const socket = new FakeSocket();
     render(<App connect={() => socket.asSocket()} />);
     await joinAs(socket, "Will");
-    act(() => socket.fire("joined", { roomId: "ABC234", playerId: "p_1", resumeToken: "tok-1" }));
+    act(() => socket.fire("joined", { roomId: "ABC", playerId: "p_1", resumeToken: "tok-1" }));
     act(() => socket.fire("roomState", publicState()));
 
     const user = userEvent.setup();

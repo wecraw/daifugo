@@ -39,8 +39,8 @@ describe("MainMenu", () => {
     await user.click(screen.getByRole("button", { name: "Join room" }));
 
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(1));
-    // The code is normalised to the server's uppercase alphabet as it is typed.
-    expect(socket.sentOf("joinRoom")[0]).toEqual(["ABC234", "Alex", undefined]);
+    // The code is normalised to uppercase letters only, and truncated to 3 chars, as it is typed.
+    expect(socket.sentOf("joinRoom")[0]).toEqual(["ABC", "Alex", undefined]);
   });
 
   it("refuses to join without a name, through a key", async () => {
