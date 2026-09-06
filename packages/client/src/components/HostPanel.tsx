@@ -1,5 +1,5 @@
 /**
- * The host panel (§10.11): the nine house rules behind a disclosure, collapsed by
+ * The host panel (§10.11): the nine house rules behind a modal, closed by
  * default and all on, plus the round limit of §9.
  *
  * **Rendered to everyone, operable by the host.** A rule change has to be visible
@@ -18,12 +18,12 @@
  * **Miyako-ochi is not here.** It is always on and is not a `HouseRulesConfig`
  * entry (§4.5), so it has no toggle to render.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HOUSE_RULE_KEYS, type HouseRuleKey, type PublicGameState } from "@daifugo/core";
 import { useSocket } from "../context/SocketContext";
 import { useTranslate, type I18nKey } from "../i18n/index";
 
-/** §10.11: the disclosure starts collapsed. */
+/** §10.11: the panel starts closed. */
 const INITIALLY_OPEN = false;
 
 export function HostPanel({ room }: { room: PublicGameState }) {
@@ -32,6 +32,17 @@ export function HostPanel({ room }: { room: PublicGameState }) {
   const [open, setOpen] = useState(INITIALLY_OPEN);
   const [limitDraft, setLimitDraft] = useState("");
   const [notice, setNotice] = useState<I18nKey | null>(null);
+
+  // Escape closes it, the way every other dialog on the platform does. The
+  // listener only exists while the modal is up, so nothing else has to know.
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open]);
 
   const isHost = room.hostId === playerId;
   // The engine accepts both host-only settings in `LOBBY` and `ROUND_END` only
@@ -67,69 +78,96 @@ export function HostPanel({ room }: { room: PublicGameState }) {
 
   return (
     <section className="host-panel" aria-label={t("ui.host.title")}>
-      <button
-        type="button"
-        className="host-panel__summary"
-        aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-      >
+      <button type="button" className="host-panel__summary" onClick={() => setOpen(true)}>
         {t("ui.host.rules")}
       </button>
 
       {open && (
-        <div className="host-panel__body" role="group" aria-label={t("ui.host.title")}>
-          {!editable && <p className="host-panel__note">{t("ui.host.readOnly")}</p>}
+        // The backdrop closes on a click that lands on it and not on the panel,
+        // which is the same gesture as Escape and needs no button of its own.
+        <div
+          className="host-panel__backdrop"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setOpen(false);
+          }}
+        >
+          <div
+            className="host-panel__dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("ui.host.title")}
+          >
+            <header className="host-panel__header">
+              <h2 className="host-panel__heading">{t("ui.host.rules")}</h2>
+              <button
+                type="button"
+                className="host-panel__close"
+                aria-label={t("ui.host.close")}
+                // The dialog opens on a click of the player's, so focus starts
+                // here rather than on the first toggle a non-host cannot use.
+                autoFocus
+                onClick={() => setOpen(false)}
+              >
+                {/* Decorative: the accessible name is the label above. */}
+                {"\u00d7"}
+              </button>
+            </header>
 
-          <ul className="host-panel__rules">
-            {HOUSE_RULE_KEYS.map((key) => (
-              <li key={key}>
-                <label className="host-panel__rule">
+            <div className="host-panel__body" role="group" aria-label={t("ui.host.title")}>
+              {!editable && <p className="host-panel__note">{t("ui.host.readOnly")}</p>}
+
+              <ul className="host-panel__rules">
+                {HOUSE_RULE_KEYS.map((key) => (
+                  <li key={key}>
+                    <label className="host-panel__rule">
+                      <input
+                        type="checkbox"
+                        checked={room.config[key]}
+                        disabled={!editable}
+                        onChange={() => toggleRule(key)}
+                      />
+                      <span>{t(`rule.${key}`)}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="host-panel__limit">
+                <label className="field">
+                  <span>{t("ui.host.roundLimitLabel")}</span>
                   <input
-                    type="checkbox"
-                    checked={room.config[key]}
+                    type="number"
+                    inputMode="numeric"
+                    min={room.roundNumber + 1}
+                    value={limitDraft}
                     disabled={!editable}
-                    onChange={() => toggleRule(key)}
+                    placeholder={
+                      room.roundLimit === null
+                        ? t("ui.host.roundLimitPlaceholder")
+                        : String(room.roundLimit)
+                    }
+                    onChange={(event) => setLimitDraft(event.target.value)}
                   />
-                  <span>{t(`rule.${key}`)}</span>
                 </label>
-              </li>
-            ))}
-          </ul>
+                <button type="button" disabled={!editable} onClick={applyLimit}>
+                  {t("ui.host.roundLimitApply")}
+                </button>
+                <button
+                  type="button"
+                  disabled={!editable || room.roundLimit === null}
+                  onClick={clearLimit}
+                >
+                  {t("ui.host.roundLimitClear")}
+                </button>
+              </div>
 
-          <div className="host-panel__limit">
-            <label className="field">
-              <span>{t("ui.host.roundLimitLabel")}</span>
-              <input
-                type="number"
-                inputMode="numeric"
-                min={room.roundNumber + 1}
-                value={limitDraft}
-                disabled={!editable}
-                placeholder={
-                  room.roundLimit === null
-                    ? t("ui.host.roundLimitPlaceholder")
-                    : String(room.roundLimit)
-                }
-                onChange={(event) => setLimitDraft(event.target.value)}
-              />
-            </label>
-            <button type="button" disabled={!editable} onClick={applyLimit}>
-              {t("ui.host.roundLimitApply")}
-            </button>
-            <button
-              type="button"
-              disabled={!editable || room.roundLimit === null}
-              onClick={clearLimit}
-            >
-              {t("ui.host.roundLimitClear")}
-            </button>
+              {notice !== null && (
+                <p className="host-panel__note" role="alert">
+                  {t(notice, { min: room.roundNumber })}
+                </p>
+              )}
+            </div>
           </div>
-
-          {notice !== null && (
-            <p className="host-panel__note" role="alert">
-              {t(notice, { min: room.roundNumber })}
-            </p>
-          )}
         </div>
       )}
     </section>

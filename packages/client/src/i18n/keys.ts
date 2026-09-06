@@ -35,7 +35,6 @@ export const UI_I18N_KEYS = [
   "ui.menu.rejoin",
   "ui.menu.forget",
   "ui.menu.nameRequired",
-  "ui.menu.roomCodeRequired",
   "ui.menu.createFailed",
 
   // Role-name terminology (§11): client-side only, persisted to localStorage
@@ -94,6 +93,7 @@ export const UI_I18N_KEYS = [
   // the whole table; only the host can operate it.
   "ui.host.title",
   "ui.host.rules",
+  "ui.host.close",
   "ui.host.readOnly",
   "ui.host.roundLimitLabel",
   "ui.host.roundLimitPlaceholder",

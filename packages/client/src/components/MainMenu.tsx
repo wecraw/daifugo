@@ -1,5 +1,5 @@
 /**
- * The main menu (§10, §11): name, create a room, join by code, and role names.
+ * The main menu (§10, §11): name, join by code, create a room, and role names.
  *
  * Creating a room is `POST /rooms` followed by a `joinRoom` — the code has to
  * exist before anyone can join it (§8), and the first joiner becomes host (§8.2).
@@ -45,6 +45,9 @@ export function MainMenu() {
 
   const busy = creating || status === "connecting";
   const trimmedName = name.trim();
+  // Join stays disabled until the code is a full 3 letters (`normalizeCode`
+  // already rejects anything else), so the primary action can't misfire.
+  const codeIsComplete = code.length === CODE_MAX_LENGTH;
 
   function requireName(): boolean {
     if (trimmedName !== "") return true;
@@ -69,10 +72,6 @@ export function MainMenu() {
     event.preventDefault();
     setNotice(null);
     if (!requireName()) return;
-    if (code === "") {
-      setNotice("ui.menu.roomCodeRequired");
-      return;
-    }
     joinRoom(code, trimmedName);
   }
 
@@ -96,17 +95,6 @@ export function MainMenu() {
           />
         </label>
 
-        <button
-          type="button"
-          className="main-menu__button main-menu__button--primary"
-          disabled={busy}
-          onClick={() => void onCreate()}
-        >
-          {creating ? t("ui.menu.creating") : t("ui.menu.createRoom")}
-        </button>
-
-        <div className="main-menu__or">{t("ui.menu.or")}</div>
-
         <form className="main-menu__join" onSubmit={onJoin}>
           <label className="field main-menu__code">
             <span>{t("ui.menu.roomCodeLabel")}</span>
@@ -122,10 +110,25 @@ export function MainMenu() {
               onChange={(event) => setCode(normalizeCode(event.target.value))}
             />
           </label>
-          <button type="submit" className="main-menu__button" disabled={busy}>
+          <button
+            type="submit"
+            className="main-menu__button main-menu__button--primary"
+            disabled={busy || !codeIsComplete}
+          >
             {status === "connecting" ? t("ui.menu.joining") : t("ui.menu.joinRoom")}
           </button>
         </form>
+
+        <div className="main-menu__or">{t("ui.menu.or")}</div>
+
+        <button
+          type="button"
+          className="main-menu__button"
+          disabled={busy}
+          onClick={() => void onCreate()}
+        >
+          {creating ? t("ui.menu.creating") : t("ui.menu.createRoom")}
+        </button>
 
         {storedSession !== null && (
           <div className="main-menu__resume">

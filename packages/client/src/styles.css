@@ -43,6 +43,18 @@ body {
     sans-serif;
   -webkit-text-size-adjust: 100%;
   touch-action: manipulation;
+  /* Tapping and dragging on the table is a game gesture, never a text
+     selection — a long-press on a card should not paint it blue. Inputs opt
+     back in below. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .app {
@@ -695,14 +707,13 @@ button:disabled {
   }
 }
 
-/* A disclosure, not a button: it belongs to the rail's text, and the caret is
-   what says it opens. */
+/* The opener sits in the rail's text; the panel it opens is a modal over the
+   whole page, so the rail's own scroll never clips it. */
 .lobby .host-panel__summary {
   display: flex;
   width: 100%;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  justify-content: center;
   padding: 0.45rem 0;
   border: 0;
   border-top: 1px solid var(--rule);
@@ -711,34 +722,67 @@ button:disabled {
   font-size: 0.8rem;
 }
 
-.lobby .host-panel__summary::after {
-  border: 0.28rem solid transparent;
-  border-top-color: currentcolor;
-  border-bottom-width: 0;
-  content: "";
-  opacity: 0.6;
-  transform: translateY(0.15rem);
-}
-
-.lobby .host-panel__summary[aria-expanded="true"]::after {
-  border-top-width: 0;
-  border-bottom: 0.28rem solid currentcolor;
-  transform: translateY(-0.15rem);
-}
-
 .host-panel__summary {
   font-size: 0.75rem;
+}
+
+/* Fixed, not absolute: the panel belongs to the page, not to the rail it is
+   opened from. */
+.host-panel__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(10, 59, 37, 0.82);
+}
+
+.host-panel__dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(28rem, 100%);
+  max-height: 100%;
+  padding: 0.75rem 0.9rem;
+  overflow-y: auto;
+  border: 1px solid var(--accent);
+  border-radius: 0.5rem;
+  background: var(--felt);
+}
+
+.host-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.host-panel__heading {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+.host-panel__close {
+  padding: 0 0.35rem;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.host-panel__close:hover {
+  opacity: 1;
 }
 
 .host-panel__body {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  margin-top: 0.4rem;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid rgba(245, 243, 238, 0.2);
-  border-radius: 0.4rem;
-  background: rgba(0, 0, 0, 0.2);
+  gap: 0.5rem;
 }
 
 .host-panel__rules {

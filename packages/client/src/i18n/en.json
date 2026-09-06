@@ -121,7 +121,6 @@
   "ui.menu.rejoin": "Rejoin {code}",
   "ui.menu.forget": "Forget that room",
   "ui.menu.nameRequired": "Enter a name first",
-  "ui.menu.roomCodeRequired": "Enter a room code",
   "ui.menu.createFailed": "Could not create a room",
 
   "ui.terminology.label": "Role names",
@@ -169,6 +168,7 @@
 
   "ui.host.title": "Table rules",
   "ui.host.rules": "House rules",
+  "ui.host.close": "Close",
   "ui.host.readOnly": "Only the host can change these",
   "ui.host.roundLimitLabel": "Round limit",
   "ui.host.roundLimitPlaceholder": "Endless",

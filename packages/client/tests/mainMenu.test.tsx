@@ -55,15 +55,19 @@ describe("MainMenu", () => {
     expect(socket.sentOf("joinRoom")).toEqual([]);
   });
 
-  it("refuses to join without a room code", async () => {
+  it("keeps join disabled until the code is a full three letters", async () => {
     const user = userEvent.setup();
-    const { socket } = renderApp();
+    renderApp();
 
     await user.type(screen.getByLabelText("Your name"), "Will");
-    await user.click(screen.getByRole("button", { name: "Join room" }));
+    const join = screen.getByRole("button", { name: "Join room" });
+    expect(join).toBeDisabled();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Enter a room code");
-    expect(socket.sentOf("joinRoom")).toEqual([]);
+    await user.type(screen.getByLabelText("Room code"), "ab");
+    expect(join).toBeDisabled();
+
+    await user.type(screen.getByLabelText("Room code"), "c");
+    expect(join).toBeEnabled();
   });
 
   it("reports a failed room creation through a key", async () => {
