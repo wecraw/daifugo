@@ -12,6 +12,8 @@
  */
 import {
   applyAction,
+  canCancelLeave,
+  cancelLeave,
   createGameState,
   err,
   ok,
@@ -170,14 +172,20 @@ export class RoomManager {
   ): { next: RoomDoc | null; outcome: Result<JoinOutcome, ErrorCode> } {
     const now = this.scheduler.now();
 
-    // Reconnect: a known token whose player still holds a seat and has not left.
+    // Reconnect: a known token whose player still holds a seat.
     if (resumeToken !== undefined) {
       const playerId = doc.tokens[resumeToken];
       if (playerId !== undefined && this.isReclaimable(doc.state, playerId)) {
-        const reconnected = setConnected(doc.state, playerId, true);
+        // A seat the grace queued for departure is reclaimed by cancelling that
+        // departure (§7.7), not by seating the arrival again: minting a fresh seat
+        // here would show one browser at the table twice, once as the ghost still
+        // leaving at the boundary and once as the new arrival.
+        const revived = cancelLeave(doc.state, playerId) ?? doc.state;
+        const reconnected = setConnected(revived, playerId, true) ?? revived;
         const outcome = ok({ playerId, resumeToken, reconnected: true });
-        // Already-connected reconnect is a no-op write but still a valid resume.
-        if (reconnected === null) return { next: null, outcome };
+        // Already-connected reconnect with nothing to cancel is a no-op write, but
+        // still a valid resume.
+        if (reconnected === doc.state) return { next: null, outcome };
         return { next: withState(doc, reconnected, now), outcome };
       }
     }
@@ -221,13 +229,23 @@ export class RoomManager {
     );
   }
 
-  /** A seat is reclaimable while its player is still seated and not leaving (§8.1). */
+  /**
+   * A seat is reclaimable while its player is still on the roster (§8.1).
+   *
+   * A queued departure does not disqualify it on its own — `cancelLeave` walks
+   * that back, so the browser whose grace expired while it slept comes back to its
+   * own seat instead of taking a second one. It does disqualify it once the room
+   * has filled the slot or the name in the meantime (`canCancelLeave`): the token
+   * then falls through to a fresh join, which answers `ROOM_FULL` or `NAME_TAKEN`.
+   * A lobby leave is different again: the engine removes the seat outright (§7.7),
+   * leaving nothing to reclaim, and that token also falls through.
+   */
   private isReclaimable(state: GameState, playerId: string): boolean {
-    if (state.pendingLeaves.includes(playerId)) return false;
-    return (
+    const seated =
       state.players.some((p) => p.id === playerId) ||
-      state.pendingJoins.some((p) => p.id === playerId)
-    );
+      state.pendingJoins.some((p) => p.id === playerId);
+    if (!seated) return false;
+    return !state.pendingLeaves.includes(playerId) || canCancelLeave(state, playerId);
   }
 
   /* ---------------------------------------------------------------------- */

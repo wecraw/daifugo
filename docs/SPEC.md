@@ -713,6 +713,20 @@ can land before the dropped socket's close is processed — and starting the gra
 while another socket is still live would remove a player who is sitting at the
 table, with no disconnect left to reconnect from.
 
+An expired grace queues the departure but does not invalidate the token: replaying
+it reclaims the seat and cancels the queued leave, so a browser that slept through
+its own grace comes back to the seat it held rather than taking a second one under
+the same name. Only the departure is walked back. Mid-round the seat was already
+dropped from the round (§7.7) and stays dropped — they sit that round out and are
+dealt into the next one — and the host seat, if it moved on, stays where it went
+unless the departures left it vacant. A lobby leave removes the seat outright, so
+there is nothing left to reclaim and the token falls through to a fresh join.
+
+The seat is only reclaimable while it is still free to take. A queued departure
+reads as already gone to a join (§7.7), so a newcomer may consume the last slot or
+the same name before the token comes back; the reclaim is refused there and the
+token falls through to a fresh join, which answers `ROOM_FULL` or `NAME_TAKEN`.
+
 ### 8.4 Server loop
 1. Receive action, resolve player id from socket.
 2. `applyAction(state, action, playerId)`.

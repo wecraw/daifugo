@@ -1220,6 +1220,83 @@ export function queueLeave(state: GameState, playerId: string): Result<GameState
 }
 
 /**
+ * Someone who was queued to leave comes back (§7.7, §8.1).
+ *
+ * The disconnect grace queues a departure for a seat whose browser is merely
+ * asleep, and the token that seat holds is still valid: replaying it has to walk
+ * that departure back, or the same browser would take a *second* seat under the
+ * same name and the room would show the player twice — once as a ghost leaving
+ * at the boundary, once as an arrival.
+ *
+ * Only the queued departure is cancelled. `queueLeave` already took them out of
+ * the round in progress — hand to the graveyard, last place in the finish order
+ * (§7.7) — and none of that is undone: they sit the round out and are dealt into
+ * the next one. Returns `null` when the player has no queued departure to cancel,
+ * so a plain reconnect writes nothing here.
+ *
+ * The deadline is carried over rather than restamped: a player walking back in
+ * must not hand the table a fresh turn clock. Returns `null` when the departure
+ * can no longer be walked back at all — see {@link canCancelLeave}.
+ */
+export function cancelLeave(state: GameState, playerId: string): GameState | null {
+  if (!canCancelLeave(state, playerId)) return null;
+
+  const next = draft(state);
+  next.pendingLeaves = state.pendingLeaves.filter((id) => id !== playerId);
+  log(next, history("history.playerJoined", { player: playerId }));
+
+  // Their departure may have vacated the host seat (§8.2): `transferHost` empties
+  // `hostId` when nobody is left to hand it to, and the room they are walking back
+  // into would otherwise have nobody who could deal.
+  if (!holdsHost(next)) {
+    next.hostId = playerId;
+    log(next, history("history.hostTransferred", { player: playerId }));
+  }
+
+  const committed = commit(next, state.deadline);
+  return committed.ok ? committed.value : null;
+}
+
+/**
+ * Whether a queued departure can still be walked back (§7.7, §8.1).
+ *
+ * The seat is only theirs to reclaim while nobody has taken what it freed:
+ * `queueJoin` reads a departing seat as already gone, so between the grace
+ * expiring and the token being replayed a newcomer can consume the last slot or
+ * the same name. Restoring the departure on top of that would put the room a seat
+ * over `MAX_PLAYERS` — every later `START_GAME` then fails `TOO_MANY_PLAYERS` —
+ * or leave two seats sharing a name. When the room has moved on, the token falls
+ * through to a fresh join and gets the honest `ROOM_FULL` / `NAME_TAKEN` instead.
+ */
+export function canCancelLeave(state: GameState, playerId: string): boolean {
+  if (!state.pendingLeaves.includes(playerId)) return false;
+  const player =
+    playerOf(state, playerId) ??
+    state.pendingJoins.find((seated) => seated.id === playerId);
+  if (player === undefined) return false;
+
+  // The same roster `queueJoin` counts against: seats that are staying, plus the
+  // arrivals already queued for the boundary.
+  const leaving = new Set(state.pendingLeaves);
+  const staying = [
+    ...state.players.filter((seated) => !leaving.has(seated.id)),
+    ...state.pendingJoins.filter((seated) => !leaving.has(seated.id)),
+  ];
+
+  if (staying.length >= MAX_PLAYERS) return false;
+  return !staying.some((seated) => seated.name.toLowerCase() === player.name.toLowerCase());
+}
+
+/** Whether anyone still on the roster is the host the state names (§8.2). */
+function holdsHost(state: RosterView): boolean {
+  if (state.hostId === "") return false;
+  const leaving = new Set(state.pendingLeaves);
+  return [...state.players, ...state.pendingJoins].some(
+    (player) => player.id === state.hostId && !leaving.has(player.id),
+  );
+}
+
+/**
  * The host leaving hands the room on to the longest-seated player who is staying
  * (§8.2).
  *

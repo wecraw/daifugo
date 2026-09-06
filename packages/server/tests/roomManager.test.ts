@@ -403,6 +403,122 @@ describe("RoomManager acceptance (§12.4)", () => {
     expect(doc.state.hostId).toBe(host.playerId);
     expect(doc.state.players).toHaveLength(3);
   });
+
+  /* ---------------------------------------------------------------------- */
+  /* Reclaiming a seat the grace already queued for departure (§8.1, §8.3)   */
+  /* ---------------------------------------------------------------------- */
+
+  it("reclaims the seat rather than seating the browser twice after the grace expires", async () => {
+    const roomId = await manager.createRoom();
+    const host = await seatPlayer(manager, roomId, "inco");
+    const alex = await seatPlayer(manager, roomId, "wam");
+    const sam = await seatPlayer(manager, roomId, "bill");
+    await readyAll(manager, roomId, alex, sam);
+    expect((await manager.startGame(roomId, host.playerId)).ok).toBe(true);
+
+    // Asleep long enough for the grace to queue their departure (§8.3).
+    await manager.disconnect(roomId, host.playerId);
+    await scheduler.advance(DISCONNECT_GRACE_MS);
+    expect((await docOf(roomId)).state.pendingLeaves).toContain(host.playerId);
+
+    // The browser wakes and replays the token it still holds: the same seat comes
+    // back, and the queued departure is cancelled with it.
+    const resumed = unwrap(await manager.join(roomId, "inco", host.resumeToken));
+    expect(resumed.reconnected).toBe(true);
+    expect(resumed.playerId).toBe(host.playerId);
+
+    const doc = await docOf(roomId);
+    expect(doc.state.pendingLeaves).toEqual([]);
+    expect(doc.state.pendingJoins).toEqual([]);
+    // One "inco" at the table, not a ghost and an arrival.
+    expect(doc.state.players.filter((p) => p.name === "inco")).toHaveLength(1);
+    expect(doc.state.players).toHaveLength(3);
+    expect(doc.state.players.find((p) => p.id === host.playerId)?.isConnected).toBe(true);
+    expect(totalCards(doc.state)).toBe(54);
+  });
+
+  it("leaves the reclaimed player out of the round they were dropped from (§7.7)", async () => {
+    const roomId = await manager.createRoom();
+    const host = await seatPlayer(manager, roomId, "Will");
+    const alex = await seatPlayer(manager, roomId, "Alex");
+    const sam = await seatPlayer(manager, roomId, "Sam");
+    await readyAll(manager, roomId, alex, sam);
+    expect((await manager.startGame(roomId, host.playerId)).ok).toBe(true);
+
+    const dealt = await docOf(roomId);
+    const dropped = activePlayerId(dealt.state);
+    const token = [host, alex, sam].find((seat) => seat.playerId === dropped)!.resumeToken;
+    const deadlineBefore = dealt.state.deadline;
+
+    await manager.disconnect(roomId, dropped);
+    await scheduler.advance(DISCONNECT_GRACE_MS);
+    const turnDeadline = (await docOf(roomId)).state.deadline;
+
+    unwrap(await manager.join(roomId, "back", token));
+    const doc = await docOf(roomId);
+
+    // Coming back does not undo the drop: their hand stays in the graveyard and
+    // they still finish last this round.
+    expect(doc.state.droppedPlayerIds).toEqual([dropped]);
+    expect(doc.state.hands[dropped] ?? []).toHaveLength(0);
+    expect(totalCards(doc.state)).toBe(54);
+    // Nor does it hand the table a fresh turn clock.
+    expect(doc.state.deadline).toBe(turnDeadline);
+    expect(deadlineBefore).not.toBeNull();
+    // But they are dealt into the next round, once this one ends.
+    expect(doc.state.pendingLeaves).toEqual([]);
+  });
+
+  it("answers ROOM_FULL when a newcomer took the slot the departure freed", async () => {
+    const roomId = await manager.createRoom();
+    const host = await seatPlayer(manager, roomId, "Will");
+    const seats = [host];
+    for (const name of ["Alex", "Sam", "Kim", "Lee", "Ray", "Jo", "Max"]) {
+      seats.push(await seatPlayer(manager, roomId, name));
+    }
+    await readyAll(manager, roomId, ...seats.slice(1));
+    expect((await manager.startGame(roomId, host.playerId)).ok).toBe(true);
+    expect((await docOf(roomId)).state.players).toHaveLength(8);
+
+    // The eighth seat sleeps through its grace, and a ninth friend takes the slot
+    // that freed before the token is replayed.
+    const asleep = seats[7]!;
+    await manager.disconnect(roomId, asleep.playerId);
+    await scheduler.advance(DISCONNECT_GRACE_MS);
+    await seatPlayer(manager, roomId, "Nine");
+
+    // Reclaiming now would seat nine, and every later deal would fail
+    // TOO_MANY_PLAYERS. The token falls through to a fresh join instead, which
+    // says plainly that the room is full.
+    expect(await manager.join(roomId, "Max", asleep.resumeToken)).toMatchObject({
+      error: "ROOM_FULL",
+    });
+    const doc = await docOf(roomId);
+    expect(doc.state.pendingLeaves).toEqual([asleep.playerId]);
+    expect(doc.state.pendingJoins).toHaveLength(1);
+  });
+
+  it("gives the host seat back when the last departure vacated it (§8.2)", async () => {
+    const roomId = await manager.createRoom();
+    const host = await seatPlayer(manager, roomId, "Will");
+    const alex = await seatPlayer(manager, roomId, "Alex");
+    const sam = await seatPlayer(manager, roomId, "Sam");
+    await readyAll(manager, roomId, alex, sam);
+    expect((await manager.startGame(roomId, host.playerId)).ok).toBe(true);
+
+    // Everyone drops and every grace expires: the room is queued empty and the
+    // host seat is vacant (§8.2).
+    for (const seat of [host, alex, sam]) await manager.disconnect(roomId, seat.playerId);
+    await scheduler.advance(DISCONNECT_GRACE_MS);
+    expect((await docOf(roomId)).state.hostId).toBe("");
+
+    // The first one back takes the host seat with their own, exactly as the first
+    // arrival in a vacant room does.
+    unwrap(await manager.join(roomId, "Alex", alex.resumeToken));
+    const doc = await docOf(roomId);
+    expect(doc.state.hostId).toBe(alex.playerId);
+    expect(doc.state.pendingLeaves).not.toContain(alex.playerId);
+  });
 });
 
 /* -------------------------------------------------------------------------- */
