@@ -883,9 +883,9 @@ the turn does not feel dropped. Suppress entirely while a pendingAction is the
 player's.
 
 ### 10.8 Sorting
-Toggle between rank-then-suit and suit-then-rank, persisted to localStorage. Rank
-sort follows the **current effective order**, so the hand visually reverses on
-revolution. That reversal is deliberate feedback.
+Always rank-then-suit, weakest first. The sort follows the **current effective
+order**, so the hand visually reverses on revolution. That reversal is
+deliberate feedback.
 
 ### 10.9 Animation priorities
 In order of impact:
