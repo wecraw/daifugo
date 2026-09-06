@@ -9,7 +9,7 @@ import { OrientationGate } from "./components/OrientationGate";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { MainMenu } from "./components/MainMenu";
 import { RoomShell } from "./components/RoomShell";
-import { I18nProvider } from "./i18n/index";
+import { CopyProvider } from "./i18n/index";
 import { SocketProvider, useSocket, type SocketProviderProps } from "./context/SocketContext";
 import type { TranslateParams } from "./i18n/index";
 
@@ -42,12 +42,12 @@ export interface AppProps {
 
 export function App({ connect, fetchImpl }: AppProps = {}) {
   return (
-    <I18nProvider>
+    <CopyProvider>
       <SocketProvider connect={connect} fetchImpl={fetchImpl}>
         <OrientationGate>
           <Screen />
         </OrientationGate>
       </SocketProvider>
-    </I18nProvider>
+    </CopyProvider>
   );
 }

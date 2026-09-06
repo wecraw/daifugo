@@ -13,7 +13,7 @@
 | House rules | All nine ON by default. Toggles hidden behind an advanced panel every seat can read and only the host can change. |
 | Match structure | Endless by default. Host may set a round limit or first-to-N. |
 | Accessibility | Out of scope for v1. |
-| Languages | English and Japanese, toggled from the main menu, persisted to localStorage. |
+| Interface copy | English only. A main-menu toggle switches English role names to romanized Daifugo names, persisted to localStorage. |
 | Turn direction | Always to the left, defined as `nextSeat = (seat + 1) % N`. |
 
 ---
@@ -52,7 +52,7 @@ daifugo-monorepo/
     └── client/
         └── src/
             ├── App.tsx
-            ├── i18n/             # en.json, ja.json
+            ├── i18n/             # Typed English copy and terminology overrides
             ├── context/SocketContext.tsx
             ├── layout/handLayout.ts   # Weighted fan geometry (Section 10.2)
             └── components/
@@ -889,11 +889,10 @@ while §8.6 would refuse the deal, and everyone but the host readies beside it.
 
 ---
 
-## 11. Internationalisation
+## 11. Copy and terminology
 
-English and Japanese from day one. Every rule name, banner, error, and history line
-goes through an i18n key. Retrofitting the history log later is painful, so no bare
-strings enter `GameState`.
+The interface is English only. Every rule name, banner, error, and history line
+still goes through a typed display key so no bare strings enter `GameState`.
 
 Key namespaces: `rule.*`, `role.*`, `history.*`, `error.*`, `ui.*`.
 
@@ -907,8 +906,8 @@ composes the union itself:
 type I18nKey = CoreI18nKey | UiI18nKey;
 ```
 
-`en.json` and `ja.json` are typechecked against that composed union, so adding a key
-on either side is a compile error until both bundles carry a translation.
+`en.json` is typechecked against that composed union, so adding a key is a compile
+error until it carries English display copy.
 
 `rule.*` and `role.*` are derived types, not hand-written lists: `rule.${keyof
 HouseRulesConfig}` and `role.${Role['kind']}`. A new house rule cannot exist without
@@ -931,19 +930,20 @@ A key names cards publicly, with no pair, when the cards it names are public by 
 time it is emitted: `history.tenDiscard` names the discarded cards because they are
 already in the public graveyard (§8.5).
 
-Sample mappings:
+There is one English copy record. A small override map changes only the game name,
+the five role names, and role wording embedded in a history line:
 
-| Key | en | ja |
-| :--- | :--- | :--- |
-| `rule.eightGiri` | Eight Cutter | 8切り |
-| `rule.shibari` | Suit Lock | 縛り |
-| `rule.kakumei` | Revolution | 革命 |
-| `rule.elevenBack` | Jack Reversal | 11バック |
-| `role.DAI_HINMIN` | Grand Pauper | 大貧民 |
-| `history.sevenPassRedacted` | {player} passed {count} card(s) to {target} | ... |
-| `history.miyakoOchi` | {player} won from Grand Pauper — {target} falls to last with {count} card(s) | 都落ち |
+| Default | Daifugo terminology |
+| :--- | :--- |
+| Grand Millionaire | Daifugo |
+| Millionaire | Fugo |
+| Commoner | Heimin |
+| Pauper | Hinmin |
+| Grand Pauper | Daihinmin |
 
-Language toggle on the main menu, persisted to localStorage, no server involvement.
+The terminology toggle is on the main menu, persisted to localStorage, and has no
+server involvement. It never changes the interface language or the document's
+`lang="en"` attribute.
 
 ---
 

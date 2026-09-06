@@ -2,9 +2,9 @@
  * Canonical i18n key registry (§11).
  *
  * Every rule name, role name, history line, and error goes through a key in this
- * file. No bare strings enter `GameState`. The client's `en.json` / `ja.json`
- * bundles are typechecked against `I18nKey`, so adding a key here is a compile
- * error until both bundles carry a translation for it.
+ * file. No bare strings enter `GameState`. The client's English copy is
+ * typechecked against `I18nKey`, so adding a key here is a compile error until
+ * it has display text.
  *
  * `ui.*` keys are client-only presentation strings and are deliberately not
  * enumerated here; nothing in core emits them.
@@ -230,7 +230,7 @@ export function errorKey(code: ErrorCode): ErrorKey {
 /**
  * Every key core can emit. The client defines its own `UiI18nKey` for the `ui.*`
  * namespace and composes `type I18nKey = CoreI18nKey | UiI18nKey`, which is what
- * `en.json` / `ja.json` are typechecked against (§11).
+ * the English copy is typechecked against (§11).
  */
 export type CoreI18nKey = RuleKey | RoleKey | HistoryKey | ErrorKey;
 
@@ -243,8 +243,8 @@ export const CORE_I18N_KEYS: readonly CoreI18nKey[] = [
 ];
 
 /**
- * The core half of a translation bundle. The client intersects this with its own
- * `ui.*` record to type `en.json` / `ja.json`.
+ * The core half of the display-copy record. The client intersects this with its
+ * own `ui.*` record to type its English copy.
  */
 export type CoreI18nBundle = Record<CoreI18nKey, string>;
 

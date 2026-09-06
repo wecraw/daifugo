@@ -1,6 +1,5 @@
 /**
- * The main menu (§10, §11): name, create a room, join by code, and the language
- * toggle.
+ * The main menu (§10, §11): name, create a room, join by code, and role names.
  *
  * Creating a room is `POST /rooms` followed by a `joinRoom` — the code has to
  * exist before anyone can join it (§8), and the first joiner becomes host (§8.2).
@@ -12,7 +11,7 @@
 import { useState, type FormEvent } from "react";
 import { useTranslate, type I18nKey } from "../i18n/index";
 import { useSocket } from "../context/SocketContext";
-import { LanguageToggle } from "./LanguageToggle";
+import { TerminologyToggle } from "./TerminologyToggle";
 
 const NAME_MAX_LENGTH = 16;
 const CODE_MAX_LENGTH = 3;
@@ -71,7 +70,7 @@ export function MainMenu() {
       <header className="main-menu__header">
         <h1>{t("ui.app.title")}</h1>
         <p>{t("ui.app.tagline")}</p>
-        <LanguageToggle />
+        <TerminologyToggle />
       </header>
 
       <form className="main-menu__form" onSubmit={onJoin}>

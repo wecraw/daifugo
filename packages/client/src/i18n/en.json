@@ -101,11 +101,11 @@
   "error.NAME_TAKEN": "That name is taken",
   "error.INVALID_ACTION": "That action is not allowed",
 
-  "ui.app.title": "Daifugo",
+  "ui.app.title": "Grand Millionaire",
   "ui.app.tagline": "3 to 8 players, landscape only",
 
   "ui.orientation.rotateTitle": "Rotate your device",
-  "ui.orientation.rotateBody": "Daifugo is played in landscape.",
+  "ui.orientation.rotateBody": "Grand Millionaire is played in landscape.",
 
   "ui.menu.nameLabel": "Your name",
   "ui.menu.namePlaceholder": "Name",
@@ -121,9 +121,9 @@
   "ui.menu.roomCodeRequired": "Enter a room code",
   "ui.menu.createFailed": "Could not create a room",
 
-  "ui.language.label": "Language",
-  "ui.language.en": "English",
-  "ui.language.ja": "日本語",
+  "ui.terminology.label": "Role names",
+  "ui.terminology.grandMillionaire": "Grand Millionaire",
+  "ui.terminology.daifugo": "Daifugo",
 
   "ui.connection.connecting": "Connecting…",
   "ui.connection.connected": "Connected",

@@ -1,11 +1,11 @@
 /**
- * The main menu (§10, §11): create, join, and the language toggle.
+ * The main menu (§10, §11): create, join, and the terminology toggle.
  */
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "../src/App";
-import { LANGUAGE_STORAGE_KEY } from "../src/i18n/index";
+import { TERMINOLOGY_STORAGE_KEY } from "../src/i18n/index";
 import { FakeSocket } from "./fakeSocket";
 
 function renderApp() {
@@ -81,23 +81,24 @@ describe("MainMenu", () => {
   });
 });
 
-describe("language toggle", () => {
-  it("switches every string and persists the choice", async () => {
+describe("terminology toggle", () => {
+  it("switches game terminology while leaving the interface in English", async () => {
     const user = userEvent.setup();
     renderApp();
 
-    await user.click(screen.getByRole("button", { name: "日本語" }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Grand Millionaire");
+    await user.click(screen.getByRole("button", { name: "Daifugo" }));
 
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("大富豪");
-    expect(screen.getByRole("button", { name: "ルームを作る" })).toBeInTheDocument();
-    await waitFor(() => expect(localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe("ja"));
-    expect(document.documentElement.getAttribute("lang")).toBe("ja");
-    expect(document.title).toBe("大富豪");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Daifugo");
+    expect(screen.getByRole("button", { name: "Create room" })).toBeInTheDocument();
+    await waitFor(() => expect(localStorage.getItem(TERMINOLOGY_STORAGE_KEY)).toBe("daifugo"));
+    expect(document.documentElement.getAttribute("lang")).toBe("en");
+    expect(document.title).toBe("Daifugo");
   });
 
-  it("starts from the stored language", () => {
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, "ja");
+  it("starts from the stored terminology", () => {
+    localStorage.setItem(TERMINOLOGY_STORAGE_KEY, "daifugo");
     renderApp();
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("大富豪");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Daifugo");
   });
 });

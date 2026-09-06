@@ -12,7 +12,7 @@ import { historyLine } from "../src/history";
 import { translate } from "../src/i18n/index";
 
 const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) =>
-  translate("en", key, params);
+  translate("grandMillionaire", key, params);
 
 const ROSTER: Player[] = [
   { id: "p_1", name: "Will", role: null, seatIndex: 0, isReady: false, isConnected: true },

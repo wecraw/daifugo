@@ -145,12 +145,12 @@ button:disabled {
   cursor: default;
 }
 
-.language-toggle {
+.terminology-toggle {
   display: inline-flex;
   gap: 0.25rem;
 }
 
-.language-toggle__option[aria-pressed="true"] {
+.terminology-toggle__option[aria-pressed="true"] {
   border-color: var(--accent);
   color: var(--accent);
 }
