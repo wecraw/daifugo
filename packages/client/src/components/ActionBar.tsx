@@ -1,5 +1,5 @@
 /**
- * The action column of §10.6: Play, Pass, the sort toggle, and the turn ring.
+ * The action column of §10.6: Play, Pass, and the turn ring.
  *
  * The Play button names the play from the *resolved* combo — "Play Pair of 8s",
  * "Play Four 3s" (§5.4, §10.6) — and when the selection cannot be played it is
@@ -92,16 +92,6 @@ export function ActionBar({ hand, deadline, isMyTurn }: ActionBarProps) {
         }
       >
         {t("ui.action.pass")}
-      </button>
-
-      <button
-        type="button"
-        className="action-bar__sort"
-        onClick={hand.toggleSort}
-      >
-        {/* The label is the action, not the state: it names the order a tap
-            gives you, so which of the two you get is never a guess (§10.8). */}
-        {t(hand.sortMode === "rank" ? "ui.action.sortBySuit" : "ui.action.sortByRank")}
       </button>
     </div>
   );

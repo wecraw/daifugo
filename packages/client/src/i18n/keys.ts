@@ -144,8 +144,6 @@ export const UI_I18N_KEYS = [
   "ui.action.mustFollowSuits",
   "ui.action.mustPlayCount",
   "ui.action.autoPass",
-  "ui.action.sortByRank",
-  "ui.action.sortBySuit",
 
   // Combo names for the Play button, from the combo's count and *resolved* rank
   // (§5.4). Four is the widest N-of-a-kind the naturals make; bound jokers can

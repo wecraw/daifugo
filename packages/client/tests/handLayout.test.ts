@@ -22,13 +22,7 @@ import {
   layoutHand,
   weightOf,
 } from "../src/layout/handLayout";
-import {
-  DEFAULT_HAND_SORT,
-  nextHandSort,
-  readHandSort,
-  sortHand,
-  writeHandSort,
-} from "../src/hand/sort";
+import { sortHand } from "../src/hand/sort";
 
 function card(id: string, suit: Card["suit"], rank: Card["rank"]): Card {
   return { id, suit, rank, isJoker: id.startsWith("JKR") };
@@ -124,33 +118,16 @@ describe("sorting (§10.8)", () => {
   ];
 
   it("sorts rank-then-suit weakest first, and reverses under revolution", () => {
-    const upright = sortHand(hand, "rank", false).map((each) => each.id);
+    const upright = sortHand(hand, false).map((each) => each.id);
     expect(upright).toEqual(["H-3", "S-7", "C-7", "S-2", "JKR-1"]);
     // The strengths reverse; the suit tie-break does not, so the two 7s keep
     // their S-before-C order inside the reversed run.
-    expect(sortHand(hand, "rank", true).map((each) => each.id)).toEqual([
+    expect(sortHand(hand, true).map((each) => each.id)).toEqual([
       "JKR-1",
       "S-2",
       "S-7",
       "C-7",
       "H-3",
     ]);
-  });
-
-  it("sorts suit-then-rank with the jokers last", () => {
-    expect(sortHand(hand, "suit", false).map((each) => each.id)).toEqual([
-      "S-7",
-      "S-2",
-      "H-3",
-      "C-7",
-      "JKR-1",
-    ]);
-  });
-
-  it("persists the preference and defaults without one", () => {
-    expect(readHandSort()).toBe(DEFAULT_HAND_SORT);
-    writeHandSort(nextHandSort(DEFAULT_HAND_SORT));
-    expect(readHandSort()).toBe("suit");
-    expect(nextHandSort("suit")).toBe("rank");
   });
 });

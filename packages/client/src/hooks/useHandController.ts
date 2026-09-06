@@ -37,13 +37,7 @@ import {
   resolveSelection,
   turnBlocker,
 } from "../hand/legality";
-import {
-  nextHandSort,
-  readHandSort,
-  sortHand,
-  writeHandSort,
-  type HandSortMode,
-} from "../hand/sort";
+import { sortHand } from "../hand/sort";
 import { AUTO_PASS_DELAY_MS, layoutHand, weightOf, type HandFanLayout } from "../layout/handLayout";
 import type { TranslateParams } from "../i18n/index";
 
@@ -75,8 +69,6 @@ export interface HandController {
   play: () => void;
   passBlocker: ErrorCode | null;
   pass: () => void;
-  sortMode: HandSortMode;
-  toggleSort: () => void;
   /** §10.7: the 1.2s "no legal play, passing" card is up. */
   autoPassing: boolean;
 }
@@ -89,7 +81,6 @@ export function useHandController(room: PublicGameState): HandController {
   const inverted = invertedIn(ctx);
   const turnKey = legalMovesKey(room.myHand, ctx);
 
-  const [sortMode, setSortMode] = useState<HandSortMode>(() => readHandSort());
   const [selected, setSelected] = useState<string[]>([]);
   const [optionIndex, setOptionIndex] = useState(0);
   const [lastTurnKey, setLastTurnKey] = useState(turnKey);
@@ -110,10 +101,7 @@ export function useHandController(room: PublicGameState): HandController {
   const turnPlayable = useMemo(() => playableIds(moves), [moves]);
   const stillPlayable = useMemo(() => continuationIds(moves, selected), [moves, selected]);
 
-  const cards = useMemo(
-    () => sortHand(room.myHand, sortMode, inverted),
-    [room.myHand, sortMode, inverted],
-  );
+  const cards = useMemo(() => sortHand(room.myHand, inverted), [room.myHand, inverted]);
   const layout = useMemo(
     () => layoutHand(cards.map((card) => weightOf(turnPlayable.has(card.id)))),
     [cards, turnPlayable],
@@ -208,14 +196,6 @@ export function useHandController(room: PublicGameState): HandController {
     send("pass");
   }, [passReason, send]);
 
-  const toggleSort = useCallback(() => {
-    setSortMode((current) => {
-      const next = nextHandSort(current);
-      writeHandSort(next);
-      return next;
-    });
-  }, []);
-
   /* ---------------------------------------------------------------------- */
   /* Auto-pass (§10.7)                                                      */
   /* ---------------------------------------------------------------------- */
@@ -267,8 +247,6 @@ export function useHandController(room: PublicGameState): HandController {
     play,
     passBlocker: passReason,
     pass,
-    sortMode,
-    toggleSort,
     autoPassing,
   };
 }
