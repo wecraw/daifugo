@@ -110,6 +110,7 @@ export const UI_I18N_KEYS = [
   "ui.table.turnOf",
   "ui.table.exchange",
   "ui.table.leadOpen",
+  "ui.table.waitingFor",
 
   // Seat chips (§10.1): count, standing in the round, and presence.
   "ui.seat.cards",

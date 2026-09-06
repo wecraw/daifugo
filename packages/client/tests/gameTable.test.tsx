@@ -252,6 +252,34 @@ describe("TrickArea", () => {
     expect(screen.getByText("Table is open — lead anything")).toBeInTheDocument();
   });
 
+  it("waits on the seat that is up instead of inviting a lead off-turn", async () => {
+    await seat(table(3, { activePlayerIndex: 1 }));
+    expect(screen.getByText("Waiting for Seat2…")).toBeInTheDocument();
+    expect(screen.queryByText("Table is open — lead anything")).not.toBeInTheDocument();
+  });
+
+  it("keeps the wait under the trick once cards are on the table", async () => {
+    await seat(
+      table(3, {
+        activePlayerIndex: 1,
+        currentTrick: [{ combo: combo([card("H-5", "H", 5)]), playedBy: "p_3" }],
+        trickLeaderId: "p_3",
+      }),
+    );
+    expect(document.querySelector('[data-card-id="H-5"]')).not.toBeNull();
+    expect(screen.getByText("Waiting for Seat2…")).toBeInTheDocument();
+  });
+
+  it("says nothing about waiting on the viewer's own turn", async () => {
+    await seat(
+      table(3, {
+        currentTrick: [{ combo: combo([card("H-5", "H", 5)]), playedBy: "p_3" }],
+        trickLeaderId: "p_3",
+      }),
+    );
+    expect(screen.queryByText(/Waiting for/)).not.toBeInTheDocument();
+  });
+
   it("stacks the plays of the current trick and names the last player", async () => {
     await seat(
       table(3, {

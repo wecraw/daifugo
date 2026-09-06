@@ -1010,6 +1010,38 @@ button:disabled {
   font-size: 0.75rem;
 }
 
+/*
+ * The wait, off-turn: an unadorned line under (or in place of) the trick, with
+ * a ring that turns so a slow opponent never reads as a frozen table.
+ */
+.trick-area__waiting {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.trick-area__spinner {
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: trick-waiting-spin 900ms linear infinite;
+}
+
+@keyframes trick-waiting-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trick-area__spinner {
+    animation: none;
+  }
+}
+
 .trick-area__stack {
   position: relative;
   display: flex;

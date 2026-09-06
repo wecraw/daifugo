@@ -180,6 +180,7 @@
   "ui.table.turnOf": "{player}'s turn",
   "ui.table.exchange": "Exchanging cards…",
   "ui.table.leadOpen": "Table is open — lead anything",
+  "ui.table.waitingFor": "Waiting for {player}…",
 
   "ui.seat.cards": "{count} card(s)",
   "ui.seat.passed": "Passed",

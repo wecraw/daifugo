@@ -26,6 +26,14 @@ import { TurnTimer } from "./TurnTimer";
 export function TrickArea({ room }: { room: PublicGameState }) {
   const t = useTranslate();
   const lock = room.suitLock ?? [];
+  // Whoever the table is waiting on. Off a viewer's turn the band says so
+  // rather than telling them what they could lead: "table is open" is advice
+  // for the seat that is up, and everyone else reading it as an invitation is
+  // what this note replaces (§10.9).
+  const activeId = room.turnOrder[room.activePlayerIndex] ?? null;
+  const isMyTurn = room.status === "IN_PROGRESS" && activeId === room.myPlayerId;
+  const waitingOn =
+    room.status === "IN_PROGRESS" && !isMyTurn && activeId !== null ? nameOf(room, activeId) : null;
   const top = room.currentTrick.length - 1;
   const { firstVisibleIndex, overlap } = fitTrickStack(
     room.currentTrick.map((play) => play.combo.cards.length),
@@ -53,7 +61,11 @@ export function TrickArea({ room }: { room: PublicGameState }) {
         </div>
       ) : room.currentTrick.length === 0 ? (
         <div className="trick-area__centre">
-          <p className="trick-area__note">{t("ui.table.leadOpen")}</p>
+          {waitingOn === null ? (
+            <p className="trick-area__note">{t("ui.table.leadOpen")}</p>
+          ) : (
+            <WaitingNote player={waitingOn} />
+          )}
         </div>
       ) : (
         <ol
@@ -93,7 +105,22 @@ export function TrickArea({ room }: { room: PublicGameState }) {
           })}
         </ol>
       )}
+
+      {/* With cards on the table the stack is the message, so the wait sits
+          under it rather than replacing it. */}
+      {room.currentTrick.length > 0 && waitingOn !== null && <WaitingNote player={waitingOn} />}
     </section>
+  );
+}
+
+/** "Waiting for X…", with the spinner that says the table is live, not stuck. */
+function WaitingNote({ player }: { player: string }) {
+  const t = useTranslate();
+  return (
+    <p className="trick-area__note trick-area__waiting">
+      <span className="trick-area__spinner" aria-hidden="true" />
+      {t("ui.table.waitingFor", { player })}
+    </p>
   );
 }
 
