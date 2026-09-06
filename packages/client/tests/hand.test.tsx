@@ -13,9 +13,15 @@ import { parseCombo, type Card, type PlayCombo, type PublicGameState } from "@da
 import { App } from "../src/App";
 import {
   AUTO_PASS_DELAY_MS,
+  CARD_HEIGHT,
+  CENTRE_RISE,
+  FAN_FLOOR_INSET,
+  SELECTION_LIFT,
   SELECTION_NOTICE_MS,
   UNPLAYABLE_SCALE,
+  liftOverhang,
 } from "../src/layout/handLayout";
+import { HAND_ROW_HEIGHT } from "../src/layout/tableLayout";
 import { FakeSocket } from "./fakeSocket";
 import { player, publicState } from "./publicState";
 
@@ -274,6 +280,27 @@ describe("the weighted layout (§10.3)", () => {
     expect(cardButton("D-13").className).not.toContain("hand__card--unplayable");
   });
 
+  it("renders the fan flat while it is someone else's turn (§10.3)", () => {
+    // The same jack, but the turn is Alex's: what the legal set says about a
+    // trick top that can still change is not worth shrinking the hand over.
+    seat(
+      table(PAIR_HAND, {
+        activePlayerIndex: 1,
+        currentTrick: [{ combo: combo([card("S-11", "S", 11)]), playedBy: "p_2" }],
+      }),
+    );
+    for (const each of PAIR_HAND) {
+      const button = cardButton(each.id);
+      expect(button.className).not.toContain("hand__card--unplayable");
+      expect(button.className).not.toContain("hand__card--dimmed");
+      expect(button.style.getPropertyValue("--card-transform")).toContain("scale(1)");
+    }
+    // Every card carries the playable weight, so the overlapped strips are all
+    // the same width. The last card's is wider because nothing covers it (§10.2).
+    const widths = new Set(PAIR_HAND.slice(0, -1).map((each) => slotOf(each.id).style.width));
+    expect(widths.size).toBe(1);
+  });
+
   it("dims without resizing once the selection narrows (§10.3)", () => {
     seat(table(PAIR_HAND));
     const before = PAIR_HAND.map((each) => slotOf(each.id).style.width);
@@ -485,5 +512,21 @@ describe("sorting (§10.8)", () => {
       }),
     );
     expect(handOrder()).toEqual(["H-13", "S-5", "H-3"]);
+  });
+});
+
+describe("the lift's clearance (§10.6)", () => {
+  it("clears the tallest a selected card gets above the hand row", () => {
+    const restingTop = HAND_ROW_HEIGHT - FAN_FLOOR_INSET - CARD_HEIGHT;
+    // The centre card is the worst case the player actually meets: full rise,
+    // full lift, and the growth the scale adds above a card on its own foot.
+    const tallest = CENTRE_RISE + SELECTION_LIFT + CARD_HEIGHT * 0.06;
+    expect(liftOverhang()).toBeGreaterThanOrEqual(tallest - restingTop);
+  });
+
+  it("gives the table the clearance as a px custom property", () => {
+    seat(table([card("S-5", "S", 5)]));
+    const table_ = document.querySelector<HTMLElement>(".game-table");
+    expect(table_?.style.getPropertyValue("--hand-lift-clearance")).toBe(`${liftOverhang()}px`);
   });
 });

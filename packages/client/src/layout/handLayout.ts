@@ -25,7 +25,7 @@
  * against the 780 the hand row has, so the weighting only ever bites on a hand
  * larger than a 54-card deck can deal.
  */
-import { CARD_HEIGHT, CARD_WIDTH, HAND_REGION_WIDTH } from "./tableLayout";
+import { CARD_HEIGHT, CARD_WIDTH, HAND_REGION_WIDTH, HAND_ROW_HEIGHT } from "./tableLayout";
 
 export { CARD_HEIGHT, CARD_WIDTH };
 
@@ -60,6 +60,34 @@ export const UNPLAYABLE_DROP = 6;
  */
 export const SELECTION_LIFT = 26;
 export const SELECTION_SCALE = 1.06;
+
+/** The fan stands this far off the floor of the hand row; `.hand` reads it back. */
+export const FAN_FLOOR_INSET = 6;
+
+/**
+ * How far the tallest a card ever gets paints above the top of the hand row.
+ *
+ * The turn controls hang off that same edge (§10.6), so this is the clearance
+ * they need: at less than it a selected card lifts into the Play button, which
+ * is both ugly and a tap the player can lose. It is arithmetic rather than a
+ * hand-tuned gap because every term in it — the lift, the fan's centre rise, the
+ * growth selection's scale adds above a card standing on its own foot, and the
+ * rise a rotated card gains over its top edge — is a number the fan already
+ * owns, and a change to any of them should move the buttons with it.
+ *
+ * The four are added as though one card could have all of them. It cannot — the
+ * centre card is the one that rises and is also the one with no rotation — so
+ * the clearance is a few px generous, which is the side to be wrong on.
+ */
+export function liftOverhang(rowHeight: number = HAND_ROW_HEIGHT): number {
+  const restingTop = rowHeight - FAN_FLOOR_INSET - CARD_HEIGHT;
+  const tallest =
+    CENTRE_RISE +
+    SELECTION_LIFT +
+    CARD_HEIGHT * (SELECTION_SCALE - 1) +
+    (CARD_WIDTH / 2) * Math.sin((MAX_FAN_ROTATION * Math.PI) / 180);
+  return Math.max(0, Math.ceil(tallest - restingTop));
+}
 
 /** §10.7: how long the "no legal play, passing" card stays up. */
 export const AUTO_PASS_DELAY_MS = 1200;

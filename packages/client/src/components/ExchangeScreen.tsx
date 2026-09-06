@@ -24,8 +24,14 @@
  * Round 1 never reaches this screen — the engine skips straight to `IN_PROGRESS`
  * (§4.3) — so there is no round check here to drift from the one in core.
  */
-import { weakestSelection, type PublicGameState } from "@daifugo/core";
+import {
+  invertedIn,
+  trickContextOf,
+  weakestSelection,
+  type PublicGameState,
+} from "@daifugo/core";
 import { useSocket } from "../context/SocketContext";
+import { sortHand } from "../hand/sort";
 import { selectionKey, timeoutNote, useCardSelection } from "../hooks/useCardSelection";
 import { useTranslate } from "../i18n/index";
 import { CardTray, cardsById } from "./CardTray";
@@ -38,6 +44,10 @@ export function ExchangeScreen({ room }: { room: PublicGameState }) {
   const required = exchange?.required[room.myPlayerId] ?? 0;
   const partnerId = exchange?.partner[room.myPlayerId] ?? null;
   const partnerName = room.players.find((seat) => seat.id === partnerId)?.name ?? "";
+  // Rank order, as the hand row reads it (§10.8) — the tray stands in the hand
+  // row's place, so it sorts the same way.
+  const inverted = invertedIn(trickContextOf(room));
+  const hand = sortHand(room.myHand, inverted);
   const forced = room.myForcedCards;
   const submitted = room.mySubmittedCards;
   const hasSubmitted = submitted.length > 0 || exchange?.submitted[room.myPlayerId] !== undefined;
@@ -46,11 +56,11 @@ export function ExchangeScreen({ room }: { room: PublicGameState }) {
   // the hook runs unconditionally, on a key that is the choice itself.
   const selection = useCardSelection(
     required,
-    weakestSelection(room.myHand, required),
+    weakestSelection(hand, required),
     selectionKey(
       "exchange",
       required,
-      room.myHand.map((card) => card.id),
+      hand.map((card) => card.id),
     ),
   );
 
@@ -65,8 +75,8 @@ export function ExchangeScreen({ room }: { room: PublicGameState }) {
   })();
 
   const shown = choosing
-    ? room.myHand
-    : cardsById(room.myHand, forced.length > 0 ? forced : submitted);
+    ? hand
+    : cardsById(hand, forced.length > 0 ? forced : submitted);
 
   return (
     <>

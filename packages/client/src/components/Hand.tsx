@@ -24,6 +24,9 @@
  *   notice id so tapping the same dead card twice replays it rather than looking
  *   like the second tap did nothing at all.
  *
+ * The shrinking and dimming are turn-scoped: off turn the controller reports every
+ * card playable, so the row reads as a plain fan (§10.3).
+ *
  * Drag-across-to-select is `pointerdown` on the first card and `pointerenter` on
  * the rest, because selecting a pair is the commonest action in the game and
  * two taps for it is one too many. A drag only ever adds: the first card

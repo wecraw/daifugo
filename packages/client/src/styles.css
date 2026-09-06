@@ -1376,7 +1376,7 @@ button:disabled {
   align-items: flex-end;
   justify-content: center;
   height: 100%;
-  padding-bottom: 0.35rem;
+  padding-bottom: var(--hand-fan-floor);
   overflow: visible;
 }
 
@@ -1565,7 +1565,11 @@ button:disabled {
   z-index: 45;
   display: grid;
   width: 100%;
-  padding: 0 0.6rem 0.5rem;
+  /* Clear of the fan's lift, not merely clear of the row: a selected card paints
+     `--hand-lift-clearance` px above the top edge these are anchored to, and at
+     less than that the Play button and the card it names sit on top of each
+     other. The extra 0.35rem is the gap between them once they do not. */
+  padding: 0 0.6rem calc(var(--hand-lift-clearance) + 0.35rem);
   /* The felt above the hand belongs to the trick area; only the buttons
      themselves take a tap out of it. */
   pointer-events: none;

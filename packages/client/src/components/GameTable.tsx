@@ -31,6 +31,7 @@ import { useTableAnimations } from "../animation/useTableAnimations";
 import { useSocket } from "../context/SocketContext";
 import { useHandController } from "../hooks/useHandController";
 import { useTranslate } from "../i18n/index";
+import { FAN_FLOOR_INSET, liftOverhang } from "../layout/handLayout";
 import {
   distributeSeats,
   finishPositionOf,
@@ -110,7 +111,19 @@ export function GameTable({ room }: { room: PublicGameState }) {
   const waitingOnOther = inTurn && activeId !== null && activeId !== room.myPlayerId;
 
   return (
-    <div className="game-table" style={tableCssVariables() as CSSProperties}>
+    <div
+      className="game-table"
+      style={
+        {
+          ...tableCssVariables(),
+          // The turn controls hang off the top edge of the hand row, so how far
+          // a selected card lifts over that edge is how much room they need
+          // above it (§10.6). The fan owns both numbers.
+          "--hand-fan-floor": `${FAN_FLOOR_INSET}px`,
+          "--hand-lift-clearance": `${liftOverhang()}px`,
+        } as CSSProperties
+      }
+    >
       <div className="game-table__top" inert={blocked}>
         <div
           className="game-table__seats game-table__seats--top"

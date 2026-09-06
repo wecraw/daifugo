@@ -18,8 +18,15 @@
  * the tray goes read-only and says what is about to happen rather than offering a
  * selection with exactly one answer.
  */
-import { TURN_DURATION_MS, weakestSelection, type PublicGameState } from "@daifugo/core";
+import {
+  TURN_DURATION_MS,
+  invertedIn,
+  trickContextOf,
+  weakestSelection,
+  type PublicGameState,
+} from "@daifugo/core";
 import { useSocket } from "../context/SocketContext";
+import { sortHand } from "../hand/sort";
 import { selectionKey, timeoutNote, useCardSelection } from "../hooks/useCardSelection";
 import { useTranslate } from "../i18n/index";
 import { CardTray } from "./CardTray";
@@ -46,7 +53,10 @@ export function PendingActionModal({ room }: { room: PublicGameState }) {
   const pending = room.pendingAction;
   const isMine = owesPendingAction(room);
   const count = pending?.count ?? 0;
-  const hand = room.myHand;
+  // The same order the hand row reads in (§10.8): the modal covers the hand, so
+  // a player who was looking at a sorted fan a moment ago must not have to
+  // re-find their cards in a different arrangement here.
+  const hand = sortHand(room.myHand, invertedIn(trickContextOf(room)));
 
   // Every card the player holds is owed: the submission is their agari (§7.3).
   const takesWholeHand = count >= hand.length;

@@ -149,14 +149,21 @@ export function useHandController(room: PublicGameState): HandController {
 
   const moves = useMemo(() => legalMoves(room.myHand, ctx), [legalMoves, room.myHand, ctx]);
 
+  const blocked = turnBlocker(room);
+  // §10.3: the legal set only says anything while the seat may act on it. Off
+  // turn the hand is a display, so it renders flat — shrinking cards against a
+  // trick top someone else is still going to change is noise, and the fan
+  // reflowing at turn start is the cue that the turn arrived.
+  const yourTurn = blocked === null;
+
   // Frozen for the turn: the widths and scales of §10.3 come from this set.
   const turnPlayable = useMemo(() => playableIds(moves), [moves]);
   const stillPlayable = useMemo(() => continuationIds(moves, selected), [moves, selected]);
 
   const cards = useMemo(() => sortHand(room.myHand, inverted), [room.myHand, inverted]);
   const layout = useMemo(
-    () => layoutHand(cards.map((card) => weightOf(turnPlayable.has(card.id)))),
-    [cards, turnPlayable],
+    () => layoutHand(cards.map((card) => weightOf(!yourTurn || turnPlayable.has(card.id)))),
+    [cards, turnPlayable, yourTurn],
   );
 
   const selectedCards = useMemo(
@@ -171,7 +178,6 @@ export function useHandController(room: PublicGameState): HandController {
     [selectedCards, option, ctx],
   );
 
-  const blocked = turnBlocker(room);
   const playBlocker = blocked ?? (resolved.ok ? null : resolved.error);
   // Everything a disabled control's reason might need to be specific (§10.6):
   // the count the trick top demands, the suits a shibari lock names, and the
@@ -336,8 +342,8 @@ export function useHandController(room: PublicGameState): HandController {
   return {
     cards,
     layout,
-    isUnplayable: (cardId) => !turnPlayable.has(cardId),
-    isDimmed: (cardId) => !stillPlayable.has(cardId),
+    isUnplayable: (cardId) => yourTurn && !turnPlayable.has(cardId),
+    isDimmed: (cardId) => yourTurn && !stillPlayable.has(cardId),
     isSelected: (cardId) => selected.includes(cardId),
     isSelectable: (cardId) => selected.includes(cardId) || stillPlayable.has(cardId),
     selectionNotice: notice,

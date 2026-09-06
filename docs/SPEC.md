@@ -861,6 +861,10 @@ server uses, so the two never disagree.
   cards automatically.
 * Unplayable cards render at `scale 0.72`, desaturated to 30 percent, dropped 6px,
   rotation zeroed.
+* **The weighting and dimming apply only on the player's own turn.** Off turn the
+  hand renders flat — every card at full weight, scale, saturation and rotation —
+  since the legal set is against a trick top that can still change, and the fan
+  reflowing is what announces the turn.
 * **Recompute the weighted layout only at turn start.** Within a turn, as selection
   narrows the legal set, dim without resizing. Cards must not slide under the
   player's finger mid-selection.
