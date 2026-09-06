@@ -61,6 +61,7 @@ import {
   firesElevenBack,
   firesKakumei,
   firesNineGiri,
+  kaidanLock,
   resolveSevenPass,
   resolveTenDiscard,
   sevenPassPending,
@@ -228,6 +229,7 @@ export function createGameState(options: NewGameOptions): GameState {
     isRevolution: false,
     trickInverted: false,
     suitLock: null,
+    kaidanLock: null,
     pendingAction: null,
     exchange: null,
     deadline: null,
@@ -392,6 +394,7 @@ function startGame(state: GameState, playerId: string, seed: string): Result<Gam
   next.isRevolution = false;
   next.trickInverted = false;
   next.suitLock = null;
+  next.kaidanLock = null;
   next.pendingAction = null;
   next.exchange = null;
   next.activePlayerIndex = 0;
@@ -594,6 +597,12 @@ function playCards(
     log(next, history("history.shibariLocked", { player: playerId, suits: lock.join("") }));
   }
 
+  const kLock = kaidanLock(previousTop, combo, state.kaidanLock, invertedIn(ctx), state.config);
+  next.kaidanLock = kLock;
+  if (kLock !== null && state.kaidanLock === null) {
+    log(next, history("history.kaidanLocked", { player: playerId }));
+  }
+
   /* PHASE B - INTERACTIVE RULE (halts the pipeline) ------------------------ */
   const remaining = split.value.remaining.length;
   const seating = seatingOf(next);
@@ -746,6 +755,7 @@ function clearTrick(next: GameState, leaderId: string | null): void {
   next.passedPlayerIds = [];
   next.trickInverted = false;
   next.suitLock = null;
+  next.kaidanLock = null;
   next.trickLeaderId = leaderId;
   log(next, history("history.trickCleared", { leader: leaderId ?? "" }));
 

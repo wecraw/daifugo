@@ -8,7 +8,7 @@ import {
 
 describe("house rule config", () => {
   it("defaults every rule to on", () => {
-    expect(HOUSE_RULE_KEYS).toHaveLength(9);
+    expect(HOUSE_RULE_KEYS).toHaveLength(10);
     for (const key of HOUSE_RULE_KEYS) {
       expect(DEFAULT_HOUSE_RULES[key]).toBe(true);
     }

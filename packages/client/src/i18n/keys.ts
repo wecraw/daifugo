@@ -119,8 +119,9 @@ export const UI_I18N_KEYS = [
   "ui.seat.dropped",
   "ui.seat.disconnected",
 
-  // Trick area. The rule badges reuse `rule.*`; only the lock names its suits.
+  // Trick area. The rule badges reuse `rule.*`; only the locks name what they require.
   "ui.trick.suitLock",
+  "ui.trick.kaidanLock",
   "ui.trick.playedBy",
 
   // Timers (§10.10). Rendered against `state.deadline`, never a local clock.
@@ -143,6 +144,7 @@ export const UI_I18N_KEYS = [
   // specific phrasing lives here, in the namespace the client owns (§11).
   "ui.action.mustFollowSuits",
   "ui.action.mustPlayCount",
+  "ui.action.mustPlayRank",
   "ui.action.autoPass",
 
   // Combo names for the Play button, from the combo's count and *resolved* rank

@@ -285,6 +285,65 @@ describe("shibari plus revolution (test 14, §6)", () => {
   });
 });
 
+describe("kaidan through the pipeline (§6)", () => {
+  // Queen, King, Ace, Two: consecutive strength indices (§5.1) that fire none of
+  // the rank-triggered house rules, so the lock's own effect is isolated from
+  // 5-skip, 7-pass, 8-giri, 9-giri, 10-discard, and 11-back.
+  it("locks the trick to the next step after two consecutive +1 plays", () => {
+    const state = table({
+      hands: {
+        p0: ["S-12", "H-12"],
+        p1: ["S-13", "H-13"],
+        p2: ["S-1", "H-1", "S-2", "H-2"],
+        p3: [],
+      },
+    });
+
+    const led = act(state, { type: "PLAY_CARDS", cardIds: ["S-12", "H-12"] }, "p0");
+    expect(led.kaidanLock).toBeNull();
+
+    const locked = act(led, { type: "PLAY_CARDS", cardIds: ["S-13", "H-13"] }, "p1");
+    expect(locked.kaidanLock).not.toBeNull();
+
+    // A pair of 2s beats a pair of Kings outright, but the lock demands Aces exactly.
+    expect(reject(locked, { type: "PLAY_CARDS", cardIds: ["S-2", "H-2"] }, "p2")).toBe(
+      "KAIDAN_LOCK_MISMATCH",
+    );
+
+    const followed = act(locked, { type: "PLAY_CARDS", cardIds: ["S-1", "H-1"] }, "p2");
+    expect(followed.kaidanLock).not.toBeNull();
+  });
+
+  it("resets on trick clear (§7.4)", () => {
+    const state = table({
+      hands: { p0: ["S-12", "H-12"], p1: ["S-13", "H-13"], p2: [], p3: [] },
+    });
+
+    const led = act(state, { type: "PLAY_CARDS", cardIds: ["S-12", "H-12"] }, "p0");
+    const locked = act(led, { type: "PLAY_CARDS", cardIds: ["S-13", "H-13"] }, "p1");
+    expect(locked.kaidanLock).not.toBeNull();
+
+    let cleared = locked;
+    for (const id of ["p2", "p3"]) cleared = act(cleared, { type: "PASS" }, id);
+    expect(cleared.kaidanLock).toBeNull();
+  });
+
+  it("does not lock with the rule off", () => {
+    const state = table({
+      hands: { p0: ["S-12"], p1: ["S-13"], p2: ["S-2"], p3: ["S-3"] },
+      config: { kaidan: false },
+    });
+
+    const led = act(state, { type: "PLAY_CARDS", cardIds: ["S-12"] }, "p0");
+    const followed = act(led, { type: "PLAY_CARDS", cardIds: ["S-13"] }, "p1");
+    expect(followed.kaidanLock).toBeNull();
+
+    // With the lock off, a jump straight to a 2 is a perfectly ordinary beat.
+    const jumped = act(followed, { type: "PLAY_CARDS", cardIds: ["S-2"] }, "p2");
+    expect(jumped.kaidanLock).toBeNull();
+  });
+});
+
 /* -------------------------------------------------------------------------- */
 /* §12.2 tests 15, 16: 5-skip and 8-giri around a finished player             */
 /* -------------------------------------------------------------------------- */

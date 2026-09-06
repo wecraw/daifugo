@@ -8,6 +8,7 @@
   "rule.elevenBack": "Jack Reversal",
   "rule.kakumei": "Revolution",
   "rule.shibari": "Suit Lock",
+  "rule.kaidan": "Kaidan",
 
   "role.DAI_FUGO": "Grand Millionaire",
   "role.FUGO": "Millionaire",
@@ -49,6 +50,7 @@
   "history.kakumei": "Revolution! {player} turned the order upside down",
   "history.kakumeiEnded": "Counter-revolution — {player} restored the order",
   "history.shibariLocked": "{player} locked the suit to {suits}",
+  "history.kaidanLocked": "{player} locked the sequence with Kaidan",
 
   "history.turnTimeout": "{player} ran out of time",
   "history.autoPlayed": "{player} was played out automatically: {cards}",
@@ -87,6 +89,7 @@
   "error.COMBO_COUNT_MISMATCH": "Must match the number of cards on the table",
   "error.TOO_WEAK": "Not high enough",
   "error.SUIT_LOCK_MISMATCH": "Must follow the locked suits",
+  "error.KAIDAN_LOCK_MISMATCH": "Must continue the Kaidan sequence",
 
   "error.CANNOT_PASS_AS_LEADER": "You lead — you must play",
   "error.ALREADY_PASSED": "You already passed this trick",
@@ -189,6 +192,7 @@
   "ui.seat.disconnected": "Disconnected",
 
   "ui.trick.suitLock": "Locked to {suits}",
+  "ui.trick.kaidanLock": "Next must be {rank}",
   "ui.trick.playedBy": "{player} played",
 
   "ui.timer.remaining": "{seconds}s left",
@@ -200,6 +204,7 @@
   "ui.action.pass": "Pass",
   "ui.action.mustFollowSuits": "Must follow {suits}",
   "ui.action.mustPlayCount": "Must play {count} card(s)",
+  "ui.action.mustPlayRank": "Must play {rank}",
   "ui.action.autoPass": "No legal play, passing",
 
   "ui.combo.single": "{rank}",

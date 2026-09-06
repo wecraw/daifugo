@@ -56,6 +56,7 @@ export interface HouseRulesConfig {
   elevenBack: boolean;
   kakumei: boolean;
   shibari: boolean;
+  kaidan: boolean;
 }
 
 export type HouseRuleKey = keyof HouseRulesConfig;
@@ -129,6 +130,7 @@ export interface GameState {
   isRevolution: boolean; // persists for the round
   trickInverted: boolean; // 11-back; resets on trick clear
   suitLock: Suit[] | null; // exact suit multiset lock; resets on trick clear
+  kaidanLock: number | null; // required strength index for the next play (§6); resets on trick clear
 
   pendingAction: PendingAction | null;
   exchange: ExchangeState | null;
