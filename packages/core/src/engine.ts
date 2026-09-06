@@ -1235,14 +1235,11 @@ export function queueLeave(state: GameState, playerId: string): Result<GameState
  * so a plain reconnect writes nothing here.
  *
  * The deadline is carried over rather than restamped: a player walking back in
- * must not hand the table a fresh turn clock.
+ * must not hand the table a fresh turn clock. Returns `null` when the departure
+ * can no longer be walked back at all — see {@link canCancelLeave}.
  */
 export function cancelLeave(state: GameState, playerId: string): GameState | null {
-  if (!state.pendingLeaves.includes(playerId)) return null;
-  const seated =
-    playerOf(state, playerId) !== undefined ||
-    state.pendingJoins.some((player) => player.id === playerId);
-  if (!seated) return null;
+  if (!canCancelLeave(state, playerId)) return null;
 
   const next = draft(state);
   next.pendingLeaves = state.pendingLeaves.filter((id) => id !== playerId);
@@ -1258,6 +1255,36 @@ export function cancelLeave(state: GameState, playerId: string): GameState | nul
 
   const committed = commit(next, state.deadline);
   return committed.ok ? committed.value : null;
+}
+
+/**
+ * Whether a queued departure can still be walked back (§7.7, §8.1).
+ *
+ * The seat is only theirs to reclaim while nobody has taken what it freed:
+ * `queueJoin` reads a departing seat as already gone, so between the grace
+ * expiring and the token being replayed a newcomer can consume the last slot or
+ * the same name. Restoring the departure on top of that would put the room a seat
+ * over `MAX_PLAYERS` — every later `START_GAME` then fails `TOO_MANY_PLAYERS` —
+ * or leave two seats sharing a name. When the room has moved on, the token falls
+ * through to a fresh join and gets the honest `ROOM_FULL` / `NAME_TAKEN` instead.
+ */
+export function canCancelLeave(state: GameState, playerId: string): boolean {
+  if (!state.pendingLeaves.includes(playerId)) return false;
+  const player =
+    playerOf(state, playerId) ??
+    state.pendingJoins.find((seated) => seated.id === playerId);
+  if (player === undefined) return false;
+
+  // The same roster `queueJoin` counts against: seats that are staying, plus the
+  // arrivals already queued for the boundary.
+  const leaving = new Set(state.pendingLeaves);
+  const staying = [
+    ...state.players.filter((seated) => !leaving.has(seated.id)),
+    ...state.pendingJoins.filter((seated) => !leaving.has(seated.id)),
+  ];
+
+  if (staying.length >= MAX_PLAYERS) return false;
+  return !staying.some((seated) => seated.name.toLowerCase() === player.name.toLowerCase());
 }
 
 /** Whether anyone still on the roster is the host the state names (§8.2). */

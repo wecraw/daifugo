@@ -722,6 +722,11 @@ dealt into the next one — and the host seat, if it moved on, stays where it we
 unless the departures left it vacant. A lobby leave removes the seat outright, so
 there is nothing left to reclaim and the token falls through to a fresh join.
 
+The seat is only reclaimable while it is still free to take. A queued departure
+reads as already gone to a join (§7.7), so a newcomer may consume the last slot or
+the same name before the token comes back; the reclaim is refused there and the
+token falls through to a fresh join, which answers `ROOM_FULL` or `NAME_TAKEN`.
+
 ### 8.4 Server loop
 1. Receive action, resolve player id from socket.
 2. `applyAction(state, action, playerId)`.

@@ -12,6 +12,7 @@
  */
 import {
   applyAction,
+  canCancelLeave,
   cancelLeave,
   createGameState,
   err,
@@ -231,17 +232,20 @@ export class RoomManager {
   /**
    * A seat is reclaimable while its player is still on the roster (§8.1).
    *
-   * A queued departure does not disqualify it — `cancelLeave` walks that back, so
-   * the browser whose grace expired while it slept comes back to its own seat
-   * instead of taking a second one. A lobby leave is different: the engine removes
-   * the seat outright (§7.7), leaving nothing to reclaim, and the token falls
-   * through to a fresh join.
+   * A queued departure does not disqualify it on its own — `cancelLeave` walks
+   * that back, so the browser whose grace expired while it slept comes back to its
+   * own seat instead of taking a second one. It does disqualify it once the room
+   * has filled the slot or the name in the meantime (`canCancelLeave`): the token
+   * then falls through to a fresh join, which answers `ROOM_FULL` or `NAME_TAKEN`.
+   * A lobby leave is different again: the engine removes the seat outright (§7.7),
+   * leaving nothing to reclaim, and that token also falls through.
    */
   private isReclaimable(state: GameState, playerId: string): boolean {
-    return (
+    const seated =
       state.players.some((p) => p.id === playerId) ||
-      state.pendingJoins.some((p) => p.id === playerId)
-    );
+      state.pendingJoins.some((p) => p.id === playerId);
+    if (!seated) return false;
+    return !state.pendingLeaves.includes(playerId) || canCancelLeave(state, playerId);
   }
 
   /* ---------------------------------------------------------------------- */

@@ -330,6 +330,29 @@ describe("cancelling a queued leave (§7.7)", () => {
     expect(cancelLeave(leave(lobby(4), "p1"), "p1")).toBeNull();
   });
 
+  it("refuses the seat once a newcomer took the slot it freed (§8.0)", () => {
+    // `queueJoin` reads a departing seat as already gone, so between the grace
+    // expiring and the token being replayed the last slot can be filled. Restoring
+    // on top of that would make a nine-seat roster no `START_GAME` could deal.
+    const full = table({
+      hands: Object.fromEntries(
+        Array.from({ length: 8 }, (_, index) => [`p${index}`, [`S-${index + 3}`]]),
+      ),
+      active: "p0",
+    });
+    const replaced = join(leave(full, "p1"), "p8");
+    expect(cancelLeave(replaced, "p1")).toBeNull();
+
+    // A newcomer who did not fill the room leaves the seat reclaimable.
+    expect(cancel(join(leave(state, "p1"), "p4"), "p1").pendingLeaves).toEqual([]);
+  });
+
+  it("refuses the seat once a newcomer took the name it freed (§8.0)", () => {
+    const impostor = queueJoin(leave(state, "p1"), { ...newcomer("p9"), name: "p1" });
+    if (!impostor.ok) throw new Error(`unexpected ${impostor.error} from a join`);
+    expect(cancelLeave(impostor.value, "p1")).toBeNull();
+  });
+
   it("deals the returning player back in at the next boundary", () => {
     // The round ends, then p1's grace expires between rounds and they come back.
     const ended = act(

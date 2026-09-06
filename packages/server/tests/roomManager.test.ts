@@ -469,6 +469,35 @@ describe("RoomManager acceptance (§12.4)", () => {
     expect(doc.state.pendingLeaves).toEqual([]);
   });
 
+  it("answers ROOM_FULL when a newcomer took the slot the departure freed", async () => {
+    const roomId = await manager.createRoom();
+    const host = await seatPlayer(manager, roomId, "Will");
+    const seats = [host];
+    for (const name of ["Alex", "Sam", "Kim", "Lee", "Ray", "Jo", "Max"]) {
+      seats.push(await seatPlayer(manager, roomId, name));
+    }
+    await readyAll(manager, roomId, ...seats.slice(1));
+    expect((await manager.startGame(roomId, host.playerId)).ok).toBe(true);
+    expect((await docOf(roomId)).state.players).toHaveLength(8);
+
+    // The eighth seat sleeps through its grace, and a ninth friend takes the slot
+    // that freed before the token is replayed.
+    const asleep = seats[7]!;
+    await manager.disconnect(roomId, asleep.playerId);
+    await scheduler.advance(DISCONNECT_GRACE_MS);
+    await seatPlayer(manager, roomId, "Nine");
+
+    // Reclaiming now would seat nine, and every later deal would fail
+    // TOO_MANY_PLAYERS. The token falls through to a fresh join instead, which
+    // says plainly that the room is full.
+    expect(await manager.join(roomId, "Max", asleep.resumeToken)).toMatchObject({
+      error: "ROOM_FULL",
+    });
+    const doc = await docOf(roomId);
+    expect(doc.state.pendingLeaves).toEqual([asleep.playerId]);
+    expect(doc.state.pendingJoins).toHaveLength(1);
+  });
+
   it("gives the host seat back when the last departure vacated it (§8.2)", async () => {
     const roomId = await manager.createRoom();
     const host = await seatPlayer(manager, roomId, "Will");
