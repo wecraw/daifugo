@@ -25,7 +25,8 @@
  *
  * **The roster is a table with chairs.** Below `MIN_PLAYERS` the list is padded out
  * with open seats, so a table that cannot be dealt says so by looking short rather
- * than only by the note under a disabled button.
+ * than only by the note under a disabled button. Past the minimum one open seat
+ * remains until `MAX_PLAYERS`, so a room with space left never reads as full.
  *
  * **Layout is the landscape split of the main menu** (§0: landscape only). The left
  * rail carries what the room *is* — the join code to read aloud, the round, the
@@ -34,6 +35,7 @@
  */
 import { useState } from "react";
 import {
+  MAX_PLAYERS,
   MIN_PLAYERS,
   matchStandings,
   roundResults,
@@ -140,9 +142,11 @@ export function Lobby({ room }: { room: PublicGameState }) {
       }));
 
   const seats = rosterRows(room);
-  // The chairs nobody is in yet. Only ever drawn short of the minimum: past it
-  // the table is dealable, and eight dotted rows would be decoration.
-  const openSeats = Math.max(0, MIN_PLAYERS - size);
+  // The chairs nobody is in yet. Short of the minimum, enough of them to show
+  // how far the table is from dealable; past it, exactly one — a table with room
+  // left should never read as closed, and eight dotted rows would be decoration.
+  // At `MAX_PLAYERS` there is genuinely nothing to sit in, so the padding stops.
+  const openSeats = size >= MAX_PLAYERS ? 0 : Math.max(1, MIN_PLAYERS - size);
 
   return (
     <div className="lobby">

@@ -10,7 +10,7 @@
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import type { PublicGameState } from "@daifugo/core";
+import { MAX_PLAYERS, type PublicGameState } from "@daifugo/core";
 import { App } from "../src/App";
 import { FakeSocket } from "./fakeSocket";
 import { player, publicState } from "./publicState";
@@ -120,6 +120,21 @@ describe("Lobby", () => {
     expect(screen.getByText("A deal needs at least 3 players")).toBeInTheDocument();
     // The round they played is still theirs: the standings are the record of it.
     expect(screen.getByRole("table").textContent).toContain("Sam");
+  });
+
+  it("keeps one open seat on a table that is already dealable", async () => {
+    // A room with space left should never read as closed, so the padding does not
+    // stop at MIN_PLAYERS — it stops at the point where nobody else can sit down.
+    await seat(publicState({ players: THREE, turnOrder: THREE.map((seat) => seat.id) }));
+    expect(within(screen.getByRole("list")).getAllByText("Open seat")).toHaveLength(1);
+  });
+
+  it("draws no open seat once the table is full", async () => {
+    const full = Array.from({ length: MAX_PLAYERS }, (_, index) =>
+      player(`p_${index + 1}`, `P${index + 1}`, { seatIndex: index, isReady: index > 0 }),
+    );
+    await seat(publicState({ players: full, turnOrder: full.map((seat) => seat.id) }));
+    expect(within(screen.getByRole("list")).queryByText("Open seat")).not.toBeInTheDocument();
   });
 
   it("keeps the row of a connected player who queued their own leave (§7.7)", async () => {
