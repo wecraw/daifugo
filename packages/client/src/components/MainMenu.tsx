@@ -67,13 +67,13 @@ export function MainMenu() {
 
   return (
     <div className="main-menu">
-      <header className="main-menu__header">
-        <h1>{t("ui.app.title")}</h1>
-        <p>{t("ui.app.tagline")}</p>
+      <section className="main-menu__identity">
+        <h1 className="main-menu__title">{t("ui.app.title")}</h1>
+        <hr className="main-menu__rule" />
         <TerminologyToggle />
-      </header>
+      </section>
 
-      <form className="main-menu__form" onSubmit={onJoin}>
+      <div className="main-menu__actions">
         <label className="field">
           <span>{t("ui.menu.nameLabel")}</span>
           <input
@@ -85,56 +85,68 @@ export function MainMenu() {
           />
         </label>
 
-        <label className="field">
-          <span>{t("ui.menu.roomCodeLabel")}</span>
-          <input
-            type="text"
-            value={code}
-            inputMode="text"
-            autoCapitalize="characters"
-            autoCorrect="off"
-            spellCheck={false}
-            maxLength={CODE_MAX_LENGTH}
-            placeholder={t("ui.menu.roomCodePlaceholder")}
-            onChange={(event) => setCode(normalizeCode(event.target.value))}
-          />
-        </label>
+        <button
+          type="button"
+          className="main-menu__button main-menu__button--primary"
+          disabled={busy}
+          onClick={() => void onCreate()}
+        >
+          {creating ? t("ui.menu.creating") : t("ui.menu.createRoom")}
+        </button>
 
-        <div className="main-menu__actions">
-          <button type="submit" disabled={busy}>
+        <div className="main-menu__or">{t("ui.menu.or")}</div>
+
+        <form className="main-menu__join" onSubmit={onJoin}>
+          <label className="field main-menu__code">
+            <span>{t("ui.menu.roomCodeLabel")}</span>
+            <input
+              type="text"
+              value={code}
+              inputMode="text"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              maxLength={CODE_MAX_LENGTH}
+              placeholder={t("ui.menu.roomCodePlaceholder")}
+              onChange={(event) => setCode(normalizeCode(event.target.value))}
+            />
+          </label>
+          <button type="submit" className="main-menu__button" disabled={busy}>
             {status === "connecting" ? t("ui.menu.joining") : t("ui.menu.joinRoom")}
           </button>
-          <button type="button" disabled={busy} onClick={() => void onCreate()}>
-            {creating ? t("ui.menu.creating") : t("ui.menu.createRoom")}
-          </button>
-        </div>
-      </form>
+        </form>
 
-      {storedSession !== null && (
-        <div className="main-menu__resume">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => {
-              joinRoom(
-                storedSession.roomId,
-                trimmedName === "" ? storedSession.playerName : trimmedName,
-              );
-            }}
-          >
-            {t("ui.menu.rejoin", { code: storedSession.roomId })}
-          </button>
-          <button type="button" onClick={leaveRoom}>
-            {t("ui.menu.forget")}
-          </button>
-        </div>
-      )}
+        {storedSession !== null && (
+          <div className="main-menu__resume">
+            <button
+              type="button"
+              className="main-menu__link"
+              disabled={busy}
+              onClick={() => {
+                joinRoom(
+                  storedSession.roomId,
+                  trimmedName === "" ? storedSession.playerName : trimmedName,
+                );
+              }}
+            >
+              {t("ui.menu.rejoin", { code: storedSession.roomId })}
+            </button>
+            <button
+              type="button"
+              className="main-menu__link main-menu__link--quiet"
+              onClick={leaveRoom}
+            >
+              {t("ui.menu.forget")}
+            </button>
+          </div>
+        )}
 
-      {notice !== null && (
-        <p className="main-menu__notice" role="alert">
-          {t(notice)}
-        </p>
-      )}
+        {notice !== null && (
+          <p className="main-menu__notice" role="alert">
+            {t(notice)}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

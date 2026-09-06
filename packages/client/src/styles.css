@@ -9,6 +9,13 @@
   --ink: #f5f3ee;
   --accent: #e8b64c;
   --danger: #b3261e;
+  --rule: rgba(245, 243, 238, 0.16);
+  --sunk: rgba(0, 0, 0, 0.28);
+  /* A Didone for the wordmark and the room code — the face card boxes and chips
+     are set in: high contrast, and it holds its own on felt. UI text stays on
+     the system stack, which is what stays legible at 12px on a phone. */
+  --display: "Bodoni Moda", "Bodoni 72", Didot, "Bodoni MT", Georgia, serif;
+  --code: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
   color-scheme: dark;
 }
 
@@ -79,38 +86,63 @@ body {
   }
 }
 
+/*
+ * The main menu (§10). Landscape is the only orientation the game has, so the
+ * menu is composed across it rather than stacked down the middle: the wordmark
+ * anchors the left, the one path to a table runs down the right.
+ */
 .main-menu {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 17rem);
+  align-items: center;
+  gap: clamp(1.5rem, 6vw, 4.5rem);
+  width: min(46rem, 100%);
+  height: 100%;
+  margin: 0 auto;
+  padding: clamp(0.75rem, 4vh, 2rem) clamp(1.25rem, 5vw, 2.5rem);
+}
+
+.main-menu__identity {
+  animation: menu-enter 460ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.main-menu__actions {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  height: 100%;
-  padding: 1rem;
+  gap: 0.7rem;
+  animation: menu-enter 460ms cubic-bezier(0.2, 0.7, 0.3, 1) 90ms both;
 }
 
-.main-menu__header {
-  text-align: center;
+@keyframes menu-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.6rem);
+  }
 }
 
-.main-menu__header h1 {
+@media (prefers-reduced-motion: reduce) {
+  .main-menu__identity,
+  .main-menu__actions {
+    animation: none;
+  }
+}
+
+/* The wordmark is the one loud thing on this screen; everything else is quiet. */
+.main-menu__title {
   margin: 0;
-  font-size: 1.75rem;
-  letter-spacing: 0.08em;
+  font-family: var(--display);
+  font-size: clamp(2.1rem, 8.5vh, 3.25rem);
+  font-weight: 500;
+  line-height: 0.94;
+  letter-spacing: -0.005em;
 }
 
-.main-menu__header p {
-  margin: 0.25rem 0 0.5rem;
-  opacity: 0.7;
-  font-size: 0.8rem;
-}
-
-.main-menu__form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 0.75rem;
+.main-menu__rule {
+  width: 2.75rem;
+  height: 2px;
+  margin: 0.9rem 0 1.1rem;
+  border: 0;
+  background: var(--accent);
 }
 
 .field {
@@ -145,26 +177,159 @@ button:disabled {
   cursor: default;
 }
 
+/* Role names (§11): a two-position segmented control, not a pair of buttons. */
 .terminology-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.terminology-toggle__label {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.terminology-toggle__options {
   display: inline-flex;
-  gap: 0.25rem;
+  padding: 2px;
+  border: 1px solid var(--rule);
+  border-radius: 0.5rem;
+  background: var(--sunk);
+}
+
+.terminology-toggle__option {
+  padding: 0.3rem 0.7rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: none;
+  font-size: 0.8rem;
+  opacity: 0.65;
 }
 
 .terminology-toggle__option[aria-pressed="true"] {
-  border-color: var(--accent);
+  background: rgba(232, 182, 76, 0.16);
   color: var(--accent);
+  opacity: 1;
 }
 
-.main-menu__actions,
+.main-menu .field {
+  gap: 0.35rem;
+}
+
+.main-menu .field > span {
+  opacity: 0.7;
+}
+
+.main-menu .field input {
+  width: 100%;
+}
+
+.main-menu .field input:focus-visible,
+.main-menu button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.main-menu__button {
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  font-weight: 600;
+}
+
+.main-menu__button--primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--felt-dark);
+}
+
+/* "or" set into a hairline, so the two paths read as one decision. */
+.main-menu__or {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.15rem 0;
+  font-size: 0.75rem;
+  opacity: 0.5;
+}
+
+.main-menu__or::before,
+.main-menu__or::after {
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+  content: "";
+}
+
+.main-menu__join {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+/*
+ * Three letters, three slots. The wells are drawn as a background so the field
+ * stays one input — the caret, paste and maxLength all keep working — while a
+ * fixed-advance face lands each glyph in its own slot: slot 2.4rem, gap 0.6rem,
+ * so the advance is 3rem and the first glyph is inset half a slot.
+ */
+.main-menu .field.main-menu__code input {
+  width: 8.4rem;
+  padding: 0.45rem 0 0.45rem 0.8rem;
+  border: 0;
+  border-radius: 0;
+  background:
+    repeating-linear-gradient(to right, var(--sunk) 0 2.4rem, transparent 2.4rem 3rem),
+    repeating-linear-gradient(to right, rgba(232, 182, 76, 0.55) 0 2.4rem, transparent 2.4rem 3rem)
+      bottom left / 100% 2px no-repeat;
+  color: var(--accent);
+  font-family: var(--code);
+  font-size: 1.35rem;
+  letter-spacing: 2.1rem;
+  text-transform: uppercase;
+}
+
+.main-menu__code input::placeholder {
+  color: rgba(245, 243, 238, 0.25);
+}
+
+/* The stored seat, when there is one: the fastest way back, stated plainly. */
 .main-menu__resume {
   display: flex;
-  gap: 0.5rem;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+}
+
+.main-menu__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.main-menu__link--quiet {
+  color: inherit;
+  opacity: 0.55;
 }
 
 .main-menu__notice {
   margin: 0;
   color: var(--accent);
   font-size: 0.8rem;
+}
+
+/* Portrait is blocked by the orientation gate; this is only for a narrow desktop. */
+@media (max-width: 40rem) {
+  .main-menu {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: center;
+    gap: 1.5rem;
+  }
 }
 
 .error-banner {

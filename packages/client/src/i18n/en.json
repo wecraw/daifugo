@@ -102,7 +102,6 @@
   "error.INVALID_ACTION": "That action is not allowed",
 
   "ui.app.title": "Grand Millionaire",
-  "ui.app.tagline": "3 to 8 players, landscape only",
 
   "ui.orientation.rotateTitle": "Rotate your device",
   "ui.orientation.rotateBody": "Grand Millionaire is played in landscape.",
@@ -113,6 +112,7 @@
   "ui.menu.creating": "Creating…",
   "ui.menu.joinRoom": "Join room",
   "ui.menu.joining": "Joining…",
+  "ui.menu.or": "or",
   "ui.menu.roomCodeLabel": "Room code",
   "ui.menu.roomCodePlaceholder": "ABC",
   "ui.menu.rejoin": "Rejoin {code}",

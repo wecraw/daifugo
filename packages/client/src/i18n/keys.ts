@@ -17,7 +17,6 @@ import { CORE_I18N_KEYS, type CoreI18nKey } from "@daifugo/core";
 export const UI_I18N_KEYS = [
   // Shell
   "ui.app.title",
-  "ui.app.tagline",
 
   // Orientation gate (§0: landscape only, portrait shows a rotate prompt)
   "ui.orientation.rotateTitle",
@@ -30,6 +29,7 @@ export const UI_I18N_KEYS = [
   "ui.menu.creating",
   "ui.menu.joinRoom",
   "ui.menu.joining",
+  "ui.menu.or",
   "ui.menu.roomCodeLabel",
   "ui.menu.roomCodePlaceholder",
   "ui.menu.rejoin",
