@@ -231,6 +231,21 @@ button:disabled {
   outline-offset: 2px;
 }
 
+/* The name applies to both paths below it, so it reads as its own group,
+   not as a label glued to Create room. Sized up like a search bar — it's the
+   first thing typed and the one field every path shares. */
+.main-menu__name {
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 0.2rem;
+}
+
+.main-menu__name input {
+  padding: 0.85rem 1.25rem;
+  border-radius: 999px;
+  font-size: 1.15rem;
+}
+
 .main-menu__button {
   width: 100%;
   padding: 0.6rem 0.9rem;
@@ -268,29 +283,26 @@ button:disabled {
 }
 
 /*
- * Three letters, three slots. The wells are drawn as a background so the field
- * stays one input — the caret, paste and maxLength all keep working — while a
- * fixed-advance face lands each glyph in its own slot: slot 2.4rem, gap 0.6rem,
- * so the advance is 3rem and the first glyph is inset half a slot.
+ * One field, styled quieter and smaller than the name pill so the two don't
+ * compete: same pill language, but a muted border, a sunk fill, and a
+ * monospaced, letter-spaced face that reads as "code" rather than "name."
  */
 .main-menu .field.main-menu__code input {
-  width: 8.4rem;
-  padding: 0.45rem 0 0.45rem 0.8rem;
-  border: 0;
-  border-radius: 0;
-  background:
-    repeating-linear-gradient(to right, var(--sunk) 0 2.4rem, transparent 2.4rem 3rem),
-    repeating-linear-gradient(to right, rgba(232, 182, 76, 0.55) 0 2.4rem, transparent 2.4rem 3rem)
-      bottom left / 100% 2px no-repeat;
+  width: 8.5rem;
+  padding: 0.5rem 0 0.5rem 1rem;
+  border: 1px solid rgba(245, 243, 238, 0.2);
+  border-radius: 999px;
+  background: var(--sunk);
   color: var(--accent);
   font-family: var(--code);
-  font-size: 1.35rem;
-  letter-spacing: 2.1rem;
+  font-size: 1.05rem;
+  letter-spacing: 0.4rem;
   text-transform: uppercase;
 }
 
 .main-menu__code input::placeholder {
   color: rgba(245, 243, 238, 0.25);
+  letter-spacing: 0.4rem;
 }
 
 /* The stored seat, when there is one: the fastest way back, stated plainly. */

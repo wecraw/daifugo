@@ -74,7 +74,7 @@ export function MainMenu() {
       </section>
 
       <div className="main-menu__actions">
-        <label className="field">
+        <label className="field main-menu__name">
           <span>{t("ui.menu.nameLabel")}</span>
           <input
             type="text"

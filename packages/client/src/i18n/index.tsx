@@ -62,9 +62,9 @@ export function translate(
 function readStoredTerminology(): Terminology {
   try {
     const stored = globalThis.localStorage?.getItem(TERMINOLOGY_STORAGE_KEY);
-    return isTerminology(stored) ? stored : "grandMillionaire";
+    return isTerminology(stored) ? stored : "daifugo";
   } catch {
-    return "grandMillionaire";
+    return "daifugo";
   }
 }
 
