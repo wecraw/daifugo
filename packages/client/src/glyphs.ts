@@ -14,6 +14,8 @@
  */
 import {
   JOKER_IDS,
+  JOKER_STRENGTH,
+  rankOfStrength,
   type Card,
   type JokerBinding,
   type Rank,
@@ -102,6 +104,19 @@ export function cardFace(card: Card, binding?: JokerBinding): CardFaceParts {
 /** The exact suit multiset a shibari lock names (§5), as pips. */
 export function suitLockGlyphs(suits: readonly Suit[]): string {
   return suits.map((suit) => SUIT_GLYPH[suit]).join("");
+}
+
+/**
+ * The rank a Kaidan lock requires next, as its face label (§6).
+ *
+ * An exhausted lock (past a pure joker, or below a 3) has no real rank to show;
+ * the badge still renders, just without a specific face, since the trick simply
+ * cannot be beaten from there.
+ */
+export function kaidanLockGlyph(requiredIndex: number): string {
+  if (requiredIndex === JOKER_STRENGTH) return JOKER_GLYPH;
+  const rank = rankOfStrength(requiredIndex);
+  return rank === undefined ? "" : RANK_LABEL[rank];
 }
 
 /**

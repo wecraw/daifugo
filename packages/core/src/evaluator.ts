@@ -21,7 +21,7 @@ import { comboStrength, parseCombo } from "./combo.js";
 import { DEFAULT_HOUSE_RULES } from "./config.js";
 import type { ErrorCode } from "./i18n-keys.js";
 import { spade3BeatsJoker } from "./rules/spade3BeatsJoker.js";
-import { compareStrength, effectiveInverted, isStronger } from "./strength.js";
+import { compareStrength, effectiveInverted, isStronger, strengthOf } from "./strength.js";
 import type { Card, GameState, HouseRulesConfig, PlayCombo, Rank, Result, Suit } from "./types.js";
 import { err, ok } from "./types.js";
 
@@ -29,7 +29,7 @@ import { err, ok } from "./types.js";
  * Everything about the trick that bears on legality.
  *
  * Every field is optional and defaults to the start-of-trick value, so a test or
- * a client can ask "what could I lead?" with `{}`. `config` defaults to all nine
+ * a client can ask "what could I lead?" with `{}`. `config` defaults to all ten
  * rules on (§0).
  */
 export interface TrickContext {
@@ -40,18 +40,24 @@ export interface TrickContext {
   trickInverted?: boolean;
   /** The exact suit multiset a play must match (§6). Null outside a lock. */
   suitLock?: readonly Suit[] | null;
+  /** The strength index a play must land on exactly under Kaidan (§6). Null outside a lock. */
+  kaidanLock?: number | null;
   config?: Readonly<HouseRulesConfig>;
 }
 
 /** The trick context of a live game state. The engine's bridge into this file. */
 export function trickContextOf(
-  state: Pick<GameState, "currentTrick" | "isRevolution" | "trickInverted" | "suitLock" | "config">,
+  state: Pick<
+    GameState,
+    "currentTrick" | "isRevolution" | "trickInverted" | "suitLock" | "kaidanLock" | "config"
+  >,
 ): TrickContext {
   return {
     top: state.currentTrick[state.currentTrick.length - 1]?.combo ?? null,
     isRevolution: state.isRevolution,
     trickInverted: state.trickInverted,
     suitLock: state.suitLock,
+    kaidanLock: state.kaidanLock,
     config: state.config,
   };
 }
@@ -94,6 +100,11 @@ export function checkLegality(
 
   const lock = ctx.suitLock ?? null;
   if (lock !== null && !matchesSuitLock(candidate, lock)) return err("SUIT_LOCK_MISMATCH");
+
+  const kaidan = ctx.kaidanLock ?? null;
+  if (kaidan !== null && strengthOf(candidate.resolvedRank) !== kaidan) {
+    return err("KAIDAN_LOCK_MISMATCH");
+  }
 
   return ok(candidate);
 }
@@ -281,7 +292,7 @@ function moveKey(combo: PlayCombo): string {
 
 /**
  * The cache key of §10.3: `(hand, trickTop, isRevolution, trickInverted,
- * suitLock)`.
+ * suitLock, kaidanLock)`.
  *
  * The hand is keyed as a *set* — sorted card ids — because a re-sort of the
  * player's hand (§10.8) does not change what is legal. The top is keyed by its
@@ -299,12 +310,14 @@ export function legalMovesKey(hand: readonly Card[], ctx: TrickContext = {}): st
     .sort()
     .join(",");
   const lock = ctx.suitLock === null || ctx.suitLock === undefined ? "-" : ctx.suitLock.join("");
+  const kaidan = ctx.kaidanLock === null || ctx.kaidanLock === undefined ? "-" : String(ctx.kaidanLock);
   return [
     cardIds,
     topKey(ctx.top ?? null),
     ctx.isRevolution === true ? "R" : "-",
     ctx.trickInverted === true ? "J" : "-",
     lock,
+    kaidan,
     configIn(ctx).spade3BeatsJoker ? "S3" : "-",
   ].join("|");
 }

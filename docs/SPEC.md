@@ -10,7 +10,7 @@
 | Bots / AI | Out of scope. |
 | Player count | 3 to 8. |
 | Orientation | Landscape only. Portrait shows a rotate prompt. |
-| House rules | All nine ON by default. Toggles hidden behind an advanced panel every seat can read and only the host can change. |
+| House rules | All ten ON by default. Toggles hidden behind an advanced panel every seat can read and only the host can change. |
 | Match structure | Endless by default. Host may set a round limit or first-to-N. |
 | Accessibility | Out of scope for v1. |
 | Interface copy | English only. A main-menu toggle switches English role names to romanized Daifugo names, persisted to localStorage. |
@@ -123,6 +123,7 @@ export interface HouseRulesConfig {
   elevenBack: boolean;
   kakumei: boolean;
   shibari: boolean;
+  kaidan: boolean;
 }
 
 export type PendingAction =
@@ -179,6 +180,7 @@ export interface GameState {
   isRevolution: boolean;                // persists for the round
   trickInverted: boolean;               // 11-back; resets on trick clear
   suitLock: Suit[] | null;              // exact suit multiset lock; resets on trick clear
+  kaidanLock: number | null;            // required strength index for the next play; resets on trick clear
 
   pendingAction: PendingAction | null;
   exchange: {
@@ -484,6 +486,7 @@ combo's card count: a pair of 5s skips 2, a triple of 7s passes up to 3.
 | **11-Back** | Resolved rank is 11. | `J` = combo count. Odd toggles `trickInverted`. Even is a no-op. Resets on trick clear. |
 | **Revolution** | **Four or more cards of the same rank** played simultaneously. | Toggles `isRevolution` for the rest of the round. |
 | **Shibari** | Consecutive plays in a trick share an identical suit multiset. | Sets `suitLock` to that exact multiset. Subsequent plays must match it exactly. Overlap is not a partial lock. Mixed sets lock too: hearts+spades followed by hearts+spades locks to {H,S}. Pure jokers satisfy any lock and maintain an existing one. |
+| **Kaidan** | Two consecutive plays in a trick are exactly one strength-index step apart (§5.1), in the winning direction under `effectiveInverted` (§5.2), with matching count. | Sets `kaidanLock` to the strength index that would continue the step (the second play's index, ±1 toward the winning direction; the step *into* the lock is read under the pre-play inversion, the step *out* of it under the post-play inversion, so a Jack that fires 11-back asks for a 10 next, §7.1). Every later play in the trick must land on exactly that index — not merely beat it — and each accepted play advances the lock by one more step. A step that would run past the ends of the strength range (below a 3, or past a pure joker) sets a lock no real play can ever match, which simply ends the trick the way any other unbeatable top does. 3-3 then 4-4 locks the trick to 5s; the player after that may play 5-5 and nothing else. Resets on trick clear, same as `suitLock`. |
 
 ---
 
@@ -507,17 +510,24 @@ PHASE 0 - VALIDATE
   ├── Combo is N-of-a-kind: every card resolves to one rank (no sequences)
   ├── If trick non-empty: count matches the top exactly
   ├── Strength check under effectiveInverted, plus the Spade-3-over-pure-joker exception
-  └── Shibari: if suitLock is set, combo suit multiset must match exactly
-      (pure jokers wildcard through)
+  ├── Shibari: if suitLock is set, combo suit multiset must match exactly
+  │   (pure jokers wildcard through)
+  └── Kaidan: if kaidanLock is set, resolved rank's strength index must equal it exactly
 
 PHASE A - IMMEDIATE STATE EFFECTS (applied in this order)
   ├── Move cards from hand to currentTrick, set trickLeaderId = playerId
   ├── Revolution: if count >= 4 -> toggle isRevolution
   ├── 11-Back: if resolved rank is 11 and count is odd -> toggle trickInverted
-  └── Shibari: if suit multiset equals the previous play's -> set suitLock
+  ├── Shibari: if suit multiset equals the previous play's -> set suitLock
+  └── Kaidan: if kaidanLock was already set, or this play's index is exactly one
+      step from the previous play's index (toward the winning direction under the
+      PRE-play inversion) with matching count -> set kaidanLock to the index one
+      further step on, stepping toward the winning direction under the POST-play
+      inversion, i.e. after the revolution and 11-back toggles above
 
   Note: Phase 0 validates against the PRE-play inversion state. Revolution and
-  11-back apply only to subsequent plays.
+  11-back apply only to subsequent plays - which is why the Kaidan lock, being a
+  requirement on the next play, advances under the post-toggle orientation.
 
 PHASE B - INTERACTIVE RULE (halts the pipeline)
   ├── Resolved rank is 7 and k > 0 -> pendingAction = RESOLVE_7_PASS, return
@@ -568,6 +578,7 @@ currentTrick = []          -> its cards go to `graveyard`
 passedPlayerIds = []
 trickInverted = false
 suitLock = null
+kaidanLock = null
 isRevolution UNCHANGED
 trickLeaderId = leader
 If leader has finished or dropped (§4.5, §7.7) -> advance to the nearest eligible player to their left
@@ -672,7 +683,7 @@ N-of-a-kind is the only combo shape (Section 5.3), so shape rejection is just
 | Card selection | `EMPTY_SELECTION`, `DUPLICATE_CARD_IDS`, `CARD_NOT_IN_HAND`, `WRONG_CARD_COUNT` |
 | Combo shape (5.3) | `MIXED_RANKS`, `JOKER_MUST_BE_BOUND` |
 | Joker binding (5.4, 5.5) | `INVALID_BINDING`, `DUPLICATE_BINDING`, `NO_LEGAL_BINDING` |
-| Legality vs trick top (7.1) | `COMBO_COUNT_MISMATCH`, `TOO_WEAK`, `SUIT_LOCK_MISMATCH` |
+| Legality vs trick top (7.1) | `COMBO_COUNT_MISMATCH`, `TOO_WEAK`, `SUIT_LOCK_MISMATCH`, `KAIDAN_LOCK_MISMATCH` |
 | Pass (7.5) | `CANNOT_PASS_AS_LEADER`, `ALREADY_PASSED` |
 | Exchange (4) | `NOT_IN_EXCHANGE`, `NOT_EXCHANGE_PARTICIPANT`, `EXCHANGE_FORCED`, `EXCHANGE_ALREADY_SUBMITTED` |
 | Room lifecycle (8) | `ROOM_NOT_FOUND`, `ROOM_FULL`, `NAME_TAKEN`, `INVALID_ACTION` |
@@ -763,7 +774,7 @@ reaches `graveyard` is redacted afterwards.
 
 The view shares no mutable container with the authoritative state: `Card` objects
 are immutable and shared, but every array and object the caller could mutate —
-`graveyard`, `suitLock`, `pendingAction`, and the rest — is copied.
+`graveyard`, `suitLock`, `kaidanLock`, `pendingAction`, and the rest — is copied.
 
 ### 8.6 Ready
 `Player.isReady` is each player's own statement that they are willing to be dealt
@@ -852,7 +863,7 @@ server uses, so the two never disagree.
 * **Recompute the weighted layout only at turn start.** Within a turn, as selection
   narrows the legal set, dim without resizing. Cards must not slide under the
   player's finger mid-selection.
-* Memoise the legal set on `(hand, trickTop, isRevolution, trickInverted, suitLock)`.
+* Memoise the legal set on `(hand, trickTop, isRevolution, trickInverted, suitLock, kaidanLock)`.
 
 ### 10.4 Selection
 Tap to select: lift 26px, scale 1.06, raise z-index, soft click, spring easing
@@ -903,7 +914,7 @@ centred during `EXCHANGE`.
 
 ### 10.11 Host panel
 Rule toggles are hidden behind a disclosure in the lobby, collapsed by default with
-all nine rules ON. Round limit lives here too.
+all ten rules ON. Round limit lives here too.
 
 The panel renders for **every** seat, because the rules decide how the next round
 plays for the whole table and a change to them has to be visible to everyone. Only
@@ -1014,7 +1025,8 @@ server involvement. It never changes the interface language or the document's
 6. `tenDiscard.test.ts` - pair of 10s discards 2 to graveyard; non-active players rejected.
 7. `elevenBack.test.ts` - 1, 2, 3 Jacks parity; reset on trick clear.
 8. `shibari.test.ts` - two hearts plays lock; mixed {H,S} locks; overlapping but unequal sets do not lock; non-matching play rejected; pure joker satisfies and maintains.
-9. `kakumei.test.ts` - 4 of a kind toggles; a triple does not; wildcard joker counts toward the four.
+9. `kaidan.test.ts` - two consecutive +1 plays lock; a jump of 2+ does not; the lock advances step by step; a non-matching play (even a stronger one) is rejected; reset on trick clear; direction follows `effectiveInverted`, with the advance following the post-play orientation when the accepted play toggles revolution or 11-back.
+10. `kakumei.test.ts` - 4 of a kind toggles; a triple does not; wildcard joker counts toward the four.
 10. `combo.test.ts` - mixed ranks rejected (no sequences); count must match the top exactly; pair of pure jokers legal; pure joker cannot pair with a non-joker; both jokers bound to the combo's rank.
 
 ### 12.2 Interaction tests (where the bugs will be)

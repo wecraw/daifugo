@@ -90,6 +90,7 @@ export interface TableOptions {
   isRevolution?: boolean;
   trickInverted?: boolean;
   suitLock?: Suit[];
+  kaidanLock?: number | null;
   points?: Record<string, number>;
 }
 
@@ -149,6 +150,7 @@ export function table(options: TableOptions): GameState {
     isRevolution: options.isRevolution ?? false,
     trickInverted: options.trickInverted ?? false,
     suitLock: options.suitLock ?? null,
+    kaidanLock: options.kaidanLock ?? null,
     points: options.points ?? base.points,
   };
 }

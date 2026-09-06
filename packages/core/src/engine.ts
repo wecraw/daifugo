@@ -61,6 +61,7 @@ import {
   firesElevenBack,
   firesKakumei,
   firesNineGiri,
+  kaidanLock,
   resolveSevenPass,
   resolveTenDiscard,
   sevenPassPending,
@@ -69,6 +70,7 @@ import {
   spade3BeatsJoker,
   tenDiscardPending,
 } from "./rules/index.js";
+import { effectiveInverted } from "./strength.js";
 import {
   eligiblePlayerIds,
   hasDropped,
@@ -228,6 +230,7 @@ export function createGameState(options: NewGameOptions): GameState {
     isRevolution: false,
     trickInverted: false,
     suitLock: null,
+    kaidanLock: null,
     pendingAction: null,
     exchange: null,
     deadline: null,
@@ -392,6 +395,7 @@ function startGame(state: GameState, playerId: string, seed: string): Result<Gam
   next.isRevolution = false;
   next.trickInverted = false;
   next.suitLock = null;
+  next.kaidanLock = null;
   next.pendingAction = null;
   next.exchange = null;
   next.activePlayerIndex = 0;
@@ -594,6 +598,21 @@ function playCards(
     log(next, history("history.shibariLocked", { player: playerId, suits: lock.join("") }));
   }
 
+  // The advance uses the post-toggle orientation: revolution and 11-back fired
+  // above apply to the *next* play, which is exactly what the lock constrains.
+  const kLock = kaidanLock(
+    previousTop,
+    combo,
+    state.kaidanLock,
+    invertedIn(ctx),
+    effectiveInverted(next.isRevolution, next.trickInverted),
+    state.config,
+  );
+  next.kaidanLock = kLock;
+  if (kLock !== null && state.kaidanLock === null) {
+    log(next, history("history.kaidanLocked", { player: playerId }));
+  }
+
   /* PHASE B - INTERACTIVE RULE (halts the pipeline) ------------------------ */
   const remaining = split.value.remaining.length;
   const seating = seatingOf(next);
@@ -746,6 +765,7 @@ function clearTrick(next: GameState, leaderId: string | null): void {
   next.passedPlayerIds = [];
   next.trickInverted = false;
   next.suitLock = null;
+  next.kaidanLock = null;
   next.trickLeaderId = leaderId;
   log(next, history("history.trickCleared", { leader: leaderId ?? "" }));
 

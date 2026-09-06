@@ -100,6 +100,7 @@ export const HISTORY_KEYS = [
   "history.kakumei",
   "history.kakumeiEnded",
   "history.shibariLocked",
+  "history.kaidanLocked",
 
   // Timeouts (§7.6)
   "history.turnTimeout",
@@ -195,6 +196,7 @@ export const ERROR_CODES = [
   "COMBO_COUNT_MISMATCH",
   "TOO_WEAK",
   "SUIT_LOCK_MISMATCH",
+  "KAIDAN_LOCK_MISMATCH",
 
   // Pass (§7.5)
   "CANNOT_PASS_AS_LEADER",

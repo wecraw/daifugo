@@ -17,7 +17,7 @@
  */
 import type { CSSProperties } from "react";
 import { EXCHANGE_DURATION_MS, type PublicGameState } from "@daifugo/core";
-import { suitLockGlyphs } from "../glyphs";
+import { kaidanLockGlyph, suitLockGlyphs } from "../glyphs";
 import { useTranslate } from "../i18n/index";
 import { fitTrickStack } from "../layout/tableLayout";
 import { CardFace } from "./CardFace";
@@ -26,6 +26,7 @@ import { TurnTimer } from "./TurnTimer";
 export function TrickArea({ room }: { room: PublicGameState }) {
   const t = useTranslate();
   const lock = room.suitLock ?? [];
+  const kaidan = room.kaidanLock ?? null;
   // Whoever the table is waiting on. Off a viewer's turn the band says so
   // rather than telling them what they could lead: "table is open" is advice
   // for the seat that is up, and everyone else reading it as an invitation is
@@ -50,6 +51,14 @@ export function TrickArea({ room }: { room: PublicGameState }) {
             title={t("ui.trick.suitLock", { suits: suitLockGlyphs(lock) })}
           >
             {t("rule.shibari")} {suitLockGlyphs(lock)}
+          </span>
+        )}
+        {kaidan !== null && (
+          <span
+            className="badge badge--rule"
+            title={t("ui.trick.kaidanLock", { rank: kaidanLockGlyph(kaidan) })}
+          >
+            {t("rule.kaidan")} {kaidanLockGlyph(kaidan)}
           </span>
         )}
       </div>

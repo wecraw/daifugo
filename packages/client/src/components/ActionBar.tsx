@@ -37,6 +37,7 @@ import { TurnTimer } from "./TurnTimer";
 const SPECIFIC: Partial<Record<ErrorCode, { key: UiI18nKey; param: string }>> = {
   SUIT_LOCK_MISMATCH: { key: "ui.action.mustFollowSuits", param: "suits" },
   COMBO_COUNT_MISMATCH: { key: "ui.action.mustPlayCount", param: "count" },
+  KAIDAN_LOCK_MISMATCH: { key: "ui.action.mustPlayRank", param: "rank" },
 };
 
 /** The reason a control is disabled, as specifically as the client can put it. */

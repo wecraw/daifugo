@@ -12,9 +12,10 @@ export const HOUSE_RULE_KEYS = [
   "elevenBack",
   "kakumei",
   "shibari",
+  "kaidan",
 ] as const satisfies readonly HouseRuleKey[];
 
-/** All nine rules on. The lobby toggles individual rules off from here. */
+/** All ten rules on. The lobby toggles individual rules off from here. */
 export const DEFAULT_HOUSE_RULES: Readonly<HouseRulesConfig> = Object.freeze({
   spade3BeatsJoker: true,
   fiveSkip: true,
@@ -25,6 +26,7 @@ export const DEFAULT_HOUSE_RULES: Readonly<HouseRulesConfig> = Object.freeze({
   elevenBack: true,
   kakumei: true,
   shibari: true,
+  kaidan: true,
 });
 
 const HOUSE_RULE_KEY_SET: ReadonlySet<string> = new Set<string>(HOUSE_RULE_KEYS);

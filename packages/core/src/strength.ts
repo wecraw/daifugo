@@ -44,6 +44,18 @@ export function strengthOf(rank: Rank | null): number {
   return rank === null ? JOKER_STRENGTH : STRENGTH_INDEX[rank];
 }
 
+/**
+ * The reverse of `STRENGTH_INDEX`, for rendering a Kaidan lock's required index
+ * back as a rank. Any index outside 0-12 (the pure joker's 13, or an exhausted
+ * sequence's out-of-range value, §6) comes back `undefined` rather than guessing.
+ */
+export function rankOfStrength(index: number): Rank | undefined {
+  for (const [rank, strength] of Object.entries(STRENGTH_INDEX)) {
+    if (strength === index) return Number(rank) as Rank;
+  }
+  return undefined;
+}
+
 /** Strength of a card as it sits in hand, i.e. with any joker taken as pure. */
 export function cardStrength(card: Card): number {
   return card.isJoker ? JOKER_STRENGTH : strengthOf(card.rank);

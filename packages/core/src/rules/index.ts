@@ -1,5 +1,5 @@
 /**
- * The nine house rules (§6), one file each.
+ * The ten house rules (§6), one file each.
  *
  * Every rule reads the *resolved* rank the parser produced, never `card.isJoker`,
  * so a joker bound to an 8 fires 8-giri without any rule file knowing jokers
@@ -20,3 +20,4 @@ export * from "./tenDiscard.js";
 export * from "./elevenBack.js";
 export * from "./kakumei.js";
 export * from "./shibari.js";
+export * from "./kaidan.js";
