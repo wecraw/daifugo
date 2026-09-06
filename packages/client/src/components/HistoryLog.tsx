@@ -6,16 +6,17 @@
  * the player ids the params carry against the roster, because the engine has no
  * names to give.
  *
- * Newest first. The strip fits about three lines and the interesting entry is
- * always the last one, so reading downwards into the past beats scrolling to keep
- * up with the bottom of a growing list.
+ * Newest first, and only as far back as the strip can show whole. The interesting
+ * entry is always the last one, so reading downwards into the past beats scrolling
+ * to keep up with the bottom of a growing list — and the styling dims each older
+ * line so the newest reads first without needing a label to say which it is.
  */
 import type { PublicGameState } from "@daifugo/core";
 import { historyLine } from "../history";
 import { useTranslate } from "../i18n/index";
 
-/** As many as the strip can scroll through without becoming a second screen. */
-export const HISTORY_LINES = 8;
+/** Line boxes the top strip fits whole; `.history-log` sizes itself to match. */
+export const HISTORY_LINES = 3;
 
 export function HistoryLog({
   room,

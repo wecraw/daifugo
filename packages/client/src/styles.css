@@ -780,7 +780,7 @@ button:disabled {
 
 .game-table__top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto auto;
   align-items: center;
   flex: 0 0 var(--top-strip-height);
   gap: 0.4rem;
@@ -1103,26 +1103,42 @@ button:disabled {
   border-style: dashed;
 }
 
-/* History log (§11): keys and params, resolved at render time. */
+/* History log (§11): keys and params, resolved at render time.
+
+   Exactly HISTORY_LINES line boxes fit the strip, so nothing is ever sliced in
+   half at the edge. Recency is carried by ink alone — newest at full strength,
+   each older line dimmer — which puts the eye on the last event without a
+   label, a marker, or a rule to say so. */
 .history-log {
+  --history-line: 14px;
+
   display: flex;
   flex-direction: column;
-  gap: 0.05rem;
-  height: 100%;
+  align-self: center;
   min-width: 0;
+  max-height: calc(var(--history-line) * 3);
   margin: 0;
   padding: 0;
-  overflow-y: auto;
-  font-size: 0.62rem;
-  line-height: 1.25;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: var(--history-line);
   list-style: none;
-  opacity: 0.8;
 }
 
 .history-log__line {
   overflow: hidden;
+  flex: 0 0 var(--history-line);
   white-space: nowrap;
   text-overflow: ellipsis;
+  color: var(--ink);
+}
+
+.history-log__line:nth-child(2) {
+  color: rgba(245, 243, 238, 0.58);
+}
+
+.history-log__line:nth-child(3) {
+  color: rgba(245, 243, 238, 0.32);
 }
 
 /* The countdown ring of §10.10. */
