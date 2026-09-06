@@ -193,9 +193,9 @@ describe("PlayerSeat", () => {
   it("shows each opponent's card count", async () => {
     await seat(table(3));
     const chip = seatsOn("left")[0] as HTMLElement;
-    // A 96px chip shows the bare number; the sentence is its accessible name.
-    const count = within(chip).getByLabelText("2 card(s)");
-    expect(count).toHaveTextContent("2");
+    // A 96px chip shows a stack of face-down pips; the sentence is its accessible name.
+    const stack = within(chip).getByLabelText("2 card(s)");
+    expect(stack.querySelectorAll(".player-seat__stack-card")).toHaveLength(2);
   });
 
   it("marks passed, finished and dropped seats apart from a live one", async () => {

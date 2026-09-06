@@ -873,6 +873,21 @@ since selecting pairs and triples is the most common action.
 
 No play occurs on tap. Confirm via the Play button.
 
+**Selection is closed under the legal set.** A tap or a drag only takes a card that
+some legal move contains alongside everything already selected — the cards §10.3
+leaves undimmed — or one whose resulting selection is itself a legal play, so the
+gate is never stricter than the server. Dimmed cards are inert (`aria-disabled`, not
+`disabled`, so a drag can still cross them); deselection is never refused.
+
+**A refused tap raises a notice over the hand for ~2.2s**, naming the reason in the
+same words §10.6 would have put on the Play button, from the same evaluator code. A
+drag skips the cards it may not take silently — one notice per crossed card is a
+strobe — but the card the drag started on is a tap and does explain itself.
+
+The reasons §10.6 itself still renders inline are therefore the ones a *legal* card
+can produce: a selection short of the count the trick demands, and the turn's own
+blockers.
+
 ### 10.5 Joker binding UI
 When a selection contains a joker and more than one legal binding exists, show a
 small badge on the joker with its current assignment and let the player tap it to
@@ -886,7 +901,9 @@ The Play button names the resolved combo from its count and rank: "Play Pair of 
 "Play Four 3s".
 When a selection is illegal the button is disabled with the reason inline, for
 example "Must follow Hearts" or "Not high enough". Never surface a validation error
-the player could have seen coming as a toast.
+the player could have seen coming as a `gameError` banner (§8.4) — it belongs on the
+control that would have sent it, or, for a selection the player was not allowed to
+make at all, on the hand's own notice (§10.4).
 
 Also in the bar: Sort toggle, and the turn timer ring.
 

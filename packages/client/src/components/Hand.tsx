@@ -15,6 +15,14 @@
  *   neighbour cannot put its overflow over the neighbour's strip.
  * * **Nothing here plays a card.** Tap selects and tap again deselects; the Play
  *   button is the only way a card reaches the table (§10.4).
+ * * **A dimmed card refuses the tap, and says why.** The controller will not add a
+ *   card no legal move contains, so the dark cards are inert rather than merely
+ *   discouraging; they carry `aria-disabled` rather than `disabled` because a
+ *   disabled button fires no pointer events, and a drag has to be able to cross
+ *   them. The refusal raises a notice over the row for a couple of seconds, in
+ *   the same words the Play button would have used (§10.4, §10.6) — keyed on the
+ *   notice id so tapping the same dead card twice replays it rather than looking
+ *   like the second tap did nothing at all.
  *
  * Drag-across-to-select is `pointerdown` on the first card and `pointerenter` on
  * the rest, because selecting a pair is the commonest action in the game and
@@ -27,6 +35,7 @@ import type { HandController } from "../hooks/useHandController";
 import { useTranslate } from "../i18n/index";
 import {
   AUTO_PASS_DELAY_MS,
+  SELECTION_NOTICE_MS,
   CARD_HEIGHT,
   CARD_WIDTH,
   HIT_SLOP_Y,
@@ -54,6 +63,7 @@ export function Hand({ hand }: { hand: HandController }) {
           const selected = hand.isSelected(card.id);
           const unplayable = hand.isUnplayable(card.id);
           const dimmed = hand.isDimmed(card.id) && !selected;
+          const selectable = hand.isSelectable(card.id);
           const binding = selected ? hand.bindingOf(card.id) : null;
           // Unplayable cards give up their rotation as well as their size (§10.3),
           // which is what makes the playable run read as a straight, brighter band.
@@ -83,6 +93,7 @@ export function Hand({ hand }: { hand: HandController }) {
                   .filter((name) => name !== "")
                   .join(" ")}
                 aria-pressed={selected}
+                aria-disabled={!selectable}
                 data-card-id={card.id}
                 style={
                   {
@@ -139,6 +150,23 @@ export function Hand({ hand }: { hand: HandController }) {
           );
         })}
       </ul>
+
+      {/*
+        §10.4: the refused tap's answer, over the cards it was about. It sits
+        where the auto-pass card does — the one place in the row nothing else
+        occupies — and the two can never be up together, since a hand with no
+        legal play has nothing left to refuse.
+      */}
+      {hand.selectionNotice !== null && (
+        <p
+          key={hand.selectionNotice.id}
+          className="hand__notice"
+          role="status"
+          style={{ "--notice-duration": `${SELECTION_NOTICE_MS}ms` } as CSSProperties}
+        >
+          {t(hand.selectionNotice.key, hand.selectionNotice.params)}
+        </p>
+      )}
 
       {/*
         §10.7: the pass the player did not have to make still gets its beat. The

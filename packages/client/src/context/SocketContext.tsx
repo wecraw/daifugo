@@ -47,6 +47,7 @@ import {
 import type { ReactNode } from "react";
 import { io, type Socket } from "socket.io-client";
 import { readRoomCodeFromLocation, syncRoomCodeToUrl } from "../roomUrl";
+import { readStoredPlayerName, writeStoredPlayerName } from "../playerName";
 import type {
   ClientToServerEvents,
   GameErrorPayload,
@@ -273,6 +274,9 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
     const socket = socketRef.current;
     if (socket === null) return;
     pendingJoin.current = { roomId: nextRoomId, playerName };
+    // Every join runs through here, so this is the one place the name has to be
+    // remembered — menu, rejoin link, and the mount-time auto-join alike.
+    writeStoredPlayerName(playerName);
     seated.current = false;
     setRoomId(nextRoomId);
     setError(null);
@@ -299,7 +303,10 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
     // replayed only when the stored seat is for that same room; `joinRoom`
     // decides that on its own.
     if (initialRoomCode !== null) {
-      const name = stored?.playerName ?? "";
+      // The seat's name first, then the name this browser plays under: a link
+      // opened by someone whose last seat is long gone still knows who they are.
+      const seatName = stored?.playerName ?? "";
+      const name = seatName !== "" ? seatName : readStoredPlayerName();
       if (name !== "") joinRoom(initialRoomCode, name);
       return;
     }

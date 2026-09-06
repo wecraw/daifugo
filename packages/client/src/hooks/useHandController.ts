@@ -14,6 +14,22 @@
  *
  * The legal set itself is memoised on the same key through core's
  * `createLegalMoveCache`, which is what §10.3 asks for.
+ *
+ * **A dimmed card cannot be picked up (§10.4).** Selection is closed under the
+ * legal set: a tap or a drag only adds a card that at least one legal move
+ * contains alongside everything already selected — exactly the set `isDimmed`
+ * renders dark. Refusing the pick is the honest version of what the dimming
+ * already says; the alternative is letting a player assemble a hand the Play
+ * button then has to talk them out of. Deselection is never refused, so a
+ * selection can always be unwound.
+ *
+ * **A refused tap still answers.** The reason the card was refused is exactly
+ * what the Play button would have said had the selection been allowed to happen,
+ * so `selectionNotice` carries it — through the same `blockerText` the button
+ * uses — and the hand row raises it for `SELECTION_NOTICE_MS` where the tap was.
+ * A refusal with no explanation teaches a new player nothing except that the game
+ * is ignoring them; the point of the gate is to keep them out of a bad selection,
+ * not to keep them in the dark about why.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -28,6 +44,7 @@ import {
 } from "@daifugo/core";
 import { useSocket } from "../context/SocketContext";
 import { kaidanLockGlyph, suitLockGlyphs } from "../glyphs";
+import { blockerText } from "../hand/blockerText";
 import { comboLabel, type ComboLabel } from "../hand/comboLabel";
 import {
   bindingOptions,
@@ -38,8 +55,21 @@ import {
   turnBlocker,
 } from "../hand/legality";
 import { sortHand } from "../hand/sort";
-import { AUTO_PASS_DELAY_MS, layoutHand, weightOf, type HandFanLayout } from "../layout/handLayout";
-import type { TranslateParams } from "../i18n/index";
+import {
+  AUTO_PASS_DELAY_MS,
+  SELECTION_NOTICE_MS,
+  layoutHand,
+  weightOf,
+  type HandFanLayout,
+} from "../layout/handLayout";
+import type { I18nKey, TranslateParams } from "../i18n/index";
+
+/** A refused tap, ready to render: the message it resolved to, and its params. */
+export interface SelectionNotice {
+  key: I18nKey;
+  params: TranslateParams;
+  id: number;
+}
 
 export interface HandController {
   /** The hand in display order (§10.8). */
@@ -50,6 +80,13 @@ export interface HandController {
   /** Narrows within the turn. Dims only — never resizes (§10.3). */
   isDimmed: (cardId: string) => boolean;
   isSelected: (cardId: string) => boolean;
+  /** Whether a tap would take this card. False for every dimmed card (§10.4). */
+  isSelectable: (cardId: string) => boolean;
+  /**
+   * Why the last tap was refused, or null. `id` rises with every refusal so a
+   * second tap on the same card replays the notice instead of sitting still.
+   */
+  selectionNotice: SelectionNotice | null;
   /** The binding a selected joker currently carries, or null for pure (§10.5). */
   bindingOf: (cardId: string) => JokerBinding | null;
   /** How many legal bindings the selection has. The badge cycles when > 1. */
@@ -85,14 +122,29 @@ export function useHandController(room: PublicGameState): HandController {
   const [optionIndex, setOptionIndex] = useState(0);
   const [lastTurnKey, setLastTurnKey] = useState(turnKey);
   const dragging = useRef(false);
+  // The selection as of the last event rather than the last render: a fast drag
+  // fires several `pointerenter`s inside one batch, and each of them has to test
+  // its card against what the ones before it already added.
+  const selectedNow = useRef<string[]>(selected);
+  const [notice, setNotice] = useState<SelectionNotice | null>(null);
+  const noticeCount = useRef(0);
+
+  const setSelection = useCallback((next: string[]): void => {
+    selectedNow.current = next;
+    setSelected(next);
+    // A selection that went through has answered the refusal that preceded it.
+    setNotice(null);
+  }, []);
 
   // A new turn — or a hand that changed under us — is a fresh selection. Adjusting
   // state during render is the supported way to react to a changed input without
   // rendering the stale value first.
   if (turnKey !== lastTurnKey) {
     setLastTurnKey(turnKey);
+    selectedNow.current = [];
     setSelected([]);
     setOptionIndex(0);
+    setNotice(null);
   }
 
   const moves = useMemo(() => legalMoves(room.myHand, ctx), [legalMoves, room.myHand, ctx]);
@@ -130,12 +182,46 @@ export function useHandController(room: PublicGameState): HandController {
     rank: room.kaidanLock === null ? "" : kaidanLockGlyph(room.kaidanLock),
   };
 
-  const toggle = useCallback((cardId: string) => {
-    setSelected((current) =>
-      current.includes(cardId) ? current.filter((id) => id !== cardId) : [...current, cardId],
-    );
-    setOptionIndex(0);
-  }, []);
+  /**
+   * Why adding `cardId` to `current` would be refused, or null to allow it.
+   *
+   * The gate is the same set that dims the row — the cards some legal move holds
+   * alongside everything already picked. The second test is what makes a reason
+   * always available: if the resulting selection is *itself* legal it is allowed
+   * through regardless, so a refusal always has an evaluator error behind it to
+   * name, and the gate can never be stricter than the server. Removing is never
+   * gated.
+   */
+  const refusalOf = useCallback(
+    (current: readonly string[], cardId: string): ErrorCode | null => {
+      if (continuationIds(moves, current).has(cardId)) return null;
+      const would = cards.filter((card) => card.id === cardId || current.includes(card.id));
+      const resolved = resolveSelection(would, null, ctx);
+      return resolved.ok ? null : resolved.error;
+    },
+    [moves, cards, ctx],
+  );
+
+  const toggle = useCallback(
+    (cardId: string) => {
+      const current = selectedNow.current;
+      if (current.includes(cardId)) {
+        setSelection(current.filter((id) => id !== cardId));
+        setOptionIndex(0);
+        return;
+      }
+      const refusal = refusalOf(current, cardId);
+      if (refusal !== null) {
+        noticeCount.current += 1;
+        const [key, params] = blockerText(refusal, blockerParams);
+        setNotice({ key, params, id: noticeCount.current });
+        return;
+      }
+      setSelection([...current, cardId]);
+      setOptionIndex(0);
+    },
+    [refusalOf, blockerParams, setSelection],
+  );
 
   const beginDrag = useCallback(
     (cardId: string) => {
@@ -145,11 +231,20 @@ export function useHandController(room: PublicGameState): HandController {
     [toggle],
   );
 
-  const extendTo = useCallback((cardId: string) => {
-    if (!dragging.current) return;
-    setSelected((current) => (current.includes(cardId) ? current : [...current, cardId]));
-    setOptionIndex(0);
-  }, []);
+  // A drag that crosses a dimmed card skips it and carries on, so the finger does
+  // not have to thread the gaps in a run — silently, because a sweep of the row
+  // crosses several and a notice per card would be a strobe, not an explanation.
+  // The card the drag *started* on went through `toggle` and did explain itself.
+  const extendTo = useCallback(
+    (cardId: string) => {
+      if (!dragging.current) return;
+      const current = selectedNow.current;
+      if (current.includes(cardId) || refusalOf(current, cardId) !== null) return;
+      setSelection([...current, cardId]);
+      setOptionIndex(0);
+    },
+    [refusalOf, setSelection],
+  );
 
   const endDrag = useCallback(() => {
     dragging.current = false;
@@ -168,6 +263,14 @@ export function useHandController(room: PublicGameState): HandController {
       globalThis.removeEventListener?.("pointercancel", stop);
     };
   }, []);
+
+  // The notice takes itself down. Keyed on the object rather than its id so a
+  // repeat refusal restarts the clock along with the animation.
+  useEffect(() => {
+    if (notice === null) return;
+    const handle = setTimeout(() => setNotice(null), SELECTION_NOTICE_MS);
+    return () => clearTimeout(handle);
+  }, [notice]);
 
   const cycleBinding = useCallback(() => {
     if (options.length <= 1) return;
@@ -188,9 +291,9 @@ export function useHandController(room: PublicGameState): HandController {
     } else {
       send("playCards", cardIds);
     }
-    setSelected([]);
+    setSelection([]);
     setOptionIndex(0);
-  }, [playBlocker, resolved, selectedCards, send]);
+  }, [playBlocker, resolved, selectedCards, send, setSelection]);
 
   const passReason = passBlocker(room);
   const pass = useCallback(() => {
@@ -236,6 +339,8 @@ export function useHandController(room: PublicGameState): HandController {
     isUnplayable: (cardId) => !turnPlayable.has(cardId),
     isDimmed: (cardId) => !stillPlayable.has(cardId),
     isSelected: (cardId) => selected.includes(cardId),
+    isSelectable: (cardId) => selected.includes(cardId) || stillPlayable.has(cardId),
+    selectionNotice: notice,
     bindingOf: (cardId) => option?.bindings.find((binding) => binding.cardId === cardId) ?? null,
     bindingChoices: options.length,
     cycleBinding,

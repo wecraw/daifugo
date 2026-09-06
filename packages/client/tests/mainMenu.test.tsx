@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "../src/App";
 import { TERMINOLOGY_STORAGE_KEY } from "../src/i18n/index";
+import { PLAYER_NAME_STORAGE_KEY } from "../src/playerName";
 import { FakeSocket } from "./fakeSocket";
 
 function renderApp() {
@@ -78,6 +79,26 @@ describe("MainMenu", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not create a room");
     expect(socket.sentOf("joinRoom")).toEqual([]);
+  });
+});
+
+describe("remembered name", () => {
+  it("remembers the name a join was made under", async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.type(screen.getByLabelText("Your name"), "Will");
+    await user.type(screen.getByLabelText("Room code"), "abc");
+    await user.click(screen.getByRole("button", { name: "Join room" }));
+
+    await waitFor(() => expect(localStorage.getItem(PLAYER_NAME_STORAGE_KEY)).toBe("Will"));
+  });
+
+  it("starts the next visit with that name already filled in", () => {
+    localStorage.setItem(PLAYER_NAME_STORAGE_KEY, "Will");
+    renderApp();
+
+    expect(screen.getByLabelText("Your name")).toHaveValue("Will");
   });
 });
 

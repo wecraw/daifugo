@@ -224,7 +224,7 @@ export const I18N_KEYS: readonly I18nKey[] = [...CORE_I18N_KEYS, ...UI_I18N_KEYS
 export type CopyBundle = Record<I18nKey, string>;
 
 /** The two naming conventions of §0. Persisted locally, never sent to the server. */
-export const TERMINOLOGIES = ["grandMillionaire", "daifugo"] as const;
+export const TERMINOLOGIES = ["daifugo", "grandMillionaire"] as const;
 
 export type Terminology = (typeof TERMINOLOGIES)[number];
 

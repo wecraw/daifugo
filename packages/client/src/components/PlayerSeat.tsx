@@ -7,9 +7,9 @@
  * seat (§10.10).
  *
  * A chip is at most 96px wide and, on the top edge, 48px tall, so the count is a
- * bare number and presence is a dot. Both carry the sentence they stand for as
- * their accessible name, which is also what a test reads them by — the shorthand
- * is a size, not a loss.
+ * stack of face-down pips and presence is a dot. Both carry the sentence they
+ * stand for as their accessible name, which is also what a test reads them by —
+ * the shorthand is a size, not a loss.
  *
  * The chip does not decide any of that. `status` comes from core's eligibility
  * helpers via `seatStatus` — a finished or demoted player keeps their chair in

@@ -64,6 +64,15 @@ export const SELECTION_SCALE = 1.06;
 /** §10.7: how long the "no legal play, passing" card stays up. */
 export const AUTO_PASS_DELAY_MS = 1200;
 
+/**
+ * §10.4: how long the notice a refused tap raises stays up.
+ *
+ * Long enough to read a short sentence, short enough that a player who already
+ * knows why is not tapping around it — and shorter than a turn, so it can never
+ * still be up under the next one.
+ */
+export const SELECTION_NOTICE_MS = 2200;
+
 /** The uniform step of §10.2, i.e. the weighted step with every weight at 1.0. */
 export function baseStep(
   count: number,

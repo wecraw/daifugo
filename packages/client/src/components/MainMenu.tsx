@@ -16,6 +16,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslate, type I18nKey } from "../i18n/index";
 import { useSocket } from "../context/SocketContext";
 import { TerminologyToggle } from "./TerminologyToggle";
+import { readStoredPlayerName } from "../playerName";
 
 const NAME_MAX_LENGTH = 16;
 const CODE_MAX_LENGTH = 3;
@@ -32,7 +33,12 @@ export function MainMenu() {
   const t = useTranslate();
   const { createRoom, joinRoom, leaveRoom, status, storedSession, initialRoomCode } =
     useSocket();
-  const [name, setName] = useState(() => storedSession?.playerName ?? "");
+  // The seat's name if this browser still holds one, otherwise the name it
+  // played under last time (`playerName.ts`) — a returning player starts typed in.
+  const [name, setName] = useState(() => {
+    const seatName = storedSession?.playerName ?? "";
+    return seatName !== "" ? seatName : readStoredPlayerName();
+  });
   const [code, setCode] = useState(() => initialRoomCode ?? "");
   const [notice, setNotice] = useState<I18nKey | null>(null);
   const [creating, setCreating] = useState(false);

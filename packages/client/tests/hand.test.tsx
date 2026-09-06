@@ -11,7 +11,11 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseCombo, type Card, type PlayCombo, type PublicGameState } from "@daifugo/core";
 import { App } from "../src/App";
-import { AUTO_PASS_DELAY_MS, UNPLAYABLE_SCALE } from "../src/layout/handLayout";
+import {
+  AUTO_PASS_DELAY_MS,
+  SELECTION_NOTICE_MS,
+  UNPLAYABLE_SCALE,
+} from "../src/layout/handLayout";
 import { FakeSocket } from "./fakeSocket";
 import { player, publicState } from "./publicState";
 
@@ -60,6 +64,10 @@ function slotOf(id: string): HTMLElement {
   const slot = cardButton(id).parentElement;
   if (slot === null) throw new Error(`card ${id} has no slot`);
   return slot;
+}
+
+function notice(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(".hand__notice");
 }
 
 function playButton(): HTMLButtonElement {
@@ -127,6 +135,128 @@ describe("selection (§10.4)", () => {
     fireEvent.pointerEnter(cardButton("C-9"));
     expect(cardButton("C-9")).toHaveAttribute("aria-pressed", "false");
   });
+
+  it("says why it refused, in the words the Play button would have used", () => {
+    // A jack on the table and a lone 9: the refusal is "not high enough", which
+    // is exactly what a Play button that had been allowed to see the selection
+    // would have said (§10.6). Being told is what keeps the gate teaching rather
+    // than just blocking.
+    seat(
+      table(PAIR_HAND, {
+        currentTrick: [{ combo: combo([card("S-11", "S", 11)]), playedBy: "p_2" }],
+      }),
+    );
+    tap("C-9");
+    expect(notice()).toHaveTextContent("Not high enough");
+  });
+
+  it("names the lock a refused card missed (§6)", () => {
+    // The specific phrasing §10.6 asks for survives the move to the notice: the
+    // suits are named, not a generic sentence. Strong enough, wrong suit.
+    seat(
+      table([card("H-9", "H", 9), card("S-9", "S", 9)], {
+        currentTrick: [{ combo: combo([card("S-5", "S", 5)]), playedBy: "p_2" }],
+        suitLock: ["S"],
+      }),
+    );
+    tap("H-9");
+    expect(cardButton("H-9")).toHaveAttribute("aria-pressed", "false");
+    expect(notice()).toHaveTextContent("Must follow ♠");
+
+    // The card that does follow the lock goes in, and takes the notice with it.
+    tap("S-9");
+    expect(cardButton("S-9")).toHaveAttribute("aria-pressed", "true");
+    expect(notice()).toBeNull();
+  });
+
+  it("replays the notice on a second tap of the same dead card", () => {
+    seat(
+      table(PAIR_HAND, {
+        currentTrick: [{ combo: combo([card("S-11", "S", 11)]), playedBy: "p_2" }],
+      }),
+    );
+    tap("C-9");
+    const first = notice();
+    tap("C-9");
+    // A new element, not the same one sitting still: the second tap has to look
+    // like it did something.
+    expect(notice()).not.toBe(first);
+    expect(notice()).toHaveTextContent("Not high enough");
+  });
+
+  it("takes the notice down on its own", () => {
+    vi.useFakeTimers();
+    try {
+      seat(
+        table(PAIR_HAND, {
+          currentTrick: [{ combo: combo([card("S-11", "S", 11)]), playedBy: "p_2" }],
+        }),
+      );
+      tap("C-9");
+      expect(notice()).not.toBeNull();
+      act(() => void vi.advanceTimersByTime(SELECTION_NOTICE_MS));
+      expect(notice()).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stays quiet for the cards a drag crosses", () => {
+    // One notice per skipped card would be a strobe; the drag's first card
+    // already spoke for it through the tap.
+    seat(table(PAIR_HAND));
+    fireEvent.pointerDown(cardButton("S-5"));
+    fireEvent.pointerEnter(cardButton("C-9"));
+    fireEvent.pointerUp(cardButton("C-9"));
+    expect(notice()).toBeNull();
+  });
+
+  it("refuses a card no legal move contains", () => {
+    // A jack on the table: only the king beats it, so nothing else can be picked
+    // up at all — the dimming is the refusal, not a warning about one.
+    const socket = seat(
+      table(PAIR_HAND, {
+        currentTrick: [{ combo: combo([card("S-11", "S", 11)]), playedBy: "p_2" }],
+      }),
+    );
+    tap("C-9");
+    expect(cardButton("C-9")).toHaveAttribute("aria-pressed", "false");
+    expect(cardButton("C-9")).toHaveAttribute("aria-disabled", "true");
+    expect(playButton()).toHaveTextContent("Select a card");
+
+    tap("D-13");
+    expect(cardButton("D-13")).toHaveAttribute("aria-pressed", "true");
+    expect(playButton()).toBeEnabled();
+    expect(socket.sentOf("playCards")).toEqual([]);
+  });
+
+  it("refuses a card the selection has narrowed away, and lets it back after a deselect", () => {
+    seat(table(PAIR_HAND));
+    tap("S-5");
+    // Only the other 5 can join a 5 — every combo is one rank (§5.3).
+    tap("C-9");
+    expect(cardButton("C-9")).toHaveAttribute("aria-pressed", "false");
+    expect(cardButton("C-9")).toHaveAttribute("aria-disabled", "true");
+
+    // Deselection is never refused, and the row opens back up behind it.
+    tap("S-5");
+    expect(cardButton("C-9")).toHaveAttribute("aria-disabled", "false");
+    tap("C-9");
+    expect(cardButton("C-9")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("skips the cards a drag crosses that it may not take", () => {
+    // Dragging the length of the row picks up the pair and steps over the rest,
+    // rather than dying on the first card it may not have.
+    seat(table(PAIR_HAND));
+    fireEvent.pointerDown(cardButton("S-5"));
+    fireEvent.pointerEnter(cardButton("C-9"));
+    fireEvent.pointerEnter(cardButton("H-5"));
+    fireEvent.pointerUp(cardButton("H-5"));
+    expect(cardButton("C-9")).toHaveAttribute("aria-pressed", "false");
+    expect(cardButton("H-5")).toHaveAttribute("aria-pressed", "true");
+    expect(playButton()).toHaveTextContent("Play Pair of 5s");
+  });
 });
 
 describe("the weighted layout (§10.3)", () => {
@@ -172,41 +302,10 @@ describe("the action bar (§10.6)", () => {
     expect(socket.sentOf("playCards")).toEqual([[["S-5", "H-5"]]]);
   });
 
-  it("disables Play with the reason inline rather than sending it", () => {
-    const socket = seat(
-      table(PAIR_HAND, {
-        currentTrick: [{ combo: combo([card("S-11", "S", 11)]), playedBy: "p_2" }],
-      }),
-    );
-    tap("C-9");
-    expect(playButton()).toBeDisabled();
-    expect(playButton()).toHaveTextContent("Not high enough");
-    fireEvent.click(playButton());
-    expect(socket.sentOf("playCards")).toEqual([]);
-  });
-
-  it("names the locked suits on the disabled Play button (§6)", () => {
-    // §10.6 wants the reason to be specific — "Must follow Hearts", not a
-    // generic sentence — and the lock is the one blocker that has something
-    // concrete to name. Strong enough and the right count, wrong suit.
-    seat(
-      table([card("H-9", "H", 9), card("S-9", "S", 9)], {
-        currentTrick: [{ combo: combo([card("S-5", "S", 5)]), playedBy: "p_2" }],
-        suitLock: ["S"],
-      }),
-    );
-    tap("H-9");
-    expect(playButton()).toBeDisabled();
-    expect(playButton()).toHaveTextContent("Must follow ♠");
-
-    // The card that does follow the lock is playable, so the reason is gone.
-    tap("H-9");
-    tap("S-9");
-    expect(playButton()).toBeEnabled();
-    expect(playButton()).toHaveTextContent("Play 9");
-  });
-
-  it("names the count the trick top demands (§7.1)", () => {
+  it("names the count the trick top demands, for a selection short of it (§7.1)", () => {
+    // The reachable illegal selection under §10.4's gate: a *subset* of a legal
+    // move. One 5 against a pair is the right rank and the wrong count, and the
+    // button says which.
     seat(
       table(PAIR_HAND, {
         currentTrick: [
@@ -214,12 +313,10 @@ describe("the action bar (§10.6)", () => {
         ],
       }),
     );
-    tap("D-13");
+    tap("S-5");
     expect(playButton()).toBeDisabled();
     expect(playButton()).toHaveTextContent("Must play 2 card(s)");
 
-    tap("D-13");
-    tap("S-5");
     tap("H-5");
     expect(playButton()).toBeEnabled();
   });
