@@ -2,14 +2,12 @@
  * Picking exactly `count` cards out of a hand, for the two screens that ask for
  * it: the exchange (§4.3) and the pending-action modals (§7.2).
  *
- * **The default selection is what the deadline would send.** Both clocks resolve
- * an unanswered choice by taking the player's weakest `count` cards — the rich
- * side of an exchange on expiry (§4.4), and an owed 7-pass or 10-discard on the
- * turn timer (§7.6) — so that is what starts selected. A player who does nothing
- * therefore watches the cards the server is about to send, rather than a blank
- * tray followed by a transfer they never saw; the acceptance criterion of the
- * issue is exactly that the timeout shows its selection instead of looking like a
- * dropped turn.
+ * **What starts selected is the caller's choice, and the two screens differ.**
+ * The exchange pre-selects the weakest `count` cards, which is exactly what its
+ * deadline gives away on expiry (§4.4), so a rich player who does nothing watches
+ * the cards the server is about to send. The pending-action modal starts empty:
+ * its clock has the same weakest-`count` fallback (§7.6), but the choice there is
+ * mid-turn and the player is at the table, so the tray asks rather than answers.
  *
  * **The cap is enforced by swapping, not by refusing.** With `count` cards
  * already selected, tapping an unselected one drops the oldest pick instead of
@@ -29,13 +27,15 @@ export interface CardSelection {
   missing: number;
   complete: boolean;
   /**
-   * Whether the selection is still the untouched default — the same *set* the
-   * clock would submit on its own.
+   * Whether the selection is still the untouched `initial` set.
+   *
+   * Only the exchange asks: there `initial` is the same *set* the clock would
+   * submit on its own, so it is the difference between "this goes" and "the
+   * weakest go instead".
    *
    * The client never sends a selection the player did not submit, so once they
-   * have changed it the deadline still takes the weakest cards (§4.4, §7.6) and
-   * what is on screen is a draft, not a promise. This is what lets the two
-   * screens say which of the two is about to happen.
+   * have changed it the deadline still takes the weakest cards (§4.4) and what is
+   * on screen is a draft, not a promise.
    */
   isDefault: boolean;
 }
@@ -99,13 +99,15 @@ export function selectionKey(kind: string, count: number, cardIds: readonly stri
 }
 
 /**
- * What the clock is about to do with this selection, as a key and its params.
+ * What the exchange clock is about to do with this selection, as a key and its
+ * params.
  *
- * The default selection *is* the weakest `count` cards, so while it is untouched
- * "this selection is sent" is the literal truth. The moment the player changes
- * it, it stops being: nothing reaches the server until they submit, and both
- * deadlines take the weakest cards regardless (§4.4, §7.6). Saying so is the
- * difference between a hint and a lie.
+ * The exchange's default selection *is* the weakest `count` cards, so while it is
+ * untouched "this selection is sent" is the literal truth. The moment the player
+ * changes it, it stops being: nothing reaches the server until they submit, and
+ * the deadline takes the weakest cards regardless (§4.4). Saying so is the
+ * difference between a hint and a lie. The pending modal has no default to be
+ * true of and states the fallback outright.
  */
 export function timeoutNote(isDefault: boolean, count: number): [I18nKey, TranslateParams] {
   return isDefault ? ["ui.select.timeout", {}] : ["ui.select.timeoutChanged", { count }];

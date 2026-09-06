@@ -178,10 +178,12 @@ export const UI_I18N_KEYS = [
   "ui.pending.submitPass",
   "ui.pending.submitDiscard",
   "ui.pending.lastCards",
+  "ui.pending.timeout",
 
-  // Shared by both: how many more cards a selection needs, and what the clock
-  // will do — which depends on whether the selection is still the default it
-  // would send anyway (§4.4, §7.6).
+  // Shared by both: how many more cards a selection needs. What the clock will
+  // do is worded per screen — the exchange pre-selects the weakest cards and so
+  // its note depends on whether that default still stands (§4.4), while the
+  // pending modal starts empty and always names the weakest cards (§7.6).
   "ui.select.more",
   "ui.select.timeout",
   "ui.select.timeoutChanged",
