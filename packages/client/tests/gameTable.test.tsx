@@ -453,3 +453,55 @@ describe("timers (§10.10)", () => {
     expect(screen.queryAllByRole("timer")).toHaveLength(0);
   });
 });
+
+describe("your turn popup", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("does not flash on the first state a seat sees, even mid-turn", async () => {
+    await seat(table(3, { activePlayerIndex: 0 }));
+    expect(document.querySelector(".your-turn-popup")).not.toBeInTheDocument();
+  });
+
+  it("flashes when the turn becomes this seat's, then clears itself", async () => {
+    const room = table(3, { activePlayerIndex: 1 });
+    const socket = await seat(room);
+    act(() => {
+      socket.fire("roomState", { ...room, myPlayerId: "p_1", activePlayerIndex: 0 });
+    });
+    expect(document.querySelector(".your-turn-popup")).toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(1400);
+    });
+    expect(document.querySelector(".your-turn-popup")).not.toBeInTheDocument();
+  });
+
+  it("does not re-flash on further updates while the turn stays this seat's", async () => {
+    const room = table(3, { activePlayerIndex: 0 });
+    const socket = await seat(room);
+    await act(async () => {
+      vi.advanceTimersByTime(1400);
+    });
+    expect(document.querySelector(".your-turn-popup")).not.toBeInTheDocument();
+
+    act(() => {
+      socket.fire("roomState", { ...room, myPlayerId: "p_1", stateVersion: room.stateVersion + 1 });
+    });
+    expect(document.querySelector(".your-turn-popup")).not.toBeInTheDocument();
+  });
+
+  it("does not flash for another seat's turn", async () => {
+    const room = table(3, { activePlayerIndex: 0 });
+    const socket = await seat(room);
+    act(() => {
+      socket.fire("roomState", { ...room, myPlayerId: "p_1", activePlayerIndex: 1 });
+    });
+    expect(document.querySelector(".your-turn-popup")).not.toBeInTheDocument();
+  });
+});

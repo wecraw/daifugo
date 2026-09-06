@@ -48,6 +48,7 @@ import { HistoryLog } from "./HistoryLog";
 import { PlayerSeat } from "./PlayerSeat";
 import { TrickArea } from "./TrickArea";
 import { TurnTimer } from "./TurnTimer";
+import { YourTurnPopup } from "./YourTurnPopup";
 
 export function GameTable({ room }: { room: PublicGameState }) {
   const t = useTranslate();
@@ -188,6 +189,10 @@ export function GameTable({ room }: { room: PublicGameState }) {
       {/* Over the table, never in front of it: the layer takes no pointer events
           and the state under it is already the authoritative one (§10.9). */}
       <AnimationLayer room={room} animations={animations} />
+
+      {/* Fires off the turn itself, not off history, so it sits beside the
+          animation layer rather than inside its queue (§10.9). */}
+      <YourTurnPopup room={room} />
 
       {/* Owed by this seat, it covers the table until it is answered (§7.2). */}
       <PendingActionModal room={room} />

@@ -1796,12 +1796,71 @@ button.card-tray__card {
 }
 
 /*
+ * The "your turn" flash (§10.9-adjacent): centred on the trick area like the
+ * animation layer, but its own overlay since it fires off the turn changing
+ * rather than off history. Fixed 1400ms lifetime — `useYourTurnPopup.ts`'s
+ * `YOUR_TURN_POPUP_MS` owns when it unmounts; this only owns how it looks
+ * while mounted.
+ */
+.your-turn-popup {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.your-turn-popup__text {
+  padding: 0.5rem 1.4rem;
+  border: 2px solid var(--accent);
+  border-radius: 0.6rem;
+  background: rgba(10, 59, 37, 0.88);
+  color: var(--accent);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  animation: anim-your-turn 1400ms ease-out both;
+}
+
+@keyframes anim-your-turn {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  18% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  28% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  78% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+}
+
+/*
  * A player who asked for less motion gets the state changes without the travel:
  * the banners still say what happened, they simply stop moving to say it.
  */
 @media (prefers-reduced-motion: reduce) {
   .table-anim > * {
     animation-name: anim-fade;
+  }
+
+  .your-turn-popup__text {
+    animation-name: anim-fade;
+    animation-duration: 1400ms;
   }
 
   .game-table__hand--revolution .hand__fan {
