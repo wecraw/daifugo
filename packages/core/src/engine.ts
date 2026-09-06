@@ -1220,6 +1220,56 @@ export function queueLeave(state: GameState, playerId: string): Result<GameState
 }
 
 /**
+ * Someone who was queued to leave comes back (§7.7, §8.1).
+ *
+ * The disconnect grace queues a departure for a seat whose browser is merely
+ * asleep, and the token that seat holds is still valid: replaying it has to walk
+ * that departure back, or the same browser would take a *second* seat under the
+ * same name and the room would show the player twice — once as a ghost leaving
+ * at the boundary, once as an arrival.
+ *
+ * Only the queued departure is cancelled. `queueLeave` already took them out of
+ * the round in progress — hand to the graveyard, last place in the finish order
+ * (§7.7) — and none of that is undone: they sit the round out and are dealt into
+ * the next one. Returns `null` when the player has no queued departure to cancel,
+ * so a plain reconnect writes nothing here.
+ *
+ * The deadline is carried over rather than restamped: a player walking back in
+ * must not hand the table a fresh turn clock.
+ */
+export function cancelLeave(state: GameState, playerId: string): GameState | null {
+  if (!state.pendingLeaves.includes(playerId)) return null;
+  const seated =
+    playerOf(state, playerId) !== undefined ||
+    state.pendingJoins.some((player) => player.id === playerId);
+  if (!seated) return null;
+
+  const next = draft(state);
+  next.pendingLeaves = state.pendingLeaves.filter((id) => id !== playerId);
+  log(next, history("history.playerJoined", { player: playerId }));
+
+  // Their departure may have vacated the host seat (§8.2): `transferHost` empties
+  // `hostId` when nobody is left to hand it to, and the room they are walking back
+  // into would otherwise have nobody who could deal.
+  if (!holdsHost(next)) {
+    next.hostId = playerId;
+    log(next, history("history.hostTransferred", { player: playerId }));
+  }
+
+  const committed = commit(next, state.deadline);
+  return committed.ok ? committed.value : null;
+}
+
+/** Whether anyone still on the roster is the host the state names (§8.2). */
+function holdsHost(state: RosterView): boolean {
+  if (state.hostId === "") return false;
+  const leaving = new Set(state.pendingLeaves);
+  return [...state.players, ...state.pendingJoins].some(
+    (player) => player.id === state.hostId && !leaving.has(player.id),
+  );
+}
+
+/**
  * The host leaving hands the room on to the longest-seated player who is staying
  * (§8.2).
  *

@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { DECK_SIZE } from "../src/deck.js";
-import { createGameState, queueJoin, queueLeave } from "../src/engine.js";
+import { cancelLeave, createGameState, queueJoin, queueLeave } from "../src/engine.js";
 import { createExchangeState } from "../src/roles.js";
 import type { GameState, Player, Role } from "../src/types.js";
 import { activeId, handIds, table } from "./fixtures.js";
@@ -263,6 +263,94 @@ describe("a leave from someone who has not been seated yet (§7.7)", () => {
     expect(cancelled.pendingLeaves).toEqual([]);
     expect(cancelled.droppedPlayerIds).toEqual([]);
     expect(cancelled.turnOrder).toEqual(["p0", "p1", "p2"]);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Walking a queued departure back (§7.7, §8.1)                               */
+/* -------------------------------------------------------------------------- */
+
+describe("cancelling a queued leave (§7.7)", () => {
+  const state = table({
+    hands: { p0: ["S-9", "H-4"], p1: ["D-6", "D-7"], p2: ["C-8"], p3: ["C-11"] },
+    active: "p0",
+  });
+
+  function cancel(from: GameState, id: string): GameState {
+    const next = cancelLeave(from, id);
+    if (next === null) throw new Error(`expected ${id} to have a queued leave`);
+    assertInvariants(from, next);
+    return next;
+  }
+
+  it("puts the seat back on the roster for the next deal", () => {
+    const back = cancel(leave(state, "p1"), "p1");
+
+    expect(back.pendingLeaves).toEqual([]);
+    expect(back.players.map((player) => player.id)).toEqual(["p0", "p1", "p2", "p3"]);
+    // A returning player is not a new seat: nothing queues them as an arrival.
+    expect(back.pendingJoins).toEqual([]);
+  });
+
+  it("does not undo the round they were dropped from (§7.7)", () => {
+    const back = cancel(leave(state, "p1"), "p1");
+
+    // Their hand stays in the graveyard and they still finish last: only the
+    // departure was queued, and only the departure is cancelled.
+    expect(back.droppedPlayerIds).toEqual(["p1"]);
+    expect(handIds(back, "p1")).toEqual([]);
+    expect(countCards(back)).toBe(DECK_SIZE);
+    expect(activeId(act(back, { type: "PLAY_CARDS", cardIds: ["H-4"] }, "p0"))).toBe("p2");
+  });
+
+  it("carries the turn clock over instead of restamping it", () => {
+    const left = leave(state, "p1");
+    const stamped = { ...left, deadline: 12_345 };
+    expect(cancelLeave(stamped, "p1")?.deadline).toBe(12_345);
+  });
+
+  it("takes the host seat back only when the departures vacated it (§8.2)", () => {
+    // The host's own leave hands the room to the longest-seated player who stays,
+    // and coming back does not take it off them.
+    const handedOn = leave(state, "p0");
+    expect(handedOn.hostId).toBe("p1");
+    expect(cancel(handedOn, "p0").hostId).toBe("p1");
+
+    // But a room everyone queued out of has no host at all, so the first one back
+    // takes the seat, exactly as the first arrival in a vacant room does (§8.2).
+    const emptied = ["p0", "p1", "p2", "p3"].reduce(leave, state);
+    expect(emptied.hostId).toBe("");
+    expect(cancel(emptied, "p2").hostId).toBe("p2");
+  });
+
+  it("is a no-op for a player with no queued departure", () => {
+    expect(cancelLeave(state, "p1")).toBeNull();
+    expect(cancelLeave(state, "nobody")).toBeNull();
+    // A lobby leave removes the seat outright, so there is nothing to walk back.
+    expect(cancelLeave(leave(lobby(4), "p1"), "p1")).toBeNull();
+  });
+
+  it("deals the returning player back in at the next boundary", () => {
+    // The round ends, then p1's grace expires between rounds and they come back.
+    const ended = act(
+      table({
+        hands: { p0: ["S-3"], p1: ["H-4"], p2: [], p3: [] },
+        finished: ["p2", "p3"],
+        active: "p0",
+      }),
+      { type: "PLAY_CARDS", cardIds: ["S-3"] },
+      "p0",
+    );
+    expect(ended.status).toBe("ROUND_END");
+
+    const dealt = act(
+      cancel(leave(ended, "p1"), "p1"),
+      { type: "START_GAME", seed: "seed-r" },
+      "p0",
+    );
+    expect(dealt.turnOrder).toContain("p1");
+    expect(dealt.players).toHaveLength(4);
+    expect(dealt.hands.p1?.length).toBeGreaterThan(0);
   });
 });
 
