@@ -199,31 +199,27 @@ describe("Lobby", () => {
     expect(socket.sentOf("startGame")).toEqual([]);
   });
 
-  it("lets a non-host ready up and take it back", async () => {
-    const { socket, user } = await seat(publicState({ players: THREE }), "p_2");
+  it("readies a non-host up one way: the button becomes the wait, with no undo", async () => {
+    const unready = [THREE[0]!, player("p_2", "Alex", { seatIndex: 1 }), THREE[2]!];
+    const { socket, user } = await seat(publicState({ players: unready }), "p_2");
 
-    // p_2 arrives already ready in this fixture, so the toggle offers the undo.
-    await user.click(screen.getByRole("button", { name: "Not ready" }));
-    expect(socket.sentOf("setReady")).toEqual([[false]]);
-
-    act(() =>
-      socket.fire("roomState", {
-        ...publicState({
-          players: [THREE[0]!, player("p_2", "Alex", { seatIndex: 1 }), THREE[2]!],
-        }),
-        myPlayerId: "p_2",
-      }),
-    );
     await user.click(screen.getByRole("button", { name: "Ready up" }));
-    expect(socket.sentOf("setReady")).toEqual([[false], [true]]);
+    expect(socket.sentOf("setReady")).toEqual([[true]]);
+
+    act(() => socket.fire("roomState", { ...publicState({ players: THREE }), myPlayerId: "p_2" }));
+    // Nothing offers `setReady(false)`: the button keeps its place and states the
+    // wait it caused.
+    expect(screen.getByRole("button", { name: "Waiting for other players" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Ready up" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Not ready" })).not.toBeInTheDocument();
   });
 
   it("reads a mid-round joiner's readiness off pendingJoins (§7.7, §8.6)", async () => {
     // p_4 joined during the round, so they wait in `pendingJoins` and see this
-    // lobby at ROUND_END. Their ready flag lives there too — the toggle has to
-    // read it from there or it offers "ready up" to someone already ready, and
-    // they can never take it back.
-    const { socket, user } = await seat(
+    // lobby at ROUND_END rather than the curtain (§10.12) — they were not in the
+    // round that just ended. Their ready flag lives there too, and reading
+    // `players` alone would offer "ready up" to someone already ready.
+    await seat(
       publicState({
         status: "ROUND_END",
         players: THREE,
@@ -232,8 +228,21 @@ describe("Lobby", () => {
       "p_4",
     );
 
-    await user.click(screen.getByRole("button", { name: "Not ready" }));
-    expect(socket.sentOf("setReady")).toEqual([[false]]);
+    expect(screen.getByRole("button", { name: "Waiting for other players" })).toBeDisabled();
+  });
+
+  it("lets a mid-round joiner who is not ready yet ready up from the lobby", async () => {
+    const { socket, user } = await seat(
+      publicState({
+        status: "ROUND_END",
+        players: THREE,
+        pendingJoins: [player("p_4", "Kim", { seatIndex: 3 })],
+      }),
+      "p_4",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Ready up" }));
+    expect(socket.sentOf("setReady")).toEqual([[true]]);
   });
 
   it("shows the miyako-ochi line only for the round it happened in (§4.5)", async () => {
@@ -266,7 +275,8 @@ describe("Lobby", () => {
   });
 
   it("gives a non-host no start button at all", async () => {
-    await seat(publicState({ players: THREE }), "p_2");
+    const unready = [THREE[0]!, player("p_2", "Alex", { seatIndex: 1 }), THREE[2]!];
+    await seat(publicState({ players: unready }), "p_2");
 
     expect(screen.queryByRole("button", { name: "Start match" })).not.toBeInTheDocument();
     expect(screen.getByText("Waiting for the host to deal…")).toBeInTheDocument();

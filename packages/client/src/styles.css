@@ -631,8 +631,10 @@ button:disabled {
   padding-top: 0.9rem;
 }
 
-.lobby__deal,
-.lobby__ready {
+/* The between-round controls (§10.12). Shared with the round-end curtain, which
+   frames them differently and gates them identically. */
+.ready-controls__deal,
+.ready-controls__ready {
   width: 100%;
   padding: 0.65rem 0.9rem;
   border-color: var(--accent);
@@ -641,20 +643,17 @@ button:disabled {
   font-weight: 600;
 }
 
-/* Not yet ready is a state, not a disabled control: it stays outlined until the
-   click that fills it in. */
-.lobby__ready--waiting {
-  background: none;
-  color: var(--ink);
-}
-
-.lobby__deal:disabled {
+/* Readying up is one way (§10.13): the button keeps its place and becomes the wait
+   it caused, rather than offering an undo nobody meant to click. */
+.ready-controls__ready--sent,
+.ready-controls__deal:disabled {
   border-color: var(--rule);
   background: none;
   color: var(--ink);
+  cursor: default;
 }
 
-.lobby__note {
+.ready-controls__note {
   margin: 0;
   font-size: 0.75rem;
   opacity: 0.72;
@@ -1894,6 +1893,263 @@ button.card-tray__card {
     }
     100% {
       opacity: 0;
+    }
+  }
+}
+
+/*
+ * The round-end curtain (§10.12): the result over the table it was won on.
+ *
+ * It fills the frame the table just filled, and the table is still under it —
+ * dimmed and blurred rather than replaced, so the round reads as ending on the
+ * hand that ended it rather than cutting to a different screen. The places land
+ * one at a time, top-down, in the finish order; each row's `animation-delay` is
+ * inline, because the pacing is data (`animation/roundEnd.ts`) and a stylesheet
+ * cannot know how many seats finished.
+ */
+.room-shell__curtain {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.room-shell__table {
+  width: 100%;
+  height: 100%;
+  animation: curtain-table-settle 700ms ease-out forwards;
+}
+
+@keyframes curtain-table-settle {
+  from {
+    filter: none;
+  }
+  to {
+    filter: blur(2px) brightness(0.45) saturate(0.7);
+  }
+}
+
+.round-end {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  background: radial-gradient(ellipse at center, rgba(10, 59, 37, 0.55), rgba(0, 0, 0, 0.82));
+  animation: curtain-rise 520ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+
+@keyframes curtain-rise {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.round-end__panel {
+  display: flex;
+  outline: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: min(34rem, 100%);
+  max-height: 100%;
+  padding: 0.9rem 1.4rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.7rem;
+  background: linear-gradient(180deg, rgba(15, 81, 50, 0.92), rgba(10, 59, 37, 0.96));
+  box-shadow: 0 1.4rem 3rem rgba(0, 0, 0, 0.45);
+  text-align: center;
+  animation: curtain-panel-in 620ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+
+@keyframes curtain-panel-in {
+  from {
+    transform: translateY(26px) scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* The round number is the caption; the winner is the headline. */
+.round-end__eyebrow {
+  margin: 0;
+  color: rgba(245, 243, 238, 0.65);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.round-end__headline {
+  margin: 0 0 0.25rem;
+  color: var(--accent);
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.round-end__places {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+/* One row per place, in the finish order core handed over (§4.1). */
+.round-end__place {
+  display: grid;
+  grid-template-columns: 1.4rem minmax(0, 1fr) minmax(0, 8rem) 2.4rem 3.2rem;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.28rem 0.5rem;
+  border-radius: 0.35rem;
+  background: var(--sunk);
+  font-size: 0.78rem;
+  text-align: left;
+  animation: curtain-place-in 420ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+
+/* Your own row, so a glance finds it without reading the names. */
+.round-end__place--me {
+  border: 1px solid rgba(232, 182, 76, 0.55);
+  background: rgba(232, 182, 76, 0.14);
+}
+
+/* The winner's row carries the gold the headline does. */
+.round-end__place:first-child .round-end__rank,
+.round-end__place:first-child .round-end__player {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+@keyframes curtain-place-in {
+  from {
+    transform: translateX(-16px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.round-end__rank {
+  font-family: var(--display);
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.round-end__player {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.round-end__role {
+  overflow: hidden;
+  color: rgba(245, 243, 238, 0.72);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* What the round paid, then what the match stands at (§9). */
+.round-end__gained {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.round-end__total {
+  color: rgba(245, 243, 238, 0.65);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* The next round's one control, under the result it follows from (§10.12). */
+.round-end__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: center;
+  width: min(18rem, 100%);
+  margin-top: 0.5rem;
+}
+
+.round-end__actions .ready-controls__deal,
+.round-end__actions .ready-controls__ready {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--accent);
+  border-radius: 0.4rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.round-end__actions .ready-controls__ready--sent,
+.round-end__actions .ready-controls__deal:disabled {
+  cursor: default;
+}
+
+/* The rest of the lobby, for the host who wants the rules or anyone who wants
+   out: quiet, because it is not what this screen is for. */
+.round-end__lobby {
+  margin-top: 0.1rem;
+  padding: 0.2rem 0.4rem;
+  border: none;
+  background: none;
+  color: rgba(245, 243, 238, 0.6);
+  font: inherit;
+  font-size: 0.72rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.round-end__lobby:hover {
+  color: var(--ink);
+}
+
+.round-end :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/*
+ * Less motion: the result still arrives and still sits there to be read, it
+ * simply stops sliding and blurring to do it.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .room-shell__table {
+    animation: none;
+    filter: brightness(0.45);
+  }
+
+  .round-end,
+  .round-end__panel,
+  .round-end__place {
+    animation-name: curtain-fade;
+    animation-duration: 200ms;
+  }
+
+  @keyframes curtain-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
     }
   }
 }

@@ -19,11 +19,9 @@
  * still holding a full hand. The `history.miyakoOchi` line is surfaced beside the
  * table so the zero explains itself rather than looking like a scoring bug.
  *
- * **Readiness gates the deal** (§8.6). Every seat but the host readies itself with
- * `setReady`; the host's start click is their own readiness, so they get no toggle.
- * Who the deal is still waiting on comes from core's `unreadyPlayerIds` — the same
- * answer `START_GAME` checks — so the start button is disabled exactly when the
- * engine would refuse it and `PLAYERS_NOT_READY` never reaches a banner (§10.11).
+ * **Readiness gates the deal** (§8.6), and the control that answers it is
+ * `NextRoundActions` — shared with the round-end curtain (§10.12), which is where
+ * a player who just finished the round readies up instead.
  *
  * **The roster is a table with chairs.** Below `MIN_PLAYERS` the list is padded out
  * with open seats, so a table that cannot be dealt says so by looking short rather
@@ -35,11 +33,9 @@
  * and the one action this seat can take.
  */
 import {
-  MAX_PLAYERS,
   MIN_PLAYERS,
   matchStandings,
   roundResults,
-  unreadyPlayerIds,
   type Player,
   type PublicGameState,
   type Role,
@@ -49,11 +45,7 @@ import { historyLine } from "../history";
 import { useTranslate } from "../i18n/index";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { HostPanel } from "./HostPanel";
-
-/** The round a `startGame` would deal to (§7.7): queued joins and leaves land there. */
-function rosterSize(room: PublicGameState): number {
-  return room.players.length + room.pendingJoins.length - room.pendingLeaves.length;
-}
+import { NextRoundActions, rosterSize } from "./NextRoundActions";
 
 /** Where a row stands relative to the next deal, or null for a settled seat. */
 type PendingChange = "joining" | "leaving" | null;
@@ -100,23 +92,11 @@ function rosterRows(room: PublicGameState): { seat: Player; pending: PendingChan
 
 export function Lobby({ room }: { room: PublicGameState }) {
   const t = useTranslate();
-  const { playerId, send, status, leaveRoom } = useSocket();
+  const { playerId, status, leaveRoom } = useSocket();
 
-  const isHost = room.hostId === playerId;
   const betweenRounds = room.status === "ROUND_END" || room.status === "MATCH_END";
   const matchOver = room.status === "MATCH_END";
   const size = rosterSize(room);
-  const tooFew = size < MIN_PLAYERS;
-  const tooMany = size > MAX_PLAYERS;
-  // §8.6, asked of core rather than re-derived: the host is exempt and so is a
-  // disconnected seat, and only the engine should be deciding either.
-  const waitingOn = matchOver ? [] : unreadyPlayerIds(room);
-  // Off the same roster the deal takes, not just the seated one: a player who
-  // joined mid-round waits in `pendingJoins` and readies from there (§7.7, §8.6),
-  // so reading `players` alone would leave their own toggle stuck on "ready up"
-  // with no way to take it back.
-  const iAmReady =
-    [...room.players, ...room.pendingJoins].find((seat) => seat.id === playerId)?.isReady ?? false;
 
   // The demotion of the round just ended (§4.5). Read off the redacted history
   // this seat already has; `miyakoOchi` names a count, never a card, so every seat
@@ -241,40 +221,7 @@ export function Lobby({ room }: { room: PublicGameState }) {
         </ul>
 
         <div className="lobby__actions">
-          {matchOver && <p className="lobby__note">{t("ui.lobby.matchOver")}</p>}
-          {!matchOver && isHost && (
-            <button
-              type="button"
-              className="lobby__deal"
-              disabled={tooFew || tooMany || waitingOn.length > 0}
-              onClick={() => send("startGame")}
-            >
-              {t(betweenRounds ? "ui.lobby.nextRound" : "ui.lobby.start")}
-            </button>
-          )}
-          {!matchOver && !isHost && (
-            <button
-              type="button"
-              className={iAmReady ? "lobby__ready" : "lobby__ready lobby__ready--waiting"}
-              onClick={() => send("setReady", !iAmReady)}
-            >
-              {t(iAmReady ? "ui.lobby.unready" : "ui.lobby.readyUp")}
-            </button>
-          )}
-          {!matchOver && !isHost && <p className="lobby__note">{t("ui.lobby.waitingForHost")}</p>}
-          {!matchOver && isHost && !tooFew && !tooMany && waitingOn.length > 0 && (
-            <p className="lobby__note">
-              {waitingOn.length === 1
-                ? t("ui.lobby.waitingForReadyOne")
-                : t("ui.lobby.waitingForReady", { count: waitingOn.length })}
-            </p>
-          )}
-          {!matchOver && isHost && tooFew && (
-            <p className="lobby__note">{t("ui.lobby.needMorePlayers", { min: MIN_PLAYERS })}</p>
-          )}
-          {!matchOver && isHost && tooMany && (
-            <p className="lobby__note">{t("ui.lobby.tooManyPlayers", { max: MAX_PLAYERS })}</p>
-          )}
+          <NextRoundActions room={room} />
         </div>
       </section>
 

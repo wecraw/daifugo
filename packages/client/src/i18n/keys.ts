@@ -59,12 +59,12 @@ export const UI_I18N_KEYS = [
   "ui.lobby.host",
   "ui.lobby.you",
   "ui.lobby.ready",
+  "ui.lobby.waitingForOthers",
   "ui.lobby.readyUp",
   // §7.7: between rounds a join queues and a leave is pending, and §8.6 counts
   // both for the deal — so both are on the roster rather than only in the count.
   "ui.lobby.joining",
   "ui.lobby.leaving",
-  "ui.lobby.unready",
   "ui.lobby.waitingForReady",
   "ui.lobby.waitingForReadyOne",
   "ui.lobby.disconnected",
@@ -189,6 +189,18 @@ export const UI_I18N_KEYS = [
   "ui.animation.revolutionOff",
   "ui.animation.agari",
   "ui.animation.miyakoOchiSeat",
+
+  // The round-end curtain (§9): the result drawn over the table it was won on,
+  // before the lobby's standings take the screen.
+  "ui.roundEnd.title",
+  "ui.roundEnd.matchTitle",
+  "ui.roundEnd.roundLabel",
+  "ui.roundEnd.winner",
+  "ui.roundEnd.matchWinner",
+  "ui.roundEnd.gained",
+  "ui.roundEnd.total",
+  "ui.roundEnd.viewLobby",
+  "ui.roundEnd.finalStandings",
 
   "ui.error.dismiss",
 ] as const;

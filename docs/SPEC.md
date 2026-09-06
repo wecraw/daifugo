@@ -912,6 +912,33 @@ merely rejected, so `NOT_HOST` (§8.2) never arrives as a banner for something t
 client should not have sent. The start button is disabled on the same principle
 while §8.6 would refuse the deal, and everyone but the host readies beside it.
 
+### 10.12 Round-end curtain
+A round ends inside the winner's last play, so the status flips to `ROUND_END` in
+the same state that would otherwise replace the table with the lobby. The client
+holds the finished table on screen and raises the result over it: the round number,
+who took it, then each place landing in core's finish order (§4.1) with the points
+the round paid and the match total behind them (§9). At `MATCH_END` the order is
+`matchStandings` instead, matching the lobby's.
+
+**The curtain is the between-round screen for anyone who was in the round.** It
+rises on the transition alone and stays up until the next deal, carrying the one
+control §8.6 offers — ready up, or deal for the host — so a player who has been at
+the table is never sent back to the roster screen between two rounds. The rest of
+the lobby (the roster, the house rules of §10.11, the way out of §7.7) is a link
+on it. A seat with no transition to have seen — a fresh join, a mid-round joiner
+waiting in `pendingJoins`, a resume into a room already between rounds (§8.1) —
+gets the lobby, which is the screen that introduces a room.
+
+It is presentation only: the room is already at `ROUND_END` underneath, and the
+table behind the curtain is inert.
+
+### 10.13 Readiness is one way
+The ready control sends `setReady(true)` and nothing else. Once pressed it keeps
+its place and becomes the wait it caused — "Waiting for other players", disabled —
+rather than offering an undo. `setReady(false)` stays in the protocol (§8.6): the
+deal clears every seat's readiness itself, and the server may still receive one
+from an older client.
+
 ---
 
 ## 11. Copy and terminology

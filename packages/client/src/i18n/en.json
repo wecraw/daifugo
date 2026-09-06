@@ -137,10 +137,10 @@
   "ui.lobby.host": "Host",
   "ui.lobby.you": "You",
   "ui.lobby.readyUp": "Ready up",
-  "ui.lobby.unready": "Not ready",
   "ui.lobby.waitingForReady": "Waiting on {count} players to ready up",
   "ui.lobby.waitingForReadyOne": "Waiting on one player to ready up",
   "ui.lobby.ready": "Ready",
+  "ui.lobby.waitingForOthers": "Waiting for other players",
   "ui.lobby.joining": "Joining next round",
   "ui.lobby.leaving": "Leaving after this round",
   "ui.lobby.disconnected": "Disconnected",
@@ -233,6 +233,16 @@
   "ui.animation.revolutionOff": "The order is restored",
   "ui.animation.agari": "{player} is out — place {position}",
   "ui.animation.miyakoOchiSeat": "Cast out",
+
+  "ui.roundEnd.title": "Round result",
+  "ui.roundEnd.matchTitle": "Match over",
+  "ui.roundEnd.roundLabel": "Round {round}",
+  "ui.roundEnd.winner": "{player} takes the round",
+  "ui.roundEnd.matchWinner": "{player} wins the match",
+  "ui.roundEnd.gained": "+{points}",
+  "ui.roundEnd.total": "{points} pts",
+  "ui.roundEnd.viewLobby": "View lobby",
+  "ui.roundEnd.finalStandings": "See the final standings",
 
   "ui.error.dismiss": "Dismiss"
 }
