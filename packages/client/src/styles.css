@@ -38,7 +38,26 @@ body,
   container-type: size;
 }
 
+/*
+ * The device's unusable edges come out of `body`, not out of the frame.
+ *
+ * `viewport-fit=cover` (index.html) hands the page the whole screen, cutout and
+ * home indicator included, and in landscape — the only orientation this game has
+ * — the cutout eats a strip off one side, which is where the left rail and the
+ * hand fan sit. Padding `body` shrinks `#root` to the safe box, so the frame and
+ * every `cq` measurement inside it still read one clean rectangle, and the felt
+ * behind shows through the inset as the table's edge. Padding `#root` instead
+ * would not: `container-type: size` makes it the containing block for the
+ * `position: fixed` sideways frame, whose corner would then sit at the padding
+ * edge while its size came from the content box.
+ *
+ * `env()` is 0 wherever there is no cutout, so this changes nothing on desktop
+ * or on a browser with chrome of its own. It is the iOS app, always full-bleed,
+ * that has nothing else standing in for the inset.
+ */
 body {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
   background: var(--felt-dark);
   color: var(--ink);
   font-family:

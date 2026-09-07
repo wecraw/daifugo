@@ -10,6 +10,7 @@
  * the same landscape frame.
  */
 import { useEffect, useState } from "react";
+import { SIDEWAYS_STORAGE_KEY, readStored, writeStored } from "../storage";
 
 const PORTRAIT_QUERY = "(orientation: portrait)";
 
@@ -50,7 +51,7 @@ export function useLandscapeLock(): void {
   }, []);
 }
 
-export const SIDEWAYS_STORAGE_KEY = "daifugo.sideways";
+export { SIDEWAYS_STORAGE_KEY };
 
 /**
  * Sideways mode: the escape hatch for a phone whose rotation is locked.
@@ -66,24 +67,15 @@ export const SIDEWAYS_STORAGE_KEY = "daifugo.sideways";
  * turns the phone gets the real landscape layout with no setting to undo, which
  * is also the way back out of a sideways mode they did not mean to enter.
  *
- * Storage can throw (private windows, blocked site data), so both sides fail
- * quiet, exactly as `playerName.ts` does.
+ * Storage fails quiet (`storage.ts`), exactly as `playerName.ts` does: a browser
+ * that refuses it costs one tap on the next visit.
  */
 export function readStoredSideways(): boolean {
-  try {
-    return globalThis.localStorage?.getItem(SIDEWAYS_STORAGE_KEY) === "true";
-  } catch {
-    return false;
-  }
+  return readStored(SIDEWAYS_STORAGE_KEY) === "true";
 }
 
 function writeStoredSideways(sideways: boolean): void {
-  try {
-    if (sideways) globalThis.localStorage?.setItem(SIDEWAYS_STORAGE_KEY, "true");
-    else globalThis.localStorage?.removeItem(SIDEWAYS_STORAGE_KEY);
-  } catch {
-    // A browser refusing storage costs one tap on the next visit, not a crash.
-  }
+  writeStored(SIDEWAYS_STORAGE_KEY, sideways ? "true" : null);
 }
 
 /** `[opted in, opt in]`. The opt-out is rotating the device, not a control. */

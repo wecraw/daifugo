@@ -12,6 +12,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import englishCopy from "./en.json";
 import { isTerminology, type CopyBundle, type I18nKey, type Terminology } from "./keys";
+import { TERMINOLOGY_STORAGE_KEY, readStored, writeStored } from "../storage";
 
 export * from "./keys";
 
@@ -30,7 +31,7 @@ export const TERMINOLOGY_OVERRIDES = {
   "history.miyakoOchi": "{player} won from Daihinmin — {target} falls to last with {count} card(s)",
 } as const satisfies Partial<CopyBundle>;
 
-export const TERMINOLOGY_STORAGE_KEY = "daifugo.terminology";
+export { TERMINOLOGY_STORAGE_KEY };
 
 export type TranslateParams = Record<string, string | number>;
 
@@ -60,12 +61,8 @@ export function translate(
 }
 
 function readStoredTerminology(): Terminology {
-  try {
-    const stored = globalThis.localStorage?.getItem(TERMINOLOGY_STORAGE_KEY);
-    return isTerminology(stored) ? stored : "daifugo";
-  } catch {
-    return "daifugo";
-  }
+  const stored = readStored(TERMINOLOGY_STORAGE_KEY);
+  return isTerminology(stored) ? stored : "daifugo";
 }
 
 interface CopyContextValue {
@@ -88,11 +85,8 @@ export function CopyProvider({
   );
 
   useEffect(() => {
-    try {
-      globalThis.localStorage?.setItem(TERMINOLOGY_STORAGE_KEY, terminology);
-    } catch {
-      // Persistence is a convenience; the toggle still works without it.
-    }
+    // Persistence is a convenience; the toggle still works without it.
+    writeStored(TERMINOLOGY_STORAGE_KEY, terminology);
     const documentRef = globalThis.document;
     if (documentRef !== undefined) {
       documentRef.documentElement.setAttribute("lang", "en");

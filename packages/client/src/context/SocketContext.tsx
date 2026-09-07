@@ -2,11 +2,13 @@
  * The socket layer (§8, §14): one typed Socket.IO connection, the seat behind it,
  * and the latest `PublicGameState`.
  *
- * **Same origin, no configuration.** The client is served as static assets off the
- * same Cloud Run service as the server (§14), so `io()` is called with no URL and
- * connects back to the page's own origin. There is no `VITE_SERVER_URL` and no
- * per-environment build. In dev, Vite proxies `/socket.io` and `/rooms` to :4000,
- * so the same-origin code path is what runs locally too.
+ * **Same origin, no configuration — on the web.** The client is served as static
+ * assets off the same Cloud Run service as the server (§14), so `io()` is called
+ * with no URL and connects back to the page's own origin. In dev, Vite proxies
+ * `/socket.io` and `/rooms` to :4000, so the same-origin code path is what runs
+ * locally too. The one exception is the iOS build, whose pages come from
+ * `capacitor://localhost` and so must name the server outright; `serverUrl.ts`
+ * owns that, and resolves to the same origin-relative calls everywhere else.
  *
  * **Transport is WebSocket-only** (§14): long-polling across a cold-started
  * instance is strictly worse and there is no fallback case worth supporting.
@@ -49,6 +51,9 @@ import { io, type Socket } from "socket.io-client";
 import { readRoomCodeFromLocation, syncRoomCodeToUrl } from "../roomUrl";
 import { readStoredPlayerName, writeStoredPlayerName } from "../playerName";
 import { readStoredPlayerIcon, writeStoredPlayerIcon } from "../playerIcon";
+import { SESSION_STORAGE_KEY, readStored, writeStored } from "../storage";
+import { serverUrl, socketUrl } from "../serverUrl";
+import { onAppResume } from "../native";
 import type {
   ClientToServerEvents,
   GameErrorPayload,
@@ -63,7 +68,7 @@ export type RoomAction = Exclude<keyof ClientToServerEvents, "joinRoom">;
 
 export type ConnectionStatus = "idle" | "connecting" | "connected" | "reconnecting";
 
-export const SESSION_STORAGE_KEY = "daifugo.session";
+export { SESSION_STORAGE_KEY };
 
 /**
  * The seat this browser holds, persisted across reloads. `resumeToken` is the
@@ -96,8 +101,8 @@ export function isSessionFresh(session: StoredSession, now: number): boolean {
 
 export function readStoredSession(): StoredSession | null {
   try {
-    const raw = globalThis.localStorage?.getItem(SESSION_STORAGE_KEY);
-    if (raw === null || raw === undefined) return null;
+    const raw = readStored(SESSION_STORAGE_KEY);
+    if (raw === null) return null;
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return null;
     const { roomId, playerName, resumeToken, savedAt } = parsed as Record<string, unknown>;
@@ -120,12 +125,8 @@ export function readStoredSession(): StoredSession | null {
  */
 function writeStoredSession(session: StoredSession | null): StoredSession | null {
   const stamped = session === null ? null : { ...session, savedAt: Date.now() };
-  try {
-    if (stamped === null) globalThis.localStorage?.removeItem(SESSION_STORAGE_KEY);
-    else globalThis.localStorage?.setItem(SESSION_STORAGE_KEY, JSON.stringify(stamped));
-  } catch {
-    // A browser refusing storage costs a reconnect, not a crash.
-  }
+  // A browser refusing storage costs a reconnect, not a crash (`storage.ts`).
+  writeStored(SESSION_STORAGE_KEY, stamped === null ? null : JSON.stringify(stamped));
   return stamped;
 }
 
@@ -154,14 +155,18 @@ const SocketContext = createContext<SocketContextValue | null>(null);
 
 export interface SocketProviderProps {
   children: ReactNode;
-  /** Overridden in tests. Production connects to the page's own origin (§14). */
+  /** Overridden in tests. Production connects to the server's origin (§14). */
   connect?: () => DaifugoClientSocket;
   /** Overridden in tests. */
   fetchImpl?: typeof fetch;
 }
 
 function defaultConnect(): DaifugoClientSocket {
-  return io({ transports: ["websocket"], autoConnect: false });
+  const options = { transports: ["websocket"], autoConnect: false };
+  // `socketUrl()` is undefined on the web — the page's own origin, unchanged —
+  // and the deployed origin inside the iOS app, which has none of its own.
+  const url = socketUrl();
+  return url === undefined ? io(options) : io(url, options);
 }
 
 export function SocketProvider({ children, connect, fetchImpl }: SocketProviderProps) {
@@ -270,7 +275,18 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
       setStatus(pendingJoin.current === null ? "idle" : "reconnecting");
     });
 
+    // iOS suspends the WebView on background, freezing Socket.IO's reconnect
+    // backoff along with everything else, so a player coming back to the app can
+    // otherwise sit disconnected for as long as the frozen delay had left. The
+    // seat itself is unaffected — the token is replayed on the next `connect`
+    // (§8.1) — so all this needs to do is ask for that connect. No-op on the web.
+    const stopResumeWatch = onAppResume(() => {
+      if (pendingJoin.current === null || socket.connected) return;
+      socket.connect();
+    });
+
     return () => {
+      stopResumeWatch();
       socket.removeAllListeners();
       socket.disconnect();
       socketRef.current = null;
@@ -345,7 +361,7 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
   const createRoom = useCallback(
     async (playerName: string, icon?: string): Promise<string> => {
       const doFetch = fetchImpl ?? globalThis.fetch.bind(globalThis);
-      const response = await doFetch("/rooms", { method: "POST" });
+      const response = await doFetch(serverUrl("/rooms"), { method: "POST" });
       if (!response.ok) throw new Error(`POST /rooms failed: ${response.status}`);
       const body = (await response.json()) as { roomId: string };
       joinRoom(body.roomId, playerName, icon);

@@ -1,20 +1,14 @@
 import { normalizePlayerIcon } from "@daifugo/core";
+import { PLAYER_ICON_STORAGE_KEY, readStored, writeStored } from "./storage";
 
-export const PLAYER_ICON_STORAGE_KEY = "daifugo.playerIcon";
+export { PLAYER_ICON_STORAGE_KEY };
 
 export function readStoredPlayerIcon(): string | undefined {
-  try {
-    const value = globalThis.localStorage?.getItem(PLAYER_ICON_STORAGE_KEY);
-    return value == null ? undefined : normalizePlayerIcon(value);
-  } catch {
-    return undefined;
-  }
+  const value = readStored(PLAYER_ICON_STORAGE_KEY);
+  return value === null ? undefined : normalizePlayerIcon(value);
 }
 
 export function writeStoredPlayerIcon(icon: string): void {
-  try {
-    globalThis.localStorage?.setItem(PLAYER_ICON_STORAGE_KEY, normalizePlayerIcon(icon));
-  } catch {
-    // The current selection still works when storage is unavailable.
-  }
+  // The current selection still works when storage is unavailable (`storage.ts`).
+  writeStored(PLAYER_ICON_STORAGE_KEY, normalizePlayerIcon(icon));
 }

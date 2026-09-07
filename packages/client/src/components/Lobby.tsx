@@ -47,6 +47,7 @@ import {
 import { useSocket } from "../context/SocketContext";
 import { historyLine } from "../history";
 import { useTranslate } from "../i18n/index";
+import { inviteUrl } from "../serverUrl";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { HostPanel } from "./HostPanel";
 import { NextRoundActions, rosterSize } from "./NextRoundActions";
@@ -103,10 +104,13 @@ export function Lobby({ room }: { room: PublicGameState }) {
   const matchOver = room.status === "MATCH_END";
   const size = rosterSize(room);
 
-  // The room code is already in the URL (the client route joins it on load), so
-  // the current location is the whole invite — nothing to build server-side.
+  // The room code is the whole of the route (`roomUrl.ts`), so the invite is
+  // just that code hung off the web client's origin — nothing to build
+  // server-side. It is built rather than read off `location` because inside the
+  // iOS app the location is `capacitor://localhost/ABC`, which is not a link
+  // anyone else can open; `inviteUrl` answers with the deployed web URL there.
   const handleShare = async () => {
-    const url = window.location.href;
+    const url = inviteUrl(room.roomId);
     if (navigator.share) {
       try {
         await navigator.share({ url });

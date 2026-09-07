@@ -57,9 +57,11 @@ export function buildServer(options: BuildServerOptions): BuiltServer {
     options.scheduler ??
     new RealScheduler((error) => app.log.error(error, "scheduled task failed"));
 
-  // No `cors` option: the client is served off this same service (§14), so the
-  // socket connects back to its own origin and there is nothing cross-origin to
-  // allow. Dev goes through the Vite proxy, which is same-origin too.
+  // No `cors` option, even with the iOS app in the picture (§14). Socket.IO's
+  // `cors` only ever applies to the HTTP polling handshake, and this server is
+  // WebSocket-only — a WebSocket upgrade is not subject to CORS at all, so the
+  // app connects cross-origin without any allowance here. `POST /rooms` is the
+  // one call that does need one; `allowNativeOrigin` below covers it.
   const io = new Server<
     ClientToServerEvents,
     ServerToClientEvents,
@@ -83,6 +85,8 @@ export function buildServer(options: BuildServerOptions): BuiltServer {
   // is swallowed. Renaming it back would silently break every external check.
   app.get("/health", async () => ({ ok: true }));
 
+  allowNativeOrigin(app);
+
   serveClient(app, options.clientRoot === undefined ? defaultClientRoot() : options.clientRoot);
 
   // Room creation is an HTTP call, not a socket event: the code has to exist
@@ -92,6 +96,40 @@ export function buildServer(options: BuildServerOptions): BuiltServer {
   io.on("connection", (socket) => hub.register(socket));
 
   return { app, io, manager, hub, scheduler };
+}
+
+/**
+ * The origins the iOS app's WebView sends, which are not this service's own.
+ *
+ * Capacitor serves the bundle from `capacitor://localhost` on iOS; the second is
+ * what a live-reload dev build reports instead. Neither is a wildcard: an
+ * allowlist of two fixed scheme-and-host strings cannot be claimed by a web page,
+ * because no browser will let one set an `Origin` it does not have.
+ */
+const NATIVE_ORIGINS = new Set(["capacitor://localhost", "ionic://localhost"]);
+
+/**
+ * The one piece of CORS this server needs (§14).
+ *
+ * On the web there is nothing cross-origin: the client is served off this same
+ * service and every call is same-origin. The iOS app is the exception — its pages
+ * come from `capacitor://localhost`, so `POST /rooms` is cross-origin and the
+ * WebView drops the response without this header. Only that fixed pair of origins
+ * is echoed, so the web's zero-CORS posture is unchanged for every real browser.
+ *
+ * No preflight branch: the request the client actually sends is a bodiless POST
+ * with no custom headers, which is a CORS *simple* request — the browser sends it
+ * outright and only checks the response. Credentials are not involved either;
+ * identity is the resume token in the socket payload (§8.1), never a cookie.
+ */
+function allowNativeOrigin(app: FastifyInstance): void {
+  app.addHook("onRequest", async (request, reply) => {
+    const origin = request.headers.origin;
+    if (typeof origin === "string" && NATIVE_ORIGINS.has(origin)) {
+      void reply.header("Access-Control-Allow-Origin", origin);
+      void reply.header("Vary", "Origin");
+    }
+  });
 }
 
 /**
