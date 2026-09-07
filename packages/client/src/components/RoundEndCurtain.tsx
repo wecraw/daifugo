@@ -1,3 +1,4 @@
+import { PlayerIcon } from "./PlayerIcon";
 /**
  * The round-end curtain (§10.12): the result, drawn over the table it was won on.
  *
@@ -127,7 +128,10 @@ export function RoundEndCurtain({
               style={{ animationDelay: `${CURTAIN_ENTER_MS + index * CURTAIN_ROW_STAGGER_MS}ms` }}
             >
               <span className="round-end__rank">{index + 1}</span>
-              <span className="round-end__player">{nameOf(room, row.playerId)}</span>
+              <span className="round-end__player">
+                <PlayerIcon icon={room.players.find((seat) => seat.id === row.playerId)?.icon} />
+                {nameOf(room, row.playerId)}
+              </span>
               <span className="round-end__role">
                 {row.role === null ? "" : t(`role.${row.role.kind}`)}
               </span>

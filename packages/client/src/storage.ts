@@ -28,6 +28,8 @@ import { isNative } from "./native";
 export const SESSION_STORAGE_KEY = "daifugo.session";
 /** The name this browser plays under, across rooms and evenings. */
 export const PLAYER_NAME_STORAGE_KEY = "daifugo.playerName";
+/** The icon that name is shown under, chosen once and reused. */
+export const PLAYER_ICON_STORAGE_KEY = "daifugo.playerIcon";
 /** Sideways mode, for a phone whose rotation is locked (§10.1). */
 export const SIDEWAYS_STORAGE_KEY = "daifugo.sideways";
 /** Role-name terminology, client-side only (§11). */
@@ -41,6 +43,7 @@ export const TERMINOLOGY_STORAGE_KEY = "daifugo.terminology";
 export const MIRRORED_KEYS = [
   SESSION_STORAGE_KEY,
   PLAYER_NAME_STORAGE_KEY,
+  PLAYER_ICON_STORAGE_KEY,
   SIDEWAYS_STORAGE_KEY,
   TERMINOLOGY_STORAGE_KEY,
 ] as const;

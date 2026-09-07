@@ -1,3 +1,4 @@
+import { PlayerIcon } from "./PlayerIcon";
 /**
  * The lobby (§9, §10.11): the roster before the first deal, and the standings
  * between rounds.
@@ -191,7 +192,12 @@ export function Lobby({ room }: { room: PublicGameState }) {
                 {standingsRows.map((row, index) => (
                   <tr key={row.playerId}>
                     <td>{index + 1}</td>
-                    <td>{nameOf(room, row.playerId)}</td>
+                    <td>
+                      <PlayerIcon
+                        icon={room.players.find((seat) => seat.id === row.playerId)?.icon}
+                      />
+                      {nameOf(room, row.playerId)}
+                    </td>
                     <td>{row.role === null ? "" : t(`role.${row.role.kind}`)}</td>
                     <td>{row.points}</td>
                   </tr>
@@ -222,6 +228,7 @@ export function Lobby({ room }: { room: PublicGameState }) {
                 .join(" ")}
             >
               <span className="seat-row__index">{index + 1}</span>
+              <PlayerIcon icon={seat.icon} />
               <span className="lobby__name">{seat.name}</span>
               {seat.id === room.hostId && (
                 <span className="badge badge--host">{t("ui.lobby.host")}</span>

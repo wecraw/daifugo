@@ -26,6 +26,8 @@ export const UI_I18N_KEYS = [
 
   // Main menu
   "ui.menu.nameLabel",
+  "ui.menu.iconLabel",
+  "ui.menu.chooseIcon",
   "ui.menu.namePlaceholder",
   "ui.menu.createRoom",
   "ui.menu.creating",

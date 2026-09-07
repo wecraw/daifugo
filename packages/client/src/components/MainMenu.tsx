@@ -18,6 +18,9 @@ import { useSocket } from "../context/SocketContext";
 import { TerminologyToggle } from "./TerminologyToggle";
 import { readStoredPlayerName } from "../playerName";
 
+import { EmojiPicker } from "./EmojiPicker";
+import { readStoredPlayerIcon, writeStoredPlayerIcon } from "../playerIcon";
+
 const NAME_MAX_LENGTH = 16;
 const CODE_MAX_LENGTH = 3;
 
@@ -31,14 +34,14 @@ function normalizeCode(raw: string): string {
 
 export function MainMenu() {
   const { t, terminology } = useCopy();
-  const { createRoom, joinRoom, leaveRoom, status, storedSession, initialRoomCode } =
-    useSocket();
+  const { createRoom, joinRoom, leaveRoom, status, storedSession, initialRoomCode } = useSocket();
   // The seat's name if this browser still holds one, otherwise the name it
   // played under last time (`playerName.ts`) — a returning player starts typed in.
   const [name, setName] = useState(() => {
     const seatName = storedSession?.playerName ?? "";
     return seatName !== "" ? seatName : readStoredPlayerName();
   });
+  const [icon, setIcon] = useState(readStoredPlayerIcon);
   const [code, setCode] = useState(() => initialRoomCode ?? "");
   const [notice, setNotice] = useState<I18nKey | null>(null);
   const [creating, setCreating] = useState(false);
@@ -60,7 +63,7 @@ export function MainMenu() {
     if (!requireName()) return;
     setCreating(true);
     try {
-      await createRoom(trimmedName);
+      await createRoom(trimmedName, icon);
     } catch {
       setNotice("ui.menu.createFailed");
     } finally {
@@ -72,7 +75,7 @@ export function MainMenu() {
     event.preventDefault();
     setNotice(null);
     if (!requireName()) return;
-    joinRoom(code, trimmedName);
+    joinRoom(code, trimmedName, icon);
   }
 
   return (
@@ -85,20 +88,29 @@ export function MainMenu() {
           </span>
         </h1>
         <TerminologyToggle />
+
+        <div className="main-menu__profile">
+          <EmojiPicker
+            value={icon}
+            onChange={(value) => {
+              setIcon(value);
+              writeStoredPlayerIcon(value);
+            }}
+          />
+          <label className="field main-menu__name">
+            <span>{t("ui.menu.nameLabel")}</span>
+            <input
+              type="text"
+              value={name}
+              maxLength={NAME_MAX_LENGTH}
+              placeholder={t("ui.menu.namePlaceholder")}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+        </div>
       </section>
 
       <div className="main-menu__actions">
-        <label className="field main-menu__name">
-          <span>{t("ui.menu.nameLabel")}</span>
-          <input
-            type="text"
-            value={name}
-            maxLength={NAME_MAX_LENGTH}
-            placeholder={t("ui.menu.namePlaceholder")}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </label>
-
         <form className="main-menu__join" onSubmit={onJoin}>
           <label className="field main-menu__code">
             <span>{t("ui.menu.roomCodeLabel")}</span>
@@ -144,6 +156,7 @@ export function MainMenu() {
                 joinRoom(
                   storedSession.roomId,
                   trimmedName === "" ? storedSession.playerName : trimmedName,
+                  icon,
                 );
               }}
             >

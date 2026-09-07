@@ -71,6 +71,18 @@ describe("RoomManager acceptance (§12.4)", () => {
     return doc!;
   }
 
+  it("persists icons, retains them on resume, and validates new selections", async () => {
+    const roomId = await manager.createRoom();
+    const host = unwrap(await manager.join(roomId, "Will", undefined, "🦊"));
+    expect((await docOf(roomId)).state.players[0]?.icon).toBe("🦊");
+    await manager.join(roomId, "Will", host.resumeToken);
+    expect((await docOf(roomId)).state.players[0]?.icon).toBe("🦊");
+    await manager.join(roomId, "Will", host.resumeToken, "🐸");
+    expect((await docOf(roomId)).state.players[0]?.icon).toBe("🐸");
+    await manager.join(roomId, "Alex", undefined, "not an emoji");
+    expect((await docOf(roomId)).state.players[1]?.icon).toBe("🙂");
+  });
+
   /* ---------------------------------------------------------------------- */
   /* Test 25: reconnect reclaims the correct seat via resumeToken           */
   /* ---------------------------------------------------------------------- */

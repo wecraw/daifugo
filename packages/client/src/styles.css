@@ -101,7 +101,8 @@ textarea {
 .lobby__rail,
 .lobby__roster ul,
 .host-panel__dialog,
-.round-end__places {
+.round-end__places,
+.emoji-picker__panel {
   touch-action: pan-y;
 }
 
@@ -213,7 +214,8 @@ textarea {
 /*
  * The main menu (§10). Landscape is the only orientation the game has, so the
  * menu is composed across it rather than stacked down the middle: the wordmark
- * anchors the left, the one path to a table runs down the right.
+ * and the name that goes with it anchor the left, the one path to a table runs
+ * down the right.
  */
 .main-menu {
   display: grid;
@@ -227,6 +229,10 @@ textarea {
 }
 
 .main-menu__identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  /* No gap: the toggle carries its own margins, which set the rhythm here. */
   animation: menu-enter 460ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
@@ -404,13 +410,13 @@ button:disabled {
   outline-offset: 2px;
 }
 
-/* The name applies to both paths below it, so it reads as its own group,
-   not as a label glued to Create room. Sized up like a search bar — it's the
-   first thing typed and the one field every path shares. */
+/* Under the wordmark rather than above the two paths: the name is who you are,
+   not a step in joining, and it applies to both paths on the right. Sized up
+   like a search bar — it's the first thing typed and the one field every path
+   shares. Held to the actions column's width so it doesn't sprawl across the
+   wide identity column. */
 .main-menu__name {
-  padding-bottom: 1.1rem;
-  border-bottom: 1px solid var(--rule);
-  margin-bottom: 0.2rem;
+  max-width: 17rem;
 }
 
 .main-menu__name input {
@@ -1138,6 +1144,20 @@ button:disabled {
   flex: 0 0 auto;
 }
 
+/*
+ * The Daifugo's chair is gilded. The role marks are otherwise a quiet index in
+ * the corner of a chip; the top seat is the one everybody at the table is
+ * playing against, so it gets the ground and the edge as well as the crown.
+ * It sits above `--active` so a lit seat still wins its ring.
+ */
+.player-seat--crowned {
+  border-color: rgba(232, 182, 76, 0.55);
+  background:
+    radial-gradient(120% 140% at 50% 0%, rgba(232, 182, 76, 0.2), transparent 70%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.2));
+  box-shadow: inset 0 1px 0 rgba(232, 182, 76, 0.22);
+}
+
 /* The seat that is up is lit, not merely outlined: the ring on the chip and the
    warm ground under it are the same signal the countdown is already giving. */
 .player-seat--active {
@@ -1195,6 +1215,22 @@ button:disabled {
   color: var(--accent);
   font-size: 0.72rem;
   letter-spacing: -0.05em;
+}
+
+/* The crown is a drawn mark, so it is sized off the line rather than off a
+   font: tall enough to read across the felt, still inside the 56px strip. */
+.player-seat__role--crown {
+  display: inline-flex;
+  align-items: center;
+}
+
+.crown-mark {
+  width: 0.95rem;
+  height: 0.8rem;
+  fill: currentColor;
+  /* The gold has to survive being drawn at 15px over a dark chip: the glow is
+     what keeps it from reading as a smudge. */
+  filter: drop-shadow(0 0 3px rgba(232, 182, 76, 0.65));
 }
 
 .player-seat__stack {
@@ -2674,4 +2710,156 @@ button:disabled {
       opacity: 1;
     }
   }
+}
+
+/* The avatar shares the name field's baseline and felt/gold treatment. */
+.main-menu__profile {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.65rem;
+  width: 100%;
+  max-width: 21rem;
+}
+.main-menu__profile .main-menu__name {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.main-menu__profile .main-menu__name > span {
+  position: absolute;
+  z-index: 1;
+  top: 0.48rem;
+  left: 1.25rem;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.main-menu__profile .main-menu__name input {
+  height: 3.25rem;
+  padding-top: 1.2rem;
+  padding-bottom: 0.3rem;
+}
+.emoji-picker {
+  position: relative;
+  flex: 0 0 auto;
+}
+.emoji-picker__trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  padding: 0;
+  border-color: rgba(245, 243, 238, 0.35);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.06), transparent 62%), var(--sunk);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+.emoji-picker__trigger:hover,
+.emoji-picker__trigger[aria-expanded="true"] {
+  border-color: rgba(232, 182, 76, 0.8);
+  background-color: rgba(232, 182, 76, 0.08);
+}
+.emoji-picker__trigger:active {
+  transform: scale(0.97);
+}
+.emoji-picker__current {
+  font-size: 1.7rem;
+  line-height: 1;
+  filter: drop-shadow(0 0.12rem 0.1rem rgba(0, 0, 0, 0.3));
+}
+.emoji-picker__panel {
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 0.7rem);
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(6, 2.5rem);
+  width: max-content;
+  max-width: min(17rem, 82cqw);
+  max-height: 55cqh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  gap: 0.2rem;
+  padding: 0.55rem;
+  border: 1px solid rgba(245, 243, 238, 0.2);
+  border-radius: 0.9rem;
+  background: linear-gradient(145deg, #104c31, var(--felt-dark));
+  box-shadow:
+    0 1rem 2.4rem rgba(0, 0, 0, 0.42),
+    inset 0 1px rgba(255, 255, 255, 0.04);
+  scrollbar-color: rgba(245, 243, 238, 0.28) transparent;
+  scrollbar-width: thin;
+  transform-origin: bottom left;
+  animation: emoji-picker-enter 140ms ease-out both;
+}
+.emoji-picker__option {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 2.5rem;
+  padding: 0;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 0.65rem;
+  background: transparent;
+  font-size: 1.45rem;
+  line-height: 1;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms ease;
+}
+.emoji-picker__option:hover {
+  background: rgba(245, 243, 238, 0.09);
+  transform: translateY(-1px);
+}
+.emoji-picker__option[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: rgba(232, 182, 76, 0.13);
+  box-shadow: inset 0 0 0 1px rgba(232, 182, 76, 0.08);
+}
+.emoji-picker__option[aria-pressed="true"]::after {
+  position: absolute;
+  right: 0.24rem;
+  bottom: 0.24rem;
+  width: 0.22rem;
+  height: 0.22rem;
+  border-radius: 50%;
+  background: var(--accent);
+  content: "";
+}
+@keyframes emoji-picker-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.3rem) scale(0.98);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .emoji-picker__trigger,
+  .emoji-picker__option {
+    transition: none;
+  }
+
+  .emoji-picker__panel {
+    animation: none;
+  }
+}
+.player-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  margin-inline-end: 0.3em;
+  font-size: 1.15em;
+  line-height: 1;
+  vertical-align: middle;
+}
+.player-seat__line > .player-icon {
+  margin-inline-end: 0;
 }
