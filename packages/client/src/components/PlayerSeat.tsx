@@ -21,7 +21,9 @@
  *
  * The role shows as a mark rather than its name because `role.DAI_HINMIN` does
  * not fit in a 56px strip; the translated name is the chip's title, so it stays
- * reachable.
+ * reachable. The Daifugo's mark is a drawn crown and gilds the chip it sits on,
+ * because the top seat is the one everybody is playing against and a pair of
+ * diamonds does not say that from across the table.
  */
 import type { CSSProperties } from "react";
 import { roleKey, type Player, type Role } from "@daifugo/core";
@@ -62,10 +64,12 @@ export function PlayerSeat({
   turnDurationMs,
 }: PlayerSeatProps) {
   const t = useTranslate();
+  const crowned = player.role?.kind === "DAI_FUGO";
   const classes = [
     "player-seat",
     `player-seat--${edge}`,
     `player-seat--${status}`,
+    crowned ? "player-seat--crowned" : "",
     isActive ? "player-seat--active" : "",
     demoted ? "player-seat--demoted" : "",
     player.isConnected ? "" : "player-seat--offline",
@@ -115,9 +119,33 @@ export function PlayerSeat({
 function RoleMark({ role }: { role: Role }) {
   const t = useTranslate();
   const name = t(roleKey(role.kind));
+  const crowned = role.kind === "DAI_FUGO";
   return (
-    <span className="player-seat__role" title={name} aria-label={name}>
-      {ROLE_GLYPH[role.kind]}
+    <span
+      className={`player-seat__role${crowned ? " player-seat__role--crown" : ""}`}
+      title={name}
+      aria-label={name}
+    >
+      {crowned ? <CrownMark /> : ROLE_GLYPH[role.kind]}
     </span>
+  );
+}
+
+/**
+ * The Daifugo's crown.
+ *
+ * Drawn rather than typeset: the chip is 124px wide, which is not room for
+ * `role.DAI_FUGO` in either naming — "Grand Millionaire" ellipsizes to nothing
+ * there — so the one seat everybody is playing against gets a mark you can pick
+ * out at a glance instead of a longer string nobody can read. The name still
+ * rides along on the wrapper's title and accessible name, as every role mark's
+ * does.
+ */
+function CrownMark() {
+  return (
+    <svg className="crown-mark" viewBox="0 0 24 20" aria-hidden="true" focusable="false">
+      <path d="M1.6 5.2 6.4 10 12 2.4 17.6 10l4.8-4.8-1.9 10.4H3.5Z" />
+      <rect x="3.4" y="16.4" width="17.2" height="2.6" rx="1.1" />
+    </svg>
   );
 }

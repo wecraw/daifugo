@@ -49,8 +49,14 @@ export const RANK_LABEL: Readonly<Record<Rank, string>> = Object.freeze({
 
 export const JOKER_GLYPH = "★";
 
-export const ROLE_GLYPH: Readonly<Record<RoleKind, string>> = Object.freeze({
-  DAI_FUGO: "◆◆",
+/**
+ * The four marks that are typeset. `DAI_FUGO` is missing on purpose: the top
+ * seat wears a drawn crown instead (`CrownMark` in `PlayerSeat`), because the
+ * one role worth spotting across the table from a 124px chip should not read as
+ * two more diamonds than the seat beside it. The type omits it so nothing can
+ * quietly fall back to a glyph for it.
+ */
+export const ROLE_GLYPH: Readonly<Record<Exclude<RoleKind, "DAI_FUGO">, string>> = Object.freeze({
   FUGO: "◆",
   HEIMIN: "◇",
   HINMIN: "▽",

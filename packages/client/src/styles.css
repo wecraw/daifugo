@@ -1125,6 +1125,20 @@ button:disabled {
   flex: 0 0 auto;
 }
 
+/*
+ * The Daifugo's chair is gilded. The role marks are otherwise a quiet index in
+ * the corner of a chip; the top seat is the one everybody at the table is
+ * playing against, so it gets the ground and the edge as well as the crown.
+ * It sits above `--active` so a lit seat still wins its ring.
+ */
+.player-seat--crowned {
+  border-color: rgba(232, 182, 76, 0.55);
+  background:
+    radial-gradient(120% 140% at 50% 0%, rgba(232, 182, 76, 0.2), transparent 70%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.2));
+  box-shadow: inset 0 1px 0 rgba(232, 182, 76, 0.22);
+}
+
 /* The seat that is up is lit, not merely outlined: the ring on the chip and the
    warm ground under it are the same signal the countdown is already giving. */
 .player-seat--active {
@@ -1182,6 +1196,22 @@ button:disabled {
   color: var(--accent);
   font-size: 0.72rem;
   letter-spacing: -0.05em;
+}
+
+/* The crown is a drawn mark, so it is sized off the line rather than off a
+   font: tall enough to read across the felt, still inside the 56px strip. */
+.player-seat__role--crown {
+  display: inline-flex;
+  align-items: center;
+}
+
+.crown-mark {
+  width: 0.95rem;
+  height: 0.8rem;
+  fill: currentColor;
+  /* The gold has to survive being drawn at 15px over a dark chip: the glow is
+     what keeps it from reading as a smudge. */
+  filter: drop-shadow(0 0 3px rgba(232, 182, 76, 0.65));
 }
 
 .player-seat__stack {
