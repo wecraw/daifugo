@@ -9,7 +9,7 @@
 | Audience | Private game for the author and friends. Not a public product. |
 | Bots / AI | Out of scope. |
 | Player count | 3 to 8. |
-| Orientation | Landscape only. Portrait shows a rotate prompt. |
+| Orientation | Landscape only. Portrait shows a rotate prompt, which offers sideways mode for a phone whose rotation is locked. |
 | House rules | All ten ON by default. Toggles hidden behind an advanced panel every seat can read and only the host can change. |
 | Match structure | Endless by default. Host may set a round limit or first-to-N. |
 | Accessibility | Out of scope for v1. |
@@ -835,6 +835,16 @@ finish order.
 Opponent seats distribute along the left, top, and right edges. The action bar is a
 row above the hand rather than a column beside it, so the hand claims the full
 frame width. Lock orientation to landscape.
+
+The lock is best effort: `screen.orientation.lock` is unimplemented on iOS and only
+succeeds in fullscreen elsewhere, so portrait falls back to a rotate prompt. A phone
+with its rotation locked never reports landscape at all, and for it the prompt offers
+**sideways mode** — the app rotated 90 degrees inside a portrait viewport, remembered
+in `localStorage`. Everything below is measured against that rotated frame rather
+than the device: the frame is a CSS size container, so the layout asks for its axes
+with `cq` units and container queries and reads the same 844 x 390 either way. The
+opt-out is rotating the device, which the flag defers to — it applies in portrait
+only.
 
 ### 10.2 Hand geometry
 Card 64 x 90. Hand region width `W ≈ 844`, the full frame.

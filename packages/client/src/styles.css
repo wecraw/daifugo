@@ -1,7 +1,8 @@
 /*
  * Shell styling only. The 844x390 landscape table of §10.1 arrives with the table
  * components; what is here is the frame they will sit in — a fixed viewport that
- * never scrolls, and the portrait blocker.
+ * never scrolls, the portrait blocker, and the sideways frame the blocker offers
+ * a rotation-locked phone.
  */
 :root {
   --felt: #0f5132;
@@ -57,6 +58,40 @@ textarea {
   user-select: text;
 }
 
+/*
+ * The frame everything else is measured against (§0, §10.1).
+ *
+ * It is a size container in both orientations, so the layout below can ask for
+ * the frame's own axes with `cq` units and container queries and get the right
+ * answer whether the frame is the viewport or the viewport turned on its side.
+ * Sizing it in `dvh`/`dvw` rather than `vh`/`vw` keeps the sideways frame clear
+ * of the mobile browser's collapsing toolbars.
+ *
+ * The containment also makes the frame the containing block for `position: fixed`
+ * descendants, which is what keeps the host panel's backdrop inside the rotation
+ * rather than lying across the device unrotated.
+ */
+.viewport {
+  container-type: size;
+  width: 100%;
+  height: 100%;
+}
+
+/* Sideways mode: rotate the app for a phone that will not rotate itself. The
+   translate runs before the rotation and lands the frame back over the viewport,
+   whose axes it has swapped. */
+.viewport--sideways {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vh;
+  height: 100vw;
+  width: 100dvh;
+  height: 100dvw;
+  transform: rotate(90deg) translateY(-100%);
+  transform-origin: top left;
+}
+
 .app {
   display: flex;
   flex-direction: column;
@@ -98,6 +133,25 @@ textarea {
   }
 }
 
+/* The escape hatch, quiet under the prompt: rotating is still the better answer,
+   and this is only for the phone that cannot take it. */
+.rotate-prompt__sideways {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.9rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.8rem;
+  opacity: 0.7;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.rotate-prompt__sideways:hover {
+  opacity: 0.9;
+}
+
 /*
  * The main menu (§10). Landscape is the only orientation the game has, so the
  * menu is composed across it rather than stacked down the middle: the wordmark
@@ -107,11 +161,11 @@ textarea {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 17rem);
   align-items: center;
-  gap: clamp(1.5rem, 6vw, 4.5rem);
+  gap: clamp(1.5rem, 6cqw, 4.5rem);
   width: min(46rem, 100%);
   height: 100%;
   margin: 0 auto;
-  padding: clamp(0.75rem, 4vh, 2rem) clamp(1.25rem, 5vw, 2.5rem);
+  padding: clamp(0.75rem, 4cqh, 2rem) clamp(1.25rem, 5cqw, 2.5rem);
 }
 
 .main-menu__identity {
@@ -143,7 +197,7 @@ textarea {
 .main-menu__title {
   margin: 0;
   font-family: var(--display);
-  font-size: clamp(2.1rem, 8.5vh, 3.25rem);
+  font-size: clamp(2.1rem, 8.5cqh, 3.25rem);
   font-weight: 500;
   line-height: 0.94;
   letter-spacing: -0.005em;
@@ -347,8 +401,8 @@ button:disabled {
   font-size: 0.8rem;
 }
 
-/* Portrait is blocked by the orientation gate; this is only for a narrow desktop. */
-@media (max-width: 40rem) {
+/* A narrow desktop window — or, in sideways mode, a narrow frame. */
+@container (max-width: 40rem) {
   .main-menu {
     grid-template-columns: minmax(0, 1fr);
     align-content: center;
@@ -379,11 +433,11 @@ button:disabled {
   display: grid;
   grid-template-columns: minmax(0, 19rem) minmax(0, 1fr);
   align-items: center;
-  gap: clamp(1.5rem, 5vw, 3.5rem);
+  gap: clamp(1.5rem, 5cqw, 3.5rem);
   width: min(52rem, 100%);
   height: 100%;
   margin: 0 auto;
-  padding: clamp(0.85rem, 4vh, 1.5rem) clamp(1.25rem, 5vw, 2.5rem) 2.4rem;
+  padding: clamp(0.85rem, 4cqh, 1.5rem) clamp(1.25rem, 5cqw, 2.5rem) 2.4rem;
   font-size: 0.8rem;
 }
 
@@ -416,7 +470,7 @@ button:disabled {
 .lobby__code-value {
   color: var(--accent);
   font-family: var(--display);
-  font-size: clamp(2rem, 8vh, 3rem);
+  font-size: clamp(2rem, 8cqh, 3rem);
   letter-spacing: 0.14em;
   line-height: 1.05;
 }
@@ -465,7 +519,7 @@ button:disabled {
 .lobby__exit {
   position: absolute;
   bottom: 0.7rem;
-  left: clamp(1.25rem, 5vw, 2.5rem);
+  left: clamp(1.25rem, 5cqw, 2.5rem);
   display: flex;
   align-items: baseline;
   gap: 0.75rem;
@@ -694,8 +748,8 @@ button:disabled {
   outline-offset: 2px;
 }
 
-/* Portrait is blocked by the orientation gate; this is only for a narrow desktop. */
-@media (max-width: 44rem) {
+/* A narrow desktop window — or, in sideways mode, a narrow frame. */
+@container (max-width: 44rem) {
   .lobby {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);

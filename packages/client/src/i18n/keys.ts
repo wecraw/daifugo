@@ -18,9 +18,11 @@ export const UI_I18N_KEYS = [
   // Shell
   "ui.app.title",
 
-  // Orientation gate (§0: landscape only, portrait shows a rotate prompt)
+  // Orientation gate (§0: landscape only, portrait shows a rotate prompt, and a
+  // rotation-locked phone can turn the app sideways instead)
   "ui.orientation.rotateTitle",
   "ui.orientation.rotateBody",
+  "ui.orientation.playSideways",
 
   // Main menu
   "ui.menu.nameLabel",

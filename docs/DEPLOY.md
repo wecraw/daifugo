@@ -151,7 +151,7 @@ the OAuth handshake. Until it exists this command fails with a bare
 The acceptance bar for the pipeline, in two commands.
 
 ```bash
-export URL="$(gcloud run services describe "$SERVICE" --region "$REGION" --format 'value(status.url)')"
+export URL="$(gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT_ID" --format 'value(status.url)')"
 ```
 
 ```bash
@@ -169,7 +169,7 @@ Then confirm the flags that must not drift are still set — after a _second_
 deploy, which is what proves the update patch does not drop them:
 
 ```bash
-gcloud run services describe "$SERVICE" --region "$REGION" --format yaml | grep -E 'execution-environment|cpu-throttling|maxScale|minScale'
+gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT_ID" --format yaml | grep -E 'execution-environment|cpu-throttling|maxScale|minScale'
 ```
 
 The annotations are kebab-case (`run.googleapis.com/execution-environment`), so
@@ -193,7 +193,7 @@ not pass `--service-account`, so this line surviving is the evidence that
 `services update` really is a patch:
 
 ```bash
-gcloud run services describe "$SERVICE" --region "$REGION" --format 'value(spec.template.spec.serviceAccountName)'
+gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT_ID" --format 'value(spec.template.spec.serviceAccountName)'
 ```
 
 ## Rolling back
@@ -202,11 +202,11 @@ Cloud Run keeps every revision, so a rollback is a traffic shift with no rebuild
 (§13.2):
 
 ```bash
-gcloud run revisions list --service "$SERVICE" --region "$REGION" --sort-by '~createTime'
+gcloud run revisions list --service "$SERVICE" --region "$REGION" --project "$PROJECT_ID" --sort-by '~createTime'
 ```
 
 ```bash
-gcloud run services update-traffic "$SERVICE" --region "$REGION" --to-revisions "$GOOD_REVISION=100"
+gcloud run services update-traffic "$SERVICE" --region "$REGION" --project "$PROJECT_ID" --to-revisions "$GOOD_REVISION=100"
 ```
 
 The process restarts, so in-flight rooms survive on their Firestore state and

@@ -11,8 +11,11 @@
  *   covers it. The strip is what takes the tap (§10.2), the last card's strip is
  *   its full width because nothing overlaps it, and the 6px of vertical slop is
  *   on the button rather than the card so it does not show up as a gap. The box
- *   itself takes no pointer events at all, so raising a selected card above its
- *   neighbour cannot put its overflow over the neighbour's strip.
+ *   itself takes no pointer events at all, so a selected card's lift and growth
+ *   cannot put its overflow over the neighbour's strip. Selection does not
+ *   raise the slot's `z-index` either: the fan stacks left to right whatever is
+ *   selected, so a selected card rises out of the fan rather than over the top
+ *   of the card to its right (§10.4).
  * * **Nothing here plays a card.** Tap selects and tap again deselects; the Play
  *   button is the only way a card reaches the table (§10.4).
  * * **A dimmed card refuses the tap, and says why.** The controller will not add a
@@ -82,7 +85,7 @@ export function Hand({ hand }: { hand: HandController }) {
               style={{
                 left: `${slot.hitLeft}px`,
                 width: `${slot.hitWidth}px`,
-                zIndex: selected ? slot.zIndex + hand.cards.length : slot.zIndex,
+                zIndex: slot.zIndex,
               }}
             >
               <button

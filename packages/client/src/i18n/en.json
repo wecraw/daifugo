@@ -108,6 +108,7 @@
 
   "ui.orientation.rotateTitle": "Rotate your device",
   "ui.orientation.rotateBody": "Grand Millionaire is played in landscape.",
+  "ui.orientation.playSideways": "Rotation locked? Play sideways",
 
   "ui.menu.nameLabel": "Your name",
   "ui.menu.namePlaceholder": "Name",
