@@ -58,7 +58,6 @@ body,
 body {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
-  background: var(--felt-dark);
   color: var(--ink);
   font-family:
     system-ui,
@@ -154,7 +153,16 @@ textarea {
 /*
  * The felt.
  *
- * Two things put a visible edge across it, and the fix for each is here.
+ * It is painted on `html`, not on the app frame, because it has to be one
+ * unbroken sheet across the whole screen. `body` is inset by the safe-area
+ * padding above, so anything painted at or inside the frame stops at the
+ * cutout inset and whatever shows through the band beside it is a second
+ * colour with a hard edge between them — visible on iOS as a rectangle cut
+ * out of the table. A background on `html` propagates to the canvas and covers
+ * the device edge to edge, insets included, so there is only ever one felt.
+ *
+ * Two more things used to put a visible edge across it, and the fix for each is
+ * here.
  *
  * The gradient used to be sized `farthest-corner`, which means it *finishes*
  * inside the frame: it reaches its outer colour on the ellipse through the
@@ -170,37 +178,37 @@ textarea {
  * The other is quantisation. Greens this close together — #0f5132 to #0a3b25 is
  * five steps of red — give each 8-bit step a wide stripe of a landscape phone to
  * itself, and the step between two stripes is an edge you can trace with a
- * finger. More stops cannot help; the interpolation is not what is coarse. So
- * `::before` dithers it: a tile of fine monochrome noise in `soft-light` at
- * about a step and a half of amplitude, which scatters each boundary into
- * something the eye integrates back to smooth — the trick a print screen plays.
- * `color-interpolation-filters: sRGB` is load-bearing, because the SVG default
- * of linearRGB centres the noise well above mid-grey and `soft-light` then
- * lightens the whole table rather than leaving it where it was.
+ * finger. More stops cannot help; the interpolation is not what is coarse. So a
+ * second background layer dithers it: a tile of fine monochrome noise blended
+ * `soft-light` at about a step and a half of amplitude, which scatters each
+ * boundary into something the eye integrates back to smooth — the trick a print
+ * screen plays. The amplitude is the tile's own alpha (0.09 in its
+ * `feColorMatrix`) rather than an `opacity` on a separate element, so the noise
+ * rides in the same layer stack as the gradient and covers exactly what it
+ * covers. `color-interpolation-filters: sRGB` is load-bearing, because the SVG
+ * default of linearRGB centres the noise well above mid-grey and `soft-light`
+ * then lightens the whole table rather than leaving it where it was.
  *
- * The tile is inline, so it costs no request; `isolation` keeps the blend
- * against the felt rather than whatever the frame sits on; and `z-index: -1`
- * keeps it under the table without touching the flex layout above it.
+ * The tile is inline, so it costs no request.
  */
+html {
+  background-color: var(--felt-dark);
+  background-image:
+    url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 0.09'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse 120% 135% at 50% 50%, var(--felt), #062a1b);
+  background-repeat: repeat, no-repeat;
+  background-position: center, center;
+  background-size:
+    140px 140px,
+    cover;
+  background-blend-mode: soft-light, normal;
+}
+
 .app {
   position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
-  isolation: isolate;
-  background: radial-gradient(ellipse 120% 135% at 50% 50%, var(--felt), #062a1b);
-}
-
-.app::before {
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  opacity: 0.09;
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 140px 140px;
-  mix-blend-mode: soft-light;
-  pointer-events: none;
-  content: "";
 }
 
 /* Portrait blocker (§0). */
