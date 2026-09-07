@@ -33,6 +33,11 @@ body,
   overscroll-behavior: none;
 }
 
+/* The page box the sideways frame measures itself against (see `.viewport--sideways`). */
+#root {
+  container-type: size;
+}
+
 body {
   background: var(--felt-dark);
   color: var(--ink);
@@ -96,6 +101,13 @@ textarea {
  */
 .viewport {
   container-type: size;
+  /* The frame clips, and it has to say so: `container-type: size` contains layout,
+     size and style but never paint, and the sideways frame is `position: fixed`, so
+     it escapes the `overflow: hidden` on `html`/`body` that clips the upright one.
+     Without this, a scene that overspills its band — the hand fan on a frame
+     narrower than the reference 844, say — paints outside the device and gives the
+     page something to scroll along the player's top and bottom edges. */
+  overflow: hidden;
   width: 100%;
   height: 100%;
 }
@@ -107,10 +119,14 @@ textarea {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vh;
-  height: 100vw;
-  width: 100dvh;
-  height: 100dvw;
+  /* Swapped from `#root`'s own box rather than from `dvh`/`dvw`: the frame has to
+     match the page it covers exactly, and a mobile browser's dynamic units track
+     collapsing toolbars on their own schedule. `cq` units resolve against the
+     nearest ancestor size container, which is `#root` — an element is never its
+     own container, so these read the page while everything inside the frame reads
+     the frame. */
+  width: 100cqh;
+  height: 100cqw;
   transform: rotate(90deg) translateY(-100%);
   transform-origin: top left;
 }
