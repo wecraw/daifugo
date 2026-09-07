@@ -242,13 +242,19 @@ textarea {
   letter-spacing: -0.005em;
 }
 
-.main-menu__rule {
-  width: 2.75rem;
-  height: 2px;
-  margin: 0.9rem 0 1.1rem;
-  border: 0;
-  background: var(--accent);
+.main-menu__title-text {
+  display: inline-block;
+  animation: title-swap 420ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
+
+@keyframes title-swap {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(0.18em);
+  }
+}
+
 
 .field {
   display: flex;
@@ -282,40 +288,84 @@ button:disabled {
   cursor: default;
 }
 
-/* Role names (§11): a two-position segmented control, not a pair of buttons. */
-.terminology-toggle {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.4rem;
-}
+/* Role names (§11). The accent rule under the wordmark is the control: it
+   slides to the far side of the inactive naming, which fades in as a small
+   label. `--terminology-shift` is that label's measured width
+   (`TerminologyToggle.tsx`); the gap either side of the bar is `--terminology-gap`. */
+.terminology-switch {
+  --terminology-gap: 0.6rem;
 
-.terminology-toggle__label {
-  font-size: 0.75rem;
-  opacity: 0.6;
-}
-
-.terminology-toggle__options {
+  position: relative;
   display: inline-flex;
-  padding: 2px;
-  border: 1px solid var(--rule);
-  border-radius: 0.5rem;
-  background: var(--sunk);
-}
-
-.terminology-toggle__option {
-  padding: 0.3rem 0.7rem;
+  align-items: center;
+  padding: 0;
   border: 0;
-  border-radius: 0.375rem;
+  border-radius: 0;
+  margin: 0.9rem 0 1.1rem;
   background: none;
-  font-size: 0.8rem;
-  opacity: 0.65;
+  gap: var(--terminology-gap);
+  -webkit-tap-highlight-color: transparent;
 }
 
-.terminology-toggle__option[aria-pressed="true"] {
-  background: rgba(232, 182, 76, 0.16);
+.terminology-switch__bar {
+  width: 2.75rem;
+  height: 2px;
+  background: var(--accent);
+  transition: transform 480ms cubic-bezier(0.65, 0, 0.15, 1);
+}
+
+.terminology-switch[data-terminology="grandMillionaire"] .terminology-switch__bar {
+  transform: translateX(calc(var(--terminology-shift, 0px) + var(--terminology-gap)));
+}
+
+.terminology-switch__label {
+  font-size: 0.75rem;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  opacity: 0;
+  transition:
+    opacity 320ms ease,
+    transform 480ms cubic-bezier(0.65, 0, 0.15, 1),
+    color 320ms ease;
+}
+
+/* Out of flow so the bar's slide is the only thing that moves the layout. */
+.terminology-switch__label--left {
+  position: absolute;
+  left: 0;
+  transform: translateX(0.5rem);
+}
+
+.terminology-switch__label--right {
+  transform: translateX(-0.5rem);
+}
+
+.terminology-switch[data-terminology="daifugo"] .terminology-switch__label--right,
+.terminology-switch[data-terminology="grandMillionaire"] .terminology-switch__label--left {
+  opacity: 0.55;
+  transform: translateX(0);
+}
+
+.terminology-switch:hover .terminology-switch__label,
+.terminology-switch:focus-visible .terminology-switch__label {
   color: var(--accent);
-  opacity: 1;
+}
+
+.terminology-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 6px;
+  border-radius: 0.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-menu__title-text {
+    animation: none;
+  }
+
+  .terminology-switch__bar,
+  .terminology-switch__label {
+    transition-duration: 1ms;
+  }
 }
 
 .main-menu .field {

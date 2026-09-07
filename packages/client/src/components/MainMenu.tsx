@@ -13,7 +13,7 @@
  * Every string here resolves through a key; nothing is written inline.
  */
 import { useState, type FormEvent } from "react";
-import { useTranslate, type I18nKey } from "../i18n/index";
+import { useCopy, type I18nKey } from "../i18n/index";
 import { useSocket } from "../context/SocketContext";
 import { TerminologyToggle } from "./TerminologyToggle";
 import { readStoredPlayerName } from "../playerName";
@@ -30,7 +30,7 @@ function normalizeCode(raw: string): string {
 }
 
 export function MainMenu() {
-  const t = useTranslate();
+  const { t, terminology } = useCopy();
   const { createRoom, joinRoom, leaveRoom, status, storedSession, initialRoomCode } =
     useSocket();
   // The seat's name if this browser still holds one, otherwise the name it
@@ -78,8 +78,12 @@ export function MainMenu() {
   return (
     <div className="main-menu">
       <section className="main-menu__identity">
-        <h1 className="main-menu__title">{t("ui.app.title")}</h1>
-        <hr className="main-menu__rule" />
+        <h1 className="main-menu__title">
+          {/* Keyed so a terminology switch re-runs the swap animation. */}
+          <span key={terminology} className="main-menu__title-text">
+            {t("ui.app.title")}
+          </span>
+        </h1>
         <TerminologyToggle />
       </section>
 

@@ -1,36 +1,59 @@
 /**
  * Switches role names only. The interface remains English in either position.
+ *
+ * The control *is* the accent rule under the wordmark: the bar slides to the
+ * far side and the inactive naming fades in as a small label beside it, so the
+ * title and the rule read as one object rather than a title plus a settings row.
+ *
+ * The slide distance is the rendered width of the left label, which only the
+ * browser knows, so it is measured and handed to CSS as `--terminology-shift`.
  */
-import { TERMINOLOGIES, useCopy, type Terminology } from "../i18n/index";
+import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useCopy } from "../i18n/index";
 
 const OPTION_KEY = {
   grandMillionaire: "ui.terminology.grandMillionaire",
   daifugo: "ui.terminology.daifugo",
 } as const;
 
-const LABEL_ID = "terminology-toggle-label";
-
 export function TerminologyToggle() {
   const { terminology, setTerminology, t } = useCopy();
+  const leftRef = useRef<HTMLSpanElement>(null);
+  const [leftWidth, setLeftWidth] = useState(0);
+
+  // The label is hidden but never unmounted, so its width is measurable in
+  // either position. Webfonts land after first paint, hence the second read.
+  useLayoutEffect(() => {
+    function measure(): void {
+      const width = leftRef.current?.getBoundingClientRect().width;
+      if (width) setLeftWidth(width);
+    }
+    measure();
+    void document.fonts?.ready.then(measure);
+  }, []);
+
+  const other = terminology === "daifugo" ? "grandMillionaire" : "daifugo";
 
   return (
-    <div className="terminology-toggle">
-      <span className="terminology-toggle__label" id={LABEL_ID}>
-        {t("ui.terminology.label")}
+    <button
+      type="button"
+      className="terminology-switch"
+      data-terminology={terminology}
+      style={{ "--terminology-shift": `${leftWidth}px` } as CSSProperties}
+      aria-label={t(OPTION_KEY[other])}
+      onClick={() => setTerminology(other)}
+    >
+      <span
+        ref={leftRef}
+        className="terminology-switch__label terminology-switch__label--left"
+        aria-hidden
+      >
+        {t(OPTION_KEY.daifugo)}
       </span>
-      <div className="terminology-toggle__options" role="group" aria-labelledby={LABEL_ID}>
-        {TERMINOLOGIES.map((option: Terminology) => (
-          <button
-            key={option}
-            type="button"
-            className="terminology-toggle__option"
-            aria-pressed={option === terminology}
-            onClick={() => setTerminology(option)}
-          >
-            {t(OPTION_KEY[option])}
-          </button>
-        ))}
-      </div>
-    </div>
+      <span className="terminology-switch__bar" aria-hidden />
+      <span className="terminology-switch__label terminology-switch__label--right" aria-hidden>
+        {t(OPTION_KEY.grandMillionaire)}
+      </span>
+    </button>
   );
 }

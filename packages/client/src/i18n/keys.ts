@@ -40,7 +40,6 @@ export const UI_I18N_KEYS = [
   "ui.menu.createFailed",
 
   // Role-name terminology (§11): client-side only, persisted to localStorage
-  "ui.terminology.label",
   "ui.terminology.grandMillionaire",
   "ui.terminology.daifugo",
 
