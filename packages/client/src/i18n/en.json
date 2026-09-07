@@ -252,5 +252,27 @@
   "ui.roundEnd.viewLobby": "View lobby",
   "ui.roundEnd.finalStandings": "See the final standings",
 
+  "ui.reaction.open": "Say something",
+  "ui.reaction.getBent": "Get bent",
+  "ui.reaction.skillIssue": "Skill issue",
+  "ui.reaction.cope": "Cope",
+  "ui.reaction.ez": "EZ 😎",
+  "ui.reaction.niceTry": "Nice try",
+  "ui.reaction.cryAboutIt": "Cry about it",
+  "ui.reaction.thatsCrazy": "That's crazy",
+  "ui.reaction.yikes": "Yikes",
+  "ui.reaction.anyDayNow": "Any day now ⏳",
+  "ui.reaction.luckNotSkill": "That was luck",
+  "ui.reaction.mistake": "You'll regret that",
+  "ui.reaction.cooked": "You're cooked 🍳",
+  "ui.reaction.respect": "Respect 🫡",
+  "ui.reaction.gg": "gg",
+  "ui.reaction.oops": "Oops 😬",
+  "ui.reaction.clap": "👏👏👏",
+  "ui.reaction.laugh": "😂",
+  "ui.reaction.eyes": "👀",
+  "ui.reaction.skull": "💀",
+  "ui.reaction.shrug": "🤷",
+
   "ui.error.dismiss": "Dismiss"
 }

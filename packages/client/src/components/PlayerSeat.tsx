@@ -31,7 +31,9 @@ import { roleKey, type Player, type Role } from "@daifugo/core";
 import { ROLE_GLYPH } from "../glyphs";
 import { useTranslate } from "../i18n/index";
 import { seatStackStep, type SeatEdge, type SeatStatus } from "../layout/tableLayout";
+import { ReactionBubble } from "./ReactionBubble";
 import { TurnTimer } from "./TurnTimer";
+import type { ActiveReaction } from "../hooks/useReactions";
 
 export interface PlayerSeatProps {
   player: Player;
@@ -47,6 +49,8 @@ export interface PlayerSeatProps {
   /** The largest hand this table deals; the pip fan is sized off it, not off
    *  `cardCount`, so the fan's length stays the count (see `seatStackStep`). */
   stackCapacity: number;
+  /** What this seat just said, while it is still on screen (`useReactions`). */
+  reaction?: ActiveReaction;
   /** `state.deadline`; only the active seat rings against it (§10.10). */
   deadline: number | null;
   turnDurationMs: number;
@@ -61,6 +65,7 @@ export function PlayerSeat({
   isActive,
   demoted = false,
   stackCapacity,
+  reaction,
   deadline,
   turnDurationMs,
 }: PlayerSeatProps) {
@@ -78,6 +83,7 @@ export function PlayerSeat({
 
   return (
     <div className={classes.join(" ")} data-player-id={player.id} data-seat-edge={edge}>
+      {reaction !== undefined && <ReactionBubble reaction={reaction} placement="seat" />}
       <div className="player-seat__line">
         {player.role !== null && <RoleMark role={player.role} />}
         <PlayerIcon icon={player.icon} />
