@@ -43,10 +43,41 @@ if (value === "") {
 if (!/^https?:\/\//.test(value)) {
   fail(`VITE_SERVER_URL must be an absolute http(s) origin; got "${value}".`);
 }
-if (value.startsWith("http://") && !/^http:\/\/(localhost|127\.0\.0\.1)(:|$)/.test(value)) {
-  // iOS App Transport Security blocks cleartext to anything but the loopback
-  // exception a dev build gets; a non-local http:// origin fails on the device.
-  fail(`VITE_SERVER_URL must be https:// unless it is localhost; got "${value}".`);
+if (value.startsWith("http://") && !isLocalNetwork(value)) {
+  // App Transport Security blocks cleartext to the public internet outright, so
+  // an `http://` origin that is not on the local network cannot work on a device
+  // however the app is configured — that is a typo worth catching here.
+  fail(`VITE_SERVER_URL must be https:// unless it is on the local network; got "${value}".`);
+}
+
+/**
+ * Whether an origin names something on the local network, which is where the
+ * live-reload workflow in docs/IOS.md points the app.
+ *
+ * Loopback is not sufficient on its own: on a physical phone `localhost` is the
+ * phone, not the Mac serving the build, so the addresses that workflow actually
+ * uses are the Mac's LAN address or its `.local` name. Cleartext to those is
+ * reachable — the doc has you set Capacitor's `cleartext: true`, and ATS treats
+ * local networking separately from the public internet — so they belong on this
+ * side of the check rather than being rejected before the build starts.
+ */
+function isLocalNetwork(origin) {
+  const host = origin
+    .slice("http://".length)
+    .split(/[:/?#]/)[0]
+    .toLowerCase();
+  if (host === "localhost" || host.endsWith(".localhost") || host === "[::1]") return true;
+  if (host.endsWith(".local")) return true; // mDNS, e.g. someones-mac.local
+  const octets = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+  if (octets === null) return false;
+  const [a, b] = octets.slice(1, 3).map(Number);
+  return (
+    a === 127 || // loopback
+    a === 10 || // RFC1918
+    (a === 172 && b >= 16 && b <= 31) || // RFC1918
+    (a === 192 && b === 168) || // RFC1918
+    (a === 169 && b === 254) // link-local
+  );
 }
 
 console.log(`check-native-env: building against ${value}`);

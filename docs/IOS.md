@@ -111,6 +111,11 @@ run `npm run dev`, and `npm run ios:build`. `cleartext: true` is what gets past
 App Transport Security for the LAN address. Take both back out before building
 anything you intend to install for more than an afternoon.
 
+Use the Mac's LAN address or its `.local` name, not `localhost`: on a physical
+phone `localhost` is the phone. The env check accepts loopback, the private
+ranges and `.local`, and rejects only cleartext to the public internet, which ATS
+would block whatever the app config says.
+
 ## What the native build changes in the client
 
 Everything below is a no-op on the web, which keeps exactly the behaviour it had.
