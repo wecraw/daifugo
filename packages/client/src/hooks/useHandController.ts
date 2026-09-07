@@ -362,10 +362,15 @@ export function useHandController(room: PublicGameState): HandController {
   }, [pending, selected, send]);
 
   const passReason = passBlocker(room);
+  // Passing abandons the selection, so it has to drop it the way a play does:
+  // the turn key is the hand plus the trick context, and a pass changes neither,
+  // so cards picked and then passed on would still be lifted next turn.
   const pass = useCallback(() => {
     if (passReason !== null) return;
     send("pass");
-  }, [passReason, send]);
+    setSelection([]);
+    setOptionIndex(0);
+  }, [passReason, send, setSelection]);
 
   /* ---------------------------------------------------------------------- */
   /* Auto-pass (§10.7)                                                      */
