@@ -1,0 +1,40 @@
+PODS:
+  - Capacitor (7.6.9):
+    - CapacitorCordova
+  - CapacitorApp (7.1.2):
+    - Capacitor
+  - CapacitorCordova (7.6.9)
+  - CapacitorKeyboard (7.0.6):
+    - Capacitor
+  - CapacitorPreferences (7.0.4):
+    - Capacitor
+
+DEPENDENCIES:
+  - "Capacitor (from `../../../../node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../../../node_modules/@capacitor/app`)"
+  - "CapacitorCordova (from `../../../../node_modules/@capacitor/ios`)"
+  - "CapacitorKeyboard (from `../../../../node_modules/@capacitor/keyboard`)"
+  - "CapacitorPreferences (from `../../../../node_modules/@capacitor/preferences`)"
+
+EXTERNAL SOURCES:
+  Capacitor:
+    :path: "../../../../node_modules/@capacitor/ios"
+  CapacitorApp:
+    :path: "../../../../node_modules/@capacitor/app"
+  CapacitorCordova:
+    :path: "../../../../node_modules/@capacitor/ios"
+  CapacitorKeyboard:
+    :path: "../../../../node_modules/@capacitor/keyboard"
+  CapacitorPreferences:
+    :path: "../../../../node_modules/@capacitor/preferences"
+
+SPEC CHECKSUMS:
+  Capacitor: 46067d1c8df89760dbed78780d436327d588c726
+  CapacitorApp: f01a913211780e0718dae9750442c3e23f96e106
+  CapacitorCordova: 2080fc0d6bfbc9dcc0e6d88e77fa624190d343ca
+  CapacitorKeyboard: a2e0869edd229490ce36aed2549c0d6b95e27ee8
+  CapacitorPreferences: 69d9991307507aeab8ef8019c10b9babfda0e9ca
+
+PODFILE CHECKSUM: 67bc1e38583950adb9244e682efd5c321b625bb2
+
+COCOAPODS: 1.17.0
