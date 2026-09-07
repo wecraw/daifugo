@@ -54,6 +54,7 @@ import { readStoredPlayerIcon, writeStoredPlayerIcon } from "../playerIcon";
 import { SESSION_STORAGE_KEY, readStored, writeStored } from "../storage";
 import { serverUrl, socketUrl } from "../serverUrl";
 import { onAppResume } from "../native";
+import { SERVER_TO_CLIENT_EVENTS } from "@daifugo/core";
 import type {
   ClientToServerEvents,
   GameErrorPayload,
@@ -149,6 +150,20 @@ export interface SocketContextValue {
   clearError: () => void;
   /** Typed passthrough for every other client-to-server event; false when dropped offline. */
   send: <E extends RoomAction>(event: E, ...args: Parameters<ClientToServerEvents[E]>) => boolean;
+  /**
+   * Listen to a server event that is not the room state — today, `reaction`
+   * (`core/reactions.ts`), which is relayed rather than stored and so has no
+   * `PublicGameState` field to read it back out of. Returns the unsubscribe.
+   *
+   * Registration is against a registry this provider owns, not the socket, so a
+   * child effect — which runs before this provider's own mount effect — cannot
+   * subscribe into a socket that does not exist yet, and a reconnect does not
+   * lose the listener.
+   */
+  subscribe: <E extends keyof ServerToClientEvents>(
+    event: E,
+    handler: ServerToClientEvents[E],
+  ) => () => void;
 }
 
 const SocketContext = createContext<SocketContextValue | null>(null);
@@ -193,10 +208,21 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
   // an error to show.
   const seated = useRef(false);
   const connectRef = useRef(connect ?? defaultConnect);
+  // Extra listeners per server event, owned here rather than on the socket: see
+  // `subscribe` on the context value.
+  const extraListeners = useRef(new Map<string, Set<(...args: never[]) => void>>());
 
   useEffect(() => {
     const socket = connectRef.current();
     socketRef.current = socket;
+
+    // One forwarder per event, registered once, fanning out to whatever is in
+    // the registry at the time it fires.
+    for (const event of SERVER_TO_CLIENT_EVENTS) {
+      socket.on(event, ((...args: never[]) => {
+        for (const handler of extraListeners.current.get(event) ?? []) handler(...args);
+      }) as never);
+    }
 
     socket.on("connect", () => {
       const join = pendingJoin.current;
@@ -400,6 +426,16 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
 
   const clearError = useCallback(() => setError(null), []);
 
+  const subscribe = useCallback<SocketContextValue["subscribe"]>((event, handler) => {
+    const existing = extraListeners.current.get(event) ?? new Set<(...args: never[]) => void>();
+    const listener = handler as (...args: never[]) => void;
+    existing.add(listener);
+    extraListeners.current.set(event, existing);
+    return () => {
+      existing.delete(listener);
+    };
+  }, []);
+
   const value = useMemo<SocketContextValue>(
     () => ({
       status,
@@ -414,6 +450,7 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
       leaveRoom,
       clearError,
       send,
+      subscribe,
     }),
     [
       status,
@@ -428,6 +465,7 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
       leaveRoom,
       clearError,
       send,
+      subscribe,
     ],
   );
 

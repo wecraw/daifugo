@@ -10,6 +10,7 @@
  * runs per recipient before the broadcast (§8.4, §8.5).
  */
 import type { ErrorCode } from "./i18n-keys.js";
+import type { ReactionId } from "./reactions.js";
 import type { HouseRulesConfig, JokerBinding, PublicGameState, Role } from "./types.js";
 
 /** The `gameError` payload. Emitted to the sender only (§8.4 step 3). */
@@ -44,10 +45,21 @@ export interface JoinedPayload {
   resumeToken: string;
 }
 
+/**
+ * One quick reaction, relayed to the whole room. Not state: it carries no
+ * `stateVersion` and is never stored, so a client that misses it has missed
+ * nothing but a joke (`reactions.ts`).
+ */
+export interface ReactionPayload {
+  playerId: string;
+  reaction: ReactionId;
+}
+
 export interface ServerToClientEvents {
   joined: (payload: JoinedPayload) => void;
   roomState: (state: PublicGameState) => void;
   gameError: (error: GameErrorPayload) => void;
+  reaction: (payload: ReactionPayload) => void;
 }
 
 export interface ClientToServerEvents {
@@ -62,6 +74,12 @@ export interface ClientToServerEvents {
   submit7Pass: (cardIds: string[]) => void;
   submit10Discard: (cardIds: string[]) => void;
   exchangeCards: (cardIds: string[]) => void;
+  /**
+   * Chat quick-react. The only client event that touches no game state: the
+   * server validates the id, rate-limits it, and relays it (§8.4 is about
+   * actions; this is not one).
+   */
+  sendReaction: (reaction: ReactionId) => void;
 }
 
 export type ServerToClientEvent = keyof ServerToClientEvents;
@@ -72,6 +90,7 @@ export const SERVER_TO_CLIENT_EVENTS = [
   "joined",
   "roomState",
   "gameError",
+  "reaction",
 ] as const satisfies readonly ServerToClientEvent[];
 
 export const CLIENT_TO_SERVER_EVENTS = [
@@ -85,6 +104,7 @@ export const CLIENT_TO_SERVER_EVENTS = [
   "submit7Pass",
   "submit10Discard",
   "exchangeCards",
+  "sendReaction",
 ] as const satisfies readonly ClientToServerEvent[];
 
 /** No server-to-server events; rooms live in one process per §14. */
@@ -99,4 +119,11 @@ export interface SocketData {
   roomId: string | null;
   playerId: string | null;
   resumeToken: string | null;
+  /**
+   * When this socket last had a reaction relayed, epoch ms, or `null` for never.
+   * The cooldown of `REACTION_COOLDOWN_MS` is per socket rather than per seat:
+   * the seat is what the room sees, but the socket is what does the spamming,
+   * and a second tab reacting twice as fast is not a problem worth a registry.
+   */
+  lastReactionAt: number | null;
 }

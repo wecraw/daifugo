@@ -211,6 +211,32 @@ export const UI_I18N_KEYS = [
   "ui.roundEnd.viewLobby",
   "ui.roundEnd.finalStandings",
 
+  // The quick-react menu (`reactions.ts`). Core owns the ids so the server can
+  // reject anything else; the phrases are presentation and live here, one key
+  // per id — `reactionKey` builds the name and this list is what makes that
+  // typecheck. Some are emoji alone, which is language enough for the table.
+  "ui.reaction.open",
+  "ui.reaction.getBent",
+  "ui.reaction.skillIssue",
+  "ui.reaction.cope",
+  "ui.reaction.ez",
+  "ui.reaction.niceTry",
+  "ui.reaction.cryAboutIt",
+  "ui.reaction.thatsCrazy",
+  "ui.reaction.yikes",
+  "ui.reaction.anyDayNow",
+  "ui.reaction.luckNotSkill",
+  "ui.reaction.mistake",
+  "ui.reaction.cooked",
+  "ui.reaction.respect",
+  "ui.reaction.gg",
+  "ui.reaction.oops",
+  "ui.reaction.clap",
+  "ui.reaction.laugh",
+  "ui.reaction.eyes",
+  "ui.reaction.skull",
+  "ui.reaction.shrug",
+
   "ui.error.dismiss",
 ] as const;
 

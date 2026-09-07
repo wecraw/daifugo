@@ -12,7 +12,7 @@
  * carries its own `resumeToken` and the seat behind it is resolved from Firestore,
  * so a reconnect after a redeploy still lands on the right seat.
  */
-import { getPublicState, type ErrorCode } from "@daifugo/core";
+import { REACTION_COOLDOWN_MS, getPublicState, isReactionId, type ErrorCode } from "@daifugo/core";
 import type { ClientToServerEvents, ServerToClientEvents, SocketData } from "@daifugo/core";
 import type { Server, Socket } from "socket.io";
 import type { RoomDoc } from "./repository.js";
@@ -68,6 +68,7 @@ export class RoomHub {
     socket.data.roomId = null;
     socket.data.playerId = null;
     socket.data.resumeToken = null;
+    socket.data.lastReactionAt = null;
 
     socket.on("joinRoom", (roomId, playerName, resumeToken, icon) => {
       void this.onJoin(socket, roomId, playerName, resumeToken, icon);
@@ -115,10 +116,41 @@ export class RoomHub {
       );
     });
 
+    socket.on("sendReaction", (reaction) => {
+      this.onReaction(socket, reaction);
+    });
+
     socket.on("disconnect", () => {
       const { roomId, playerId } = socket.data;
       if (roomId !== null && playerId !== null) void this.onDisconnect(socket, roomId, playerId);
     });
+  }
+
+  /**
+   * Relay a quick reaction to the room (`reactions.ts`).
+   *
+   * The one client event that is not a game action: nothing is read, written, or
+   * versioned, so it runs outside `guarded` and never reaches the manager. It is
+   * also the one event that answers a bad request with silence rather than a
+   * `gameError` — an unknown id or a tap inside the cooldown is a client bug or
+   * an impatient thumb, and neither is a reason the sender needs an error banner
+   * for. Every distinct illegal *play* still gets its own `ErrorCode` (§8.0);
+   * this is not a play.
+   */
+  private onReaction(socket: DaifugoSocket, reaction: unknown): void {
+    const { roomId, playerId } = socket.data;
+    if (roomId === null || playerId === null) return;
+    if (!isReactionId(reaction)) return;
+
+    const now = Date.now();
+    const last = socket.data.lastReactionAt;
+    if (last !== null && now - last < REACTION_COOLDOWN_MS) return;
+    socket.data.lastReactionAt = now;
+
+    // To the whole room including the sender, so everyone's table shows the same
+    // bubble at the same moment and the sender sees what landed, not what they
+    // hoped would.
+    this.io.in(roomId).emit("reaction", { playerId, reaction });
   }
 
   /**
@@ -160,7 +192,13 @@ export class RoomHub {
     }
 
     const { playerId, resumeToken: token } = result.value;
-    socket.data = { roomId, playerId, resumeToken: token };
+    socket.data = {
+      roomId,
+      playerId,
+      resumeToken: token,
+      // A rejoin does not refund the cooldown.
+      lastReactionAt: socket.data.lastReactionAt,
+    };
     await socket.join(roomId);
 
     // §8.1: `joined` reaches this socket alone, before its first `roomState`, so

@@ -1008,7 +1008,9 @@ button:disabled {
 
 .game-table__top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto auto;
+  /* The quick-react trigger heads the strip; the seats, the log, the clock and
+     the leave button keep the widths they had. */
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.2fr) auto auto;
   align-items: center;
   flex: 0 0 var(--top-strip-height);
   gap: 0.4rem;
@@ -1110,6 +1112,8 @@ button:disabled {
 
 /* Seat chips. */
 .player-seat {
+  /* The reaction bubble is laid over the chip (`.reaction-bubble--seat`). */
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -2862,4 +2866,139 @@ button:disabled {
 }
 .player-seat__line > .player-icon {
   margin-inline-end: 0;
+}
+
+/*
+ * The quick-react menu (§10.1's top strip) and the bubbles it puts on the table.
+ *
+ * The trigger is a 2rem button at the head of the strip, which is all the 56px
+ * band has to give; the panel drops out of it over the felt, where there is
+ * room for three phrases at a readable size. A tap target that small is fine for
+ * a control nobody is racing to hit — the turn clock is elsewhere.
+ */
+.reaction-menu {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+.reaction-menu__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-color: rgba(245, 243, 238, 0.28);
+  border-radius: 0.45rem;
+  background: var(--sunk);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    opacity 160ms ease;
+}
+.reaction-menu__trigger:hover:not(:disabled),
+.reaction-menu__trigger[aria-expanded="true"] {
+  border-color: rgba(232, 182, 76, 0.8);
+  background-color: rgba(232, 182, 76, 0.1);
+}
+/* Spent, not broken: the server drops anything sent inside the cooldown, so the
+   button says so rather than swallowing the tap. */
+.reaction-menu__trigger:disabled {
+  opacity: 0.45;
+}
+.reaction-mark {
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: var(--accent);
+}
+.reaction-menu__panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: max-content;
+  max-width: 11rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(245, 243, 238, 0.2);
+  border-radius: 0.6rem;
+  background: linear-gradient(145deg, #104c31, var(--felt-dark));
+  box-shadow: 0 0.8rem 1.8rem rgba(0, 0, 0, 0.45);
+  transform-origin: top left;
+  animation: reaction-menu-enter 120ms ease-out both;
+}
+.reaction-menu__option {
+  padding: 0.3rem 0.55rem;
+  border: 1px solid rgba(245, 243, 238, 0.18);
+  border-radius: 0.45rem;
+  background: rgba(0, 0, 0, 0.24);
+  font-size: 0.78rem;
+  line-height: 1.1;
+  text-align: left;
+  white-space: nowrap;
+}
+.reaction-menu__option:hover {
+  border-color: rgba(232, 182, 76, 0.75);
+  background: rgba(232, 182, 76, 0.12);
+}
+@keyframes reaction-menu-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem) scale(0.98);
+  }
+}
+
+/*
+ * What a seat just said. On a chip it is laid over the chip rather than floated
+ * above it: the chips clip their own overflow so they never grow past the band
+ * they sit in, and covering a card count for three seconds is a smaller price
+ * than a bubble sliced in half.
+ */
+.reaction-bubble {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid rgba(232, 182, 76, 0.75);
+  border-radius: 0.55rem;
+  background: linear-gradient(180deg, #123e2a, #09261a);
+  box-shadow: 0 0.4rem 0.9rem rgba(0, 0, 0, 0.45);
+  color: var(--accent);
+  font-size: 0.72rem;
+  line-height: 1.15;
+  text-align: center;
+  animation: reaction-bubble-enter 160ms ease-out both;
+}
+.reaction-bubble--seat {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  overflow: hidden;
+}
+.reaction-bubble--trigger {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  width: max-content;
+  max-width: 9rem;
+}
+@keyframes reaction-bubble-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reaction-menu__panel,
+  .reaction-bubble {
+    animation: none;
+  }
+
+  .reaction-menu__trigger {
+    transition: none;
+  }
 }

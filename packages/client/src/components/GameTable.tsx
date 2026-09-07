@@ -31,6 +31,7 @@ import { useTableAnimations } from "../animation/useTableAnimations";
 import { useSocket } from "../context/SocketContext";
 import { owesPendingAction } from "../hand/pendingAction";
 import { useHandController } from "../hooks/useHandController";
+import { useReactions } from "../hooks/useReactions";
 import { useTranslate } from "../i18n/index";
 import { FAN_FLOOR_INSET, liftOverhang } from "../layout/handLayout";
 import {
@@ -49,6 +50,7 @@ import { ExchangeScreen } from "./ExchangeScreen";
 import { Hand } from "./Hand";
 import { HistoryLog } from "./HistoryLog";
 import { PlayerSeat } from "./PlayerSeat";
+import { ReactionMenu } from "./ReactionMenu";
 import { TrickArea } from "./TrickArea";
 import { TurnTimer } from "./TurnTimer";
 import { YourTurnPopup } from "./YourTurnPopup";
@@ -64,6 +66,10 @@ export function GameTable({ room }: { room: PublicGameState }) {
   const revolving = animations.some((animation) => animation.kind === "revolution");
   // §4.5: while the sweep runs, the demoted chip carries the reason it emptied.
   const demotedId = miyakoOchiTarget(animations);
+
+  // Relayed rather than stored (`core/reactions.ts`): the bubbles ride beside
+  // the table state, never inside it.
+  const reactions = useReactions();
 
   const seating = seatingOf(room);
   const opponents = opponentIds(room);
@@ -110,6 +116,7 @@ export function GameTable({ room }: { room: PublicGameState }) {
             isActive={inTurn && id === activeId}
             demoted={id === demotedId}
             stackCapacity={stackCapacity}
+            reaction={reactions[id]}
             deadline={room.deadline}
             turnDurationMs={TURN_DURATION_MS}
           />
@@ -136,6 +143,12 @@ export function GameTable({ room }: { room: PublicGameState }) {
       }
     >
       <div className="game-table__top" inert={blocked}>
+        {/* The quick-react menu heads the strip: reachable with the left thumb
+            in landscape, and clear of the seats, the log and the clock. It is
+            outside the `inert` seats group only in spirit — an owed pending
+            action freezes the whole strip, this included, because that moment
+            belongs to the hand row (§7.2). */}
+        <ReactionMenu own={reactions[room.myPlayerId]} />
         <div
           className="game-table__seats game-table__seats--top"
           aria-label={t("ui.table.opponents")}

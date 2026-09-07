@@ -19,7 +19,12 @@ import type { PublicGameState } from "../src/types.js";
 
 describe("socket contracts (§8)", () => {
   it("enumerates the server-to-client events", () => {
-    expect([...SERVER_TO_CLIENT_EVENTS].sort()).toEqual(["gameError", "joined", "roomState"]);
+    expect([...SERVER_TO_CLIENT_EVENTS].sort()).toEqual([
+      "gameError",
+      "joined",
+      "reaction",
+      "roomState",
+    ]);
   });
 
   it("enumerates the client-to-server events", () => {
@@ -28,6 +33,7 @@ describe("socket contracts (§8)", () => {
       "joinRoom",
       "pass",
       "playCards",
+      "sendReaction",
       "setReady",
       "setRoundLimit",
       "startGame",

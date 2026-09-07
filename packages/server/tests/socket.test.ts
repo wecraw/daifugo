@@ -255,6 +255,47 @@ describe("Socket.IO contract (§8, §12.4)", () => {
     expect(await seatConnected(roomId, host.joined.playerId)).toBe(false);
   });
 
+  it("relays a quick reaction to the whole room, sender included", async () => {
+    const roomId = await createRoom();
+    const first = await join(roomId, "Will");
+    const second = await join(roomId, "Alex");
+
+    const heard = [once(first.socket, "reaction"), once(second.socket, "reaction")];
+    second.socket.emit("sendReaction", "getBent");
+    for (const [payload] of await Promise.all(heard)) {
+      expect(payload).toEqual({ playerId: second.joined.playerId, reaction: "getBent" });
+    }
+
+    // Nothing was stored: a reaction is relayed and forgotten, so the room's
+    // version is exactly where it was.
+    const doc = await server.manager.get(roomId);
+    expect(doc?.state.stateVersion).toBe(second.state.stateVersion);
+  });
+
+  it("drops an unknown reaction and one sent inside the cooldown, silently", async () => {
+    const roomId = await createRoom();
+    const first = await join(roomId, "Will");
+    const second = await join(roomId, "Alex");
+
+    const seen: unknown[] = [];
+    first.socket.on("reaction", (payload) => seen.push(payload));
+    const errors: unknown[] = [];
+    second.socket.on("gameError", (payload) => errors.push(payload));
+
+    // An id that is not in the pool never leaves the server.
+    second.socket.emit("sendReaction", "'; DROP TABLE" as never);
+    // The first of these lands; the second is inside `REACTION_COOLDOWN_MS`.
+    second.socket.emit("sendReaction", "skull");
+    second.socket.emit("sendReaction", "skull");
+
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(seen).toEqual([{ playerId: second.joined.playerId, reaction: "skull" }]);
+    // A dropped reaction is not an error the sender needs to see (§8.0 is about
+    // plays; this is not one).
+    expect(errors).toEqual([]);
+  });
+
   it("answers the health probe", async () => {
     const response = await server.app.inject({ method: "GET", url: "/health" });
     expect(response.json()).toEqual({ ok: true });
