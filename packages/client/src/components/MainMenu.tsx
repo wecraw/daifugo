@@ -12,9 +12,10 @@
  *
  * Every string here resolves through a key; nothing is written inline.
  */
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { useCopy, type I18nKey } from "../i18n/index";
 import { useSocket } from "../context/SocketContext";
+import { useKeyboardInset } from "../hooks/useKeyboardInset";
 import { TerminologyToggle } from "./TerminologyToggle";
 import { readStoredPlayerName } from "../playerName";
 
@@ -23,6 +24,8 @@ import { readStoredPlayerIcon, writeStoredPlayerIcon } from "../playerIcon";
 
 const NAME_MAX_LENGTH = 16;
 const CODE_MAX_LENGTH = 3;
+/** Matches the exit half of `name-spotlight` in `styles.css`. */
+const SPOTLIGHT_EXIT_MS = 180;
 
 /** The server's join codes are 3 uppercase letters. */
 function normalizeCode(raw: string): string {
@@ -45,6 +48,17 @@ export function MainMenu() {
   const [code, setCode] = useState(() => initialRoomCode ?? "");
   const [notice, setNotice] = useState<I18nKey | null>(null);
   const [creating, setCreating] = useState(false);
+  // The focused name field is lifted clear of the keyboard (see below). "closing"
+  // is the beat that lets it slide back rather than snap.
+  const [spotlight, setSpotlight] = useState<"idle" | "open" | "closing">("idle");
+  const nameRef = useRef<HTMLInputElement>(null);
+  const keyboardInset = useKeyboardInset();
+
+  useEffect(() => {
+    if (spotlight !== "closing") return;
+    const timer = setTimeout(() => setSpotlight("idle"), SPOTLIGHT_EXIT_MS);
+    return () => clearTimeout(timer);
+  }, [spotlight]);
 
   const busy = creating || status === "connecting";
   const trimmedName = name.trim();
@@ -79,7 +93,23 @@ export function MainMenu() {
   }
 
   return (
-    <div className="main-menu">
+    <div className="main-menu" data-spotlight={spotlight === "idle" ? undefined : spotlight}>
+      {/*
+       * The scrim behind the lifted name field. Decorative — the field it dims
+       * to is focused, so a screen reader is already there — and a tap on it is
+       * the way out, which is what a player reaches for before the keyboard's
+       * own dismiss key.
+       */}
+      {spotlight !== "idle" && (
+        <div
+          className="input-spotlight"
+          aria-hidden="true"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            nameRef.current?.blur();
+          }}
+        />
+      )}
       <section className="main-menu__identity">
         <h1 className="main-menu__title">
           {/* Keyed so a terminology switch re-runs the swap animation. */}
@@ -97,14 +127,27 @@ export function MainMenu() {
               writeStoredPlayerIcon(value);
             }}
           />
-          <label className="field main-menu__name">
+          <label
+            className="field main-menu__name"
+            style={{ "--keyboard-inset": `${keyboardInset}px` } as CSSProperties}
+          >
             <span>{t("ui.menu.nameLabel")}</span>
             <input
+              ref={nameRef}
               type="text"
               value={name}
               maxLength={NAME_MAX_LENGTH}
+              enterKeyHint="done"
+              autoCorrect="off"
               placeholder={t("ui.menu.namePlaceholder")}
               onChange={(event) => setName(event.target.value)}
+              onFocus={() => setSpotlight("open")}
+              onBlur={() => setSpotlight((current) => (current === "open" ? "closing" : current))}
+              onKeyDown={(event) => {
+                // Enter is "done" on the phone keyboard: it closes the field
+                // rather than submitting anything, since the name is not a form.
+                if (event.key === "Enter") event.currentTarget.blur();
+              }}
             />
           </label>
         </div>

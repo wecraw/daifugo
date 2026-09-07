@@ -34,8 +34,10 @@ const config: CapacitorConfig = {
     Keyboard: {
       // `none`, not `native`: resizing the web view when the keyboard opens for
       // the name or room-code field would re-lay-out the whole fixed table
-      // underneath it and then snap it back. The fields sit high enough in the
-      // landscape layout to stay visible above the keyboard as they are.
+      // underneath it and then snap it back. The cost is that the page has to
+      // get itself out of the keyboard's way, since nothing else will — the
+      // menu lifts the focused name field into what is left of the screen
+      // (`useKeyboardInset.ts`, `.input-spotlight` in `styles.css`).
       resize: KeyboardResize.None,
     },
   },

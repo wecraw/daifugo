@@ -151,11 +151,56 @@ textarea {
   transform-origin: top left;
 }
 
+/*
+ * The felt.
+ *
+ * Two things put a visible edge across it, and the fix for each is here.
+ *
+ * The gradient used to be sized `farthest-corner`, which means it *finishes*
+ * inside the frame: it reaches its outer colour on the ellipse through the
+ * corners and is flat felt-dark everywhere past it, and the arc where the last
+ * band meets that flat is a hard edge running across the screen. Sizing the
+ * ellipse past the frame instead — 120% of its width and 135% of its height, as
+ * radii — puts the end of the gradient off the phone entirely, so nothing inside
+ * the frame is clamped and there is no boundary to see. `#062a1b` is the outer
+ * stop that colour travelling that much further still lands on `--felt-dark` at
+ * the corner, so the felt itself is unchanged: same centre, same corners, same
+ * edges, minus the arc.
+ *
+ * The other is quantisation. Greens this close together — #0f5132 to #0a3b25 is
+ * five steps of red — give each 8-bit step a wide stripe of a landscape phone to
+ * itself, and the step between two stripes is an edge you can trace with a
+ * finger. More stops cannot help; the interpolation is not what is coarse. So
+ * `::before` dithers it: a tile of fine monochrome noise in `soft-light` at
+ * about a step and a half of amplitude, which scatters each boundary into
+ * something the eye integrates back to smooth — the trick a print screen plays.
+ * `color-interpolation-filters: sRGB` is load-bearing, because the SVG default
+ * of linearRGB centres the noise well above mid-grey and `soft-light` then
+ * lightens the whole table rather than leaving it where it was.
+ *
+ * The tile is inline, so it costs no request; `isolation` keeps the blend
+ * against the felt rather than whatever the frame sits on; and `z-index: -1`
+ * keeps it under the table without touching the flex layout above it.
+ */
 .app {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: radial-gradient(ellipse at center, var(--felt), var(--felt-dark));
+  isolation: isolate;
+  background: radial-gradient(ellipse 120% 135% at 50% 50%, var(--felt), #062a1b);
+}
+
+.app::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  opacity: 0.09;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 140px 140px;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+  content: "";
 }
 
 /* Portrait blocker (§0). */
@@ -2852,6 +2897,99 @@ button:disabled {
     animation: none;
   }
 }
+/*
+ * The focused name field on a phone (§10).
+ *
+ * The iOS shell draws the keyboard *over* the web view rather than resizing it
+ * (`capacitor.config.ts`), and in landscape the keyboard takes most of the
+ * screen with it: the name pill ends up underneath, sliced in half, with nothing
+ * to scroll it into view because the frame never scrolls (§0). So while it is
+ * focused the field leaves the layout and lifts into the middle of whatever
+ * strip the keyboard has left — `--keyboard-inset` is that keyboard's height,
+ * measured in `useKeyboardInset.ts` and 0 wherever there is no keyboard — over a
+ * scrim that dims the rest of the menu and doubles as the way out.
+ *
+ * `position: fixed` here resolves against the frame, not the device: `.viewport`
+ * is a size container and therefore the containing block, so sideways mode
+ * carries the lift into its rotation along with everything else.
+ *
+ * Only where the keyboard is a real one taking real screen: a desktop pointer
+ * has nothing covering the field, and dimming the menu at it would be theatre.
+ */
+.input-spotlight {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .input-spotlight {
+    position: fixed;
+    z-index: 30;
+    display: block;
+    inset: 0;
+    background: rgba(4, 16, 10, 0.6);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    animation: spotlight-fade 200ms ease both;
+  }
+
+  .main-menu[data-spotlight="closing"] .input-spotlight {
+    pointer-events: none;
+    animation: spotlight-fade 180ms ease both reverse;
+  }
+
+  /* Out-specifies the `flex: 1` and `max-width` the field carries in the row. */
+  .main-menu[data-spotlight] .main-menu__profile .main-menu__name {
+    position: fixed;
+    z-index: 31;
+    /* Centred in the strip the keyboard has left, but never so high that the
+       pill clears the top of the frame — `max()` floors it at half its own
+       height plus a little air. */
+    top: max(2.1rem, calc((100% - var(--keyboard-inset, 0px)) / 2));
+    left: 50%;
+    width: min(24rem, 80cqw);
+    max-width: none;
+    animation: name-spotlight 280ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+
+  .main-menu[data-spotlight="closing"] .main-menu__profile .main-menu__name {
+    animation: name-spotlight 180ms ease both reverse;
+  }
+
+  .main-menu[data-spotlight] .main-menu__name input {
+    border-color: rgba(232, 182, 76, 0.85);
+    box-shadow: 0 1.4rem 3.2rem rgba(0, 0, 0, 0.5);
+  }
+}
+
+@keyframes spotlight-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes name-spotlight {
+  from {
+    opacity: 0.5;
+    transform: translate(-50%, calc(-50% + 2.4rem)) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Less motion: the field still lifts clear of the keyboard, it just stops
+   sliding to get there. */
+@media (prefers-reduced-motion: reduce) {
+  .input-spotlight,
+  .main-menu[data-spotlight] .main-menu__profile .main-menu__name {
+    animation-duration: 1ms;
+  }
+}
+
 .player-icon {
   display: inline-block;
   flex-shrink: 0;
