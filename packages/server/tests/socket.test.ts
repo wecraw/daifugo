@@ -301,3 +301,17 @@ describe("Socket.IO contract (§8, §12.4)", () => {
     expect(response.json()).toEqual({ ok: true });
   });
 });
+
+it("explicit lobby leave releases the name immediately for a fresh join", async () => {
+  const roomId = await createRoom();
+  const first = await join(roomId, "Will");
+  const second = await join(roomId, "Sam");
+  await new Promise<void>((resolve) => first.socket.emit("leaveRoom", resolve));
+  const doc = await server.manager.get(roomId);
+  expect(doc?.state.players.map((player) => player.name)).toEqual(["Sam"]);
+  expect(doc?.state.hostId).toBe(second.joined.playerId);
+  first.socket.disconnect();
+  const rejoined = await join(roomId, "Will");
+  expect(rejoined.joined.playerId).not.toBe(first.joined.playerId);
+  expect(rejoined.state.players.map((player) => player.name)).toEqual(["Sam", "Will"]);
+});

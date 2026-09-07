@@ -423,21 +423,30 @@ export class RoomManager {
     if (changed) await this.emit(doc);
   }
 
+  /** Explicit departure bypasses the reconnect grace and releases the seat now. */
+  async leave(roomId: string, playerId: string): Promise<void> {
+    await this.expireGrace(roomId, playerId, true);
+    this.scheduler.clear(graceKey(roomId, playerId));
+  }
+
   /**
-   * Grace expired without a reconnect: remove the seat (§8.3). `queueLeave`
-   * transfers the host if it was them (§8.2) and, mid-round, drops them to last
-   * place (§7.7) — all in the engine, under the same CAS.
+   * Remove a departed seat (§8.3), unless it reconnected during the grace window.
+   * Explicit departures skip that check. `queueLeave` transfers the host (§8.2)
+   * and, mid-round, drops the player to last place (§7.7), under the same CAS.
    */
-  private async expireGrace(roomId: string, playerId: string): Promise<void> {
+  private async expireGrace(roomId: string, playerId: string, explicit = false): Promise<void> {
     let removed = false;
     let doc: RoomDoc;
     try {
       doc = await this.repo.mutate(roomId, (current) => {
         // Reconnected during the window: nothing to remove.
         const player = current.state.players.find((p) => p.id === playerId);
-        if (player !== undefined && player.isConnected) return null;
+        if (!explicit && player !== undefined && player.isConnected) return null;
 
-        const left = queueLeave(current.state, playerId);
+        const disconnected = explicit
+          ? (setConnected(current.state, playerId, false) ?? current.state)
+          : current.state;
+        const left = queueLeave(disconnected, playerId);
         if (!left.ok || left.value.stateVersion === current.state.stateVersion) return null;
         removed = true;
         const state = stampDeadline(left.value, this.scheduler.now());

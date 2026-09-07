@@ -31,6 +31,7 @@ describe("socket contracts (§8)", () => {
     expect([...CLIENT_TO_SERVER_EVENTS].sort()).toEqual([
       "exchangeCards",
       "joinRoom",
+      "leaveRoom",
       "pass",
       "playCards",
       "sendReaction",

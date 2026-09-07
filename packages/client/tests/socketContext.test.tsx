@@ -375,7 +375,7 @@ describe("SocketContext", () => {
     expect(readStoredSession()?.resumeToken).toBe("tok-1");
   });
 
-  it("leaving forgets the stored seat", async () => {
+  it("leaving waits for server removal before forgetting the stored seat", async () => {
     const socket = new FakeSocket();
     render(<App connect={() => socket.asSocket()} />);
     await joinAs(socket, "Will");
@@ -385,6 +385,11 @@ describe("SocketContext", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Leave room" }));
 
+    expect(readStoredSession()?.resumeToken).toBe("tok-1");
+    expect(socket.connected).toBe(true);
+    const [ack] = socket.sentOf("leaveRoom")[0]!;
+    act(() => (ack as () => void)());
+    expect(socket.connected).toBe(false);
     expect(readStoredSession()).toBeNull();
     expect(screen.getByRole("button", { name: "Create room" })).toBeInTheDocument();
   });

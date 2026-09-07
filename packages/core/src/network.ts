@@ -64,6 +64,7 @@ export interface ServerToClientEvents {
 
 export interface ClientToServerEvents {
   joinRoom: (roomId: string, playerName: string, resumeToken?: string, icon?: string) => void;
+  leaveRoom: (ack: () => void) => void;
   updateRules: (config: Partial<HouseRulesConfig>) => void;
   setRoundLimit: (limit: number | null) => void;
   /** The sender's own readiness (§8.6). The one event nobody may send for another. */
@@ -95,6 +96,7 @@ export const SERVER_TO_CLIENT_EVENTS = [
 
 export const CLIENT_TO_SERVER_EVENTS = [
   "joinRoom",
+  "leaveRoom",
   "updateRules",
   "setRoundLimit",
   "setReady",

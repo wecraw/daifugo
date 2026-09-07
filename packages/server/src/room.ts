@@ -74,6 +74,10 @@ export class RoomHub {
       void this.onJoin(socket, roomId, playerName, resumeToken, icon);
     });
 
+    socket.on("leaveRoom", (ack) => {
+      void this.onLeave(socket, ack);
+    });
+
     socket.on("updateRules", (config) => {
       void this.guarded(socket, (roomId, playerId) =>
         this.manager.updateRules(roomId, playerId, config),
@@ -124,6 +128,23 @@ export class RoomHub {
       const { roomId, playerId } = socket.data;
       if (roomId !== null && playerId !== null) void this.onDisconnect(socket, roomId, playerId);
     });
+  }
+
+  private async onLeave(socket: DaifugoSocket, ack: () => void): Promise<void> {
+    const { roomId, playerId } = socket.data;
+    if (roomId !== null && playerId !== null) {
+      await this.manager.leave(roomId, playerId);
+      // Detach every tab holding the departed seat so none can act as its owner.
+      const sockets = await this.io.in(roomId).fetchSockets();
+      for (const other of sockets) {
+        if (other.data.playerId !== playerId) continue;
+        other.data.roomId = null;
+        other.data.playerId = null;
+        other.data.resumeToken = null;
+        await other.leave(roomId);
+      }
+    }
+    if (typeof ack === "function") ack();
   }
 
   /**

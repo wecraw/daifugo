@@ -426,16 +426,25 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
   );
 
   const leaveRoom = useCallback(() => {
-    pendingJoin.current = null;
-    seated.current = false;
-    writeStoredSession(null);
-    setStoredSession(null);
-    setRoom(null);
-    setPlayerId(null);
-    setRoomId(null);
-    setError(null);
-    setStatus("idle");
-    socketRef.current?.disconnect();
+    const socket = socketRef.current;
+    const finish = (forgetSeat: boolean) => {
+      pendingJoin.current = null;
+      seated.current = false;
+      // Offline departures retain the token until the server can be reached;
+      // otherwise an immediate rejoin would collide with the grace-period seat.
+      if (forgetSeat) {
+        writeStoredSession(null);
+        setStoredSession(null);
+      }
+      setRoom(null);
+      setPlayerId(null);
+      setRoomId(null);
+      setError(null);
+      setStatus("idle");
+      socket?.disconnect();
+    };
+    if (socket?.connected) socket.emit("leaveRoom", () => finish(true));
+    else finish(false);
   }, []);
 
   const send = useCallback<SocketContextValue["send"]>(
