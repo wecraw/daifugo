@@ -85,9 +85,7 @@ export function MainMenu() {
           </span>
         </h1>
         <TerminologyToggle />
-      </section>
 
-      <div className="main-menu__actions">
         <label className="field main-menu__name">
           <span>{t("ui.menu.nameLabel")}</span>
           <input
@@ -98,7 +96,9 @@ export function MainMenu() {
             onChange={(event) => setName(event.target.value)}
           />
         </label>
+      </section>
 
+      <div className="main-menu__actions">
         <form className="main-menu__join" onSubmit={onJoin}>
           <label className="field main-menu__code">
             <span>{t("ui.menu.roomCodeLabel")}</span>

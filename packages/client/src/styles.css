@@ -194,7 +194,8 @@ textarea {
 /*
  * The main menu (§10). Landscape is the only orientation the game has, so the
  * menu is composed across it rather than stacked down the middle: the wordmark
- * anchors the left, the one path to a table runs down the right.
+ * and the name that goes with it anchor the left, the one path to a table runs
+ * down the right.
  */
 .main-menu {
   display: grid;
@@ -208,6 +209,10 @@ textarea {
 }
 
 .main-menu__identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  /* No gap: the toggle carries its own margins, which set the rhythm here. */
   animation: menu-enter 460ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
@@ -386,13 +391,13 @@ button:disabled {
   outline-offset: 2px;
 }
 
-/* The name applies to both paths below it, so it reads as its own group,
-   not as a label glued to Create room. Sized up like a search bar — it's the
-   first thing typed and the one field every path shares. */
+/* Under the wordmark rather than above the two paths: the name is who you are,
+   not a step in joining, and it applies to both paths on the right. Sized up
+   like a search bar — it's the first thing typed and the one field every path
+   shares. Held to the actions column's width so it doesn't sprawl across the
+   wide identity column. */
 .main-menu__name {
-  padding-bottom: 1.1rem;
-  border-bottom: 1px solid var(--rule);
-  margin-bottom: 0.2rem;
+  max-width: 17rem;
 }
 
 .main-menu__name input {
