@@ -111,6 +111,45 @@ describe("MainMenu", () => {
   });
 });
 
+/*
+ * The keyboard on iOS is drawn over the web view rather than resizing it
+ * (`capacitor.config.ts`), so the focused name field lifts clear of it. The
+ * lift itself is CSS; what is testable here is the state that drives it and the
+ * way back out.
+ */
+describe("focused name field", () => {
+  function spotlight(): HTMLElement | null {
+    return document.querySelector(".main-menu[data-spotlight]");
+  }
+
+  it("marks the menu while the name field is focused", async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    expect(spotlight()).toBeNull();
+    await user.click(screen.getByLabelText("Your name"));
+    expect(spotlight()).toHaveAttribute("data-spotlight", "open");
+  });
+
+  it("closes on a tap outside, and on Enter", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    const nameField = screen.getByLabelText("Your name");
+
+    await user.click(nameField);
+    const scrim = document.querySelector(".input-spotlight");
+    expect(scrim).not.toBeNull();
+    await user.click(scrim as Element);
+    expect(nameField).not.toHaveFocus();
+    await waitFor(() => expect(spotlight()).toBeNull());
+
+    await user.click(nameField);
+    await user.keyboard("{Enter}");
+    expect(nameField).not.toHaveFocus();
+    await waitFor(() => expect(spotlight()).toBeNull());
+  });
+});
+
 describe("remembered name", () => {
   it("remembers the name a join was made under", async () => {
     const user = userEvent.setup();
