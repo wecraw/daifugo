@@ -13,7 +13,14 @@
  *
  * Every string here resolves through a key; nothing is written inline.
  */
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+} from "react";
 import { useCopy, type I18nKey } from "../i18n/index";
 import { useSocket } from "../context/SocketContext";
 import { useKeyboardInset } from "../hooks/useKeyboardInset";
@@ -25,8 +32,19 @@ import { readStoredPlayerIcon, writeStoredPlayerIcon } from "../playerIcon";
 
 const NAME_MAX_LENGTH = 16;
 const CODE_MAX_LENGTH = 3;
-/** Matches the exit half of `name-spotlight` in `styles.css`. */
-const SPOTLIGHT_EXIT_MS = 180;
+/** Matches `name-spotlight-out` in `styles.css`. */
+const SPOTLIGHT_EXIT_MS = 240;
+
+type SpotlightTrack = CSSProperties & {
+  "--spotlight-enter-x"?: string;
+  "--spotlight-enter-y"?: string;
+  "--spotlight-enter-scale-x"?: number;
+  "--spotlight-enter-scale-y"?: number;
+  "--spotlight-exit-x"?: string;
+  "--spotlight-exit-y"?: string;
+  "--spotlight-exit-scale-x"?: number;
+  "--spotlight-exit-scale-y"?: number;
+};
 
 /** The server's join codes are 3 uppercase letters. */
 function normalizeCode(raw: string): string {
@@ -52,6 +70,9 @@ export function MainMenu() {
   // The focused name field is lifted clear of the keyboard (see below). "closing"
   // is the beat that lets it slide back rather than snap.
   const [spotlight, setSpotlight] = useState<"idle" | "open" | "closing">("idle");
+  const [spotlightTrack, setSpotlightTrack] = useState<SpotlightTrack>({});
+  const spotlightOrigin = useRef<DOMRect | null>(null);
+  const nameFieldRef = useRef<HTMLLabelElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const keyboardInset = useKeyboardInset();
 
@@ -67,6 +88,31 @@ export function MainMenu() {
     const timer = setTimeout(() => setSpotlight("idle"), SPOTLIGHT_EXIT_MS);
     return () => clearTimeout(timer);
   }, [spotlight]);
+
+  useLayoutEffect(() => {
+    if (spotlight !== "open") return;
+    const origin = spotlightOrigin.current;
+    const field = nameFieldRef.current;
+    if (origin === null || field === null) return;
+
+    // Read the field's final lifted rectangle without letting its entry
+    // keyframes affect the measurement. This happens before paint, so the
+    // player only sees the animation beginning over the in-flow field.
+    field.style.animation = "none";
+    field.style.transform = "translate(-50%, -50%)";
+    const lifted = field.getBoundingClientRect();
+    field.style.removeProperty("animation");
+    field.style.removeProperty("transform");
+
+    if (lifted.width === 0 || lifted.height === 0) return;
+    setSpotlightTrack((current) => ({
+      ...current,
+      "--spotlight-enter-x": `${origin.left + origin.width / 2 - (lifted.left + lifted.width / 2)}px`,
+      "--spotlight-enter-y": `${origin.top + origin.height / 2 - (lifted.top + lifted.height / 2)}px`,
+      "--spotlight-enter-scale-x": origin.width / lifted.width,
+      "--spotlight-enter-scale-y": origin.height / lifted.height,
+    }));
+  }, [keyboardInset, spotlight]);
 
   const busy = creating || status === "connecting";
   const trimmedName = name.trim();
@@ -136,8 +182,14 @@ export function MainMenu() {
             }}
           />
           <label
+            ref={nameFieldRef}
             className="field main-menu__name"
-            style={{ "--keyboard-inset": `${keyboardInset}px` } as CSSProperties}
+            style={
+              {
+                "--keyboard-inset": `${keyboardInset}px`,
+                ...spotlightTrack,
+              } as CSSProperties
+            }
           >
             <span>{t("ui.menu.nameLabel")}</span>
             <input
@@ -149,8 +201,35 @@ export function MainMenu() {
               autoCorrect="off"
               placeholder={t("ui.menu.namePlaceholder")}
               onChange={(event) => setName(event.target.value)}
-              onFocus={() => setSpotlight("open")}
-              onBlur={() => setSpotlight((current) => (current === "open" ? "closing" : current))}
+              onFocus={() => {
+                // Remember the in-flow destination before fixed positioning
+                // lifts the field into the keyboard's visible strip.
+                spotlightOrigin.current = nameFieldRef.current?.getBoundingClientRect() ?? null;
+                setSpotlightTrack({});
+                setSpotlight("open");
+              }}
+              onBlur={() => {
+                const origin = spotlightOrigin.current;
+                const lifted = nameFieldRef.current?.getBoundingClientRect();
+                if (
+                  origin !== null &&
+                  lifted !== undefined &&
+                  lifted.width > 0 &&
+                  lifted.height > 0
+                ) {
+                  // The closing keyframes keep the field fixed, then translate
+                  // and scale it onto the exact rectangle it will occupy once
+                  // it returns to normal flow. The state handoff is invisible.
+                  setSpotlightTrack((current) => ({
+                    ...current,
+                    "--spotlight-exit-x": `${origin.left + origin.width / 2 - (lifted.left + lifted.width / 2)}px`,
+                    "--spotlight-exit-y": `${origin.top + origin.height / 2 - (lifted.top + lifted.height / 2)}px`,
+                    "--spotlight-exit-scale-x": origin.width / lifted.width,
+                    "--spotlight-exit-scale-y": origin.height / lifted.height,
+                  }));
+                }
+                setSpotlight((current) => (current === "open" ? "closing" : current));
+              }}
               onKeyDown={(event) => {
                 // Enter is "done" on the phone keyboard: it closes the field
                 // rather than submitting anything, since the name is not a form.

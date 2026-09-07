@@ -146,6 +146,46 @@ describe("focused name field", () => {
     expect(spotlight()).toHaveAttribute("data-spotlight", "open");
   });
 
+  it("tracks the spotlight animation between the field's real rectangles", () => {
+    renderApp();
+    const input = screen.getByLabelText("Your name");
+    const field = input.closest("label");
+    expect(field).not.toBeNull();
+
+    const inFlow = {
+      left: 100,
+      top: 100,
+      width: 200,
+      height: 50,
+    } as DOMRect;
+    const lifted = {
+      left: 300,
+      top: 50,
+      width: 400,
+      height: 50,
+    } as DOMRect;
+    vi.spyOn(field as HTMLLabelElement, "getBoundingClientRect")
+      .mockReturnValueOnce(inFlow)
+      .mockReturnValueOnce(lifted)
+      .mockReturnValueOnce(lifted);
+
+    fireEvent.focus(input);
+    expect(field).toHaveStyle({
+      "--spotlight-enter-x": "-300px",
+      "--spotlight-enter-y": "50px",
+      "--spotlight-enter-scale-x": "0.5",
+      "--spotlight-enter-scale-y": "1",
+    });
+
+    fireEvent.blur(input);
+    expect(field).toHaveStyle({
+      "--spotlight-exit-x": "-300px",
+      "--spotlight-exit-y": "50px",
+      "--spotlight-exit-scale-x": "0.5",
+      "--spotlight-exit-scale-y": "1",
+    });
+  });
+
   it("closes on a tap outside, and on Enter", async () => {
     const user = userEvent.setup();
     renderApp();
