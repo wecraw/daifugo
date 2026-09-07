@@ -22,6 +22,9 @@ import { App } from "../src/App";
 import { FakeSocket } from "./fakeSocket";
 import { player, publicState } from "./publicState";
 
+const { confetti } = vi.hoisted(() => ({ confetti: vi.fn() }));
+vi.mock("canvas-confetti", () => ({ default: confetti }));
+
 const THREE = [
   player("p_1", "Will", { seatIndex: 0 }),
   player("p_2", "Alex", { seatIndex: 1 }),
@@ -83,6 +86,7 @@ function placeRows(): string[][] {
 describe("the round-end curtain (§10.12)", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    confetti.mockClear();
   });
 
   afterEach(() => {
@@ -98,6 +102,39 @@ describe("the round-end curtain (§10.12)", () => {
     expect(document.querySelector(".game-table")).not.toBeNull();
     expect(document.querySelector(".room-shell__table")?.hasAttribute("inert")).toBe(true);
     expect(document.querySelector(".lobby")).toBeNull();
+  });
+
+  it("celebrates when the first player goes out, not when the round later ends", async () => {
+    const { socket } = await seat(inProgress());
+    act(() =>
+      socket.fire("roomState", {
+        ...inProgress({
+          stateVersion: 2,
+          finishedPlayerIds: ["p_2"],
+          hands: {
+            p_1: { cardCount: 3 },
+            p_2: { cardCount: 0 },
+            p_3: { cardCount: 3 },
+          },
+        }),
+        myPlayerId: "p_1",
+      }),
+    );
+
+    expect(curtain()).toBeNull();
+    expect(confetti).toHaveBeenCalledOnce();
+    expect(confetti).toHaveBeenCalledWith(
+      expect.objectContaining({
+        particleCount: 120,
+        disableForReducedMotion: true,
+      }),
+    );
+
+    // The second finisher ends this three-player round, but the Daifugo was
+    // already crowned and the result curtain must not celebrate again.
+    act(() => socket.fire("roomState", { ...ended({ stateVersion: 3 }), myPlayerId: "p_1" }));
+    expect(curtain()).not.toBeNull();
+    expect(confetti).toHaveBeenCalledOnce();
   });
 
   it("lands the places in core's finish order, with what the round paid", async () => {
@@ -182,6 +219,7 @@ describe("the round-end curtain (§10.12)", () => {
     await seat(ended());
     expect(curtain()).toBeNull();
     expect(document.querySelector(".lobby")).not.toBeNull();
+    expect(confetti).not.toHaveBeenCalled();
   });
 
   it("does not come back once a seat has left it for the lobby", async () => {
