@@ -28,10 +28,12 @@ export function ProfileEditor({
   }, [open]);
 
   const normalizedName = normalizePlayerName(draftName);
+  const nameChanged = normalizedName !== name;
   const duplicate =
     normalizedName !== null &&
+    nameChanged &&
     takenNames.some((other) => other.toLowerCase() === normalizedName.toLowerCase());
-  const unchanged = normalizedName === name && draftIcon === normalizePlayerIcon(icon);
+  const unchanged = !nameChanged && draftIcon === normalizePlayerIcon(icon);
   const cannotSave =
     disabled || status !== "connected" || normalizedName === null || duplicate || unchanged;
 

@@ -115,6 +115,41 @@ describe("RoomManager acceptance (§12.4)", () => {
     });
   });
 
+  it("does not revalidate an unchanged name when only the icon changes", async () => {
+    const roomId = await manager.createRoom();
+    const host = await seatPlayer(manager, roomId, "Will");
+    const alex = await seatPlayer(manager, roomId, "Alex");
+
+    // Existing rooms may contain a duplicated name from older data. Keeping the
+    // current name is not a rename, so an unrelated icon update must not surface
+    // NAME_TAKEN; choosing that name from another seat remains prohibited.
+    await repo.mutate(roomId, (current) => {
+      const state = {
+        ...current.state,
+        players: current.state.players.map((player) =>
+          player.id === alex.playerId ? { ...player, name: "Will" } : player,
+        ),
+      };
+      return { ...current, state };
+    });
+
+    expect(await manager.updateProfile(roomId, host.playerId, "Will", "🦊")).toMatchObject({
+      ok: true,
+    });
+    expect(
+      (await docOf(roomId)).state.players.find((player) => player.id === host.playerId),
+    ).toMatchObject({
+      name: "Will",
+      icon: "🦊",
+    });
+    expect(await manager.updateProfile(roomId, alex.playerId, "Will", "🐸")).toMatchObject({
+      ok: true,
+    });
+    expect(await manager.updateProfile(roomId, alex.playerId, "WILL", "🐸")).toMatchObject({
+      error: "NAME_TAKEN",
+    });
+  });
+
   it("updates pending players at round end and refuses active play", async () => {
     const roomId = await manager.createRoom();
     const host = await seatPlayer(manager, roomId, "Will");

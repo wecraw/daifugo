@@ -381,6 +381,7 @@ export class RoomManager {
           return null;
         }
         if (
+          name !== seat.name &&
           roster.some(
             (player) => player.id !== playerId && player.name.toLowerCase() === name.toLowerCase(),
           )
