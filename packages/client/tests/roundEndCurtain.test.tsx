@@ -97,7 +97,9 @@ describe("the round-end curtain (§10.12)", () => {
     const { socket, user } = await seat(inProgress());
     act(() => socket.fire("roomState", { ...ended(), myPlayerId: "p_1" }));
 
-    await user.click(screen.getByRole("button", { name: "Edit profile" }));
+    const editProfile = screen.getByRole("button", { name: "Edit profile" });
+    expect(editProfile.closest(".round-end__player")).toHaveClass("round-end__player--editable");
+    await user.click(editProfile);
     const editor = screen.getByRole("group", { name: "Edit profile" });
     const name = within(editor).getByLabelText("Your name");
     await user.clear(name);
@@ -113,6 +115,27 @@ describe("the round-end curtain (§10.12)", () => {
     );
     expect(screen.getByRole("button", { name: "Edit profile" })).toBeInTheDocument();
   });
+
+  it("rejects a pending joiner's name before sending a profile update", async () => {
+    const { socket, user } = await seat(inProgress());
+    act(() =>
+      socket.fire("roomState", {
+        ...ended({ pendingJoins: [player("p_4", "Kim", { seatIndex: 3 })] }),
+        myPlayerId: "p_1",
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Edit profile" }));
+    const editor = screen.getByRole("group", { name: "Edit profile" });
+    const name = within(editor).getByLabelText("Your name");
+    await user.clear(name);
+    await user.type(name, "kim");
+
+    expect(within(editor).getByText("That name is already taken")).toBeInTheDocument();
+    expect(within(editor).getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(socket.sentOf("updateProfile")).toEqual([]);
+  });
+
 
   it("holds the table with the result over it rather than warping to the lobby", async () => {
     const { socket } = await seat(inProgress());

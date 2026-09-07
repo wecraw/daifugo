@@ -129,14 +129,20 @@ export function RoundEndCurtain({
               style={{ animationDelay: `${CURTAIN_ENTER_MS + index * CURTAIN_ROW_STAGGER_MS}ms` }}
             >
               <span className="round-end__rank">{index + 1}</span>
-              <span className="round-end__player">
+              <span
+                className={
+                  row.playerId === room.myPlayerId
+                    ? "round-end__player round-end__player--editable"
+                    : "round-end__player"
+                }
+              >
                 <PlayerIcon icon={room.players.find((seat) => seat.id === row.playerId)?.icon} />
                 {nameOf(room, row.playerId)}
                 {row.playerId === room.myPlayerId && (
                   <ProfileEditor
                     name={nameOf(room, row.playerId)}
                     icon={room.players.find((seat) => seat.id === row.playerId)?.icon}
-                    takenNames={room.players
+                    takenNames={[...room.players, ...room.pendingJoins]
                       .filter((seat) => seat.id !== row.playerId)
                       .map((seat) => seat.name)}
                     disabled={

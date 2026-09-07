@@ -2684,7 +2684,7 @@ button:disabled {
   white-space: nowrap;
 }
 
-.round-end__player:has(.profile-editor) {
+.round-end__player--editable {
   overflow: visible;
 }
 
