@@ -6,9 +6,10 @@
  * A seat this browser already holds is offered as a rejoin, which replays the
  * stored `resumeToken` instead of taking a new seat (§8.1).
  *
- * A page loaded on `/ABC` arrives with that code already in the field: the
- * provider auto-joins it when it knows a name, and lands here when it does not,
- * so the only thing left to type is the name (`roomUrl.ts`).
+ * A page loaded on `/ABC` — or an invite link tapped into the iOS app — arrives
+ * with that code already in the field: the provider auto-joins it when it knows
+ * a name, and lands here when it does not, so the only thing left to type is the
+ * name (`roomUrl.ts`).
  *
  * Every string here resolves through a key; nothing is written inline.
  */
@@ -37,7 +38,7 @@ function normalizeCode(raw: string): string {
 
 export function MainMenu() {
   const { t, terminology } = useCopy();
-  const { createRoom, joinRoom, leaveRoom, status, storedSession, initialRoomCode } = useSocket();
+  const { createRoom, joinRoom, leaveRoom, status, storedSession, linkedRoomCode } = useSocket();
   // The seat's name if this browser still holds one, otherwise the name it
   // played under last time (`playerName.ts`) — a returning player starts typed in.
   const [name, setName] = useState(() => {
@@ -45,7 +46,7 @@ export function MainMenu() {
     return seatName !== "" ? seatName : readStoredPlayerName();
   });
   const [icon, setIcon] = useState(readStoredPlayerIcon);
-  const [code, setCode] = useState(() => initialRoomCode ?? "");
+  const [code, setCode] = useState(() => linkedRoomCode ?? "");
   const [notice, setNotice] = useState<I18nKey | null>(null);
   const [creating, setCreating] = useState(false);
   // The focused name field is lifted clear of the keyboard (see below). "closing"
@@ -53,6 +54,13 @@ export function MainMenu() {
   const [spotlight, setSpotlight] = useState<"idle" | "open" | "closing">("idle");
   const nameRef = useRef<HTMLInputElement>(null);
   const keyboardInset = useKeyboardInset();
+
+  // An invite link tapped while the menu is already up (the iOS app, §14) fills
+  // the field the same way a load on `/ABC` does. The provider joins outright
+  // when it knows a name; this is the other half, when it does not.
+  useEffect(() => {
+    if (linkedRoomCode !== null) setCode(linkedRoomCode);
+  }, [linkedRoomCode]);
 
   useEffect(() => {
     if (spotlight !== "closing") return;

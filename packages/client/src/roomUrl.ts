@@ -23,6 +23,22 @@ export function readRoomCodeFromPath(pathname: string): string | null {
   return ROOM_CODE_PATTERN.test(code) ? code : null;
 }
 
+/**
+ * The room code a whole URL names, or null when it names none.
+ *
+ * This is the universal-link entry point: iOS hands the app the tapped
+ * `https://…/ABC` outright rather than navigating the web view to it (§14), so
+ * the path has to be pulled back out of an absolute URL. A string that is not a
+ * URL at all is simply not a room code.
+ */
+export function readRoomCodeFromUrl(url: string): string | null {
+  try {
+    return readRoomCodeFromPath(new URL(url).pathname);
+  } catch {
+    return null;
+  }
+}
+
 /** The code in the address bar at load, before any sync has rewritten it. */
 export function readRoomCodeFromLocation(): string | null {
   try {

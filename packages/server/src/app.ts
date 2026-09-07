@@ -87,6 +87,8 @@ export function buildServer(options: BuildServerOptions): BuiltServer {
 
   allowNativeOrigin(app);
 
+  serveAppleAppSiteAssociation(app);
+
   serveClient(app, options.clientRoot === undefined ? defaultClientRoot() : options.clientRoot);
 
   // Room creation is an HTTP call, not a socket event: the code has to exist
@@ -130,6 +132,42 @@ function allowNativeOrigin(app: FastifyInstance): void {
       void reply.header("Vary", "Origin");
     }
   });
+}
+
+/**
+ * The Apple App Site Association file, which is what makes an invite link open
+ * the iOS app instead of Safari (§14).
+ *
+ * iOS fetches this once, at install, from `https://<domain>/.well-known/` — via
+ * Apple's CDN, so it must be plain HTTPS JSON with no redirect and no
+ * authentication. The app claims it back with an `applinks:` associated-domains
+ * entitlement (`packages/client/ios/App/App/App.entitlements`); both sides have
+ * to name each other or the link silently stays a web link.
+ *
+ * `?` matches exactly one character, so `/???` is the room-code path (§8.1) and
+ * nothing else: the bare origin still opens the web client, which is what
+ * someone sharing "come play" rather than a specific room means.
+ *
+ * Served as a route rather than a static file because `@fastify/static` ignores
+ * dotted directories, which would drop this into the SPA fallback and answer
+ * Apple with a page of HTML.
+ */
+const APPLE_APP_SITE_ASSOCIATION = {
+  applinks: {
+    details: [
+      {
+        // <team id>.<bundle id>, both from the Xcode project.
+        appIDs: ["2FVQPZ94T9.org.ccrawford.daifugo"],
+        components: [{ "/": "/???", comment: "a room code, e.g. /ABC" }],
+      },
+    ],
+  },
+} as const;
+
+function serveAppleAppSiteAssociation(app: FastifyInstance): void {
+  app.get("/.well-known/apple-app-site-association", async (_request, reply) =>
+    reply.type("application/json").send(APPLE_APP_SITE_ASSOCIATION),
+  );
 }
 
 /**

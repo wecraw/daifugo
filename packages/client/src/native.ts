@@ -52,3 +52,32 @@ export function onAppResume(onResume: () => void): () => void {
     void handle.then((listener) => listener.remove()).catch(() => {});
   };
 }
+
+/**
+ * Calls `onUrl` with every URL iOS hands the app — a tapped invite link (§14).
+ *
+ * A universal link does not navigate the web view: the bundle keeps whatever
+ * page it already had (`capacitor://localhost/`, which has no room code in it),
+ * and the tapped `https://` URL arrives here instead. Reading the code back out
+ * of it is what turns the tap into a join.
+ *
+ * A link that launched the app cold fires before any of this has mounted;
+ * Capacitor retains that event until a listener consumes it, so registering
+ * late still sees it.
+ *
+ * Returns its own unsubscribe; on the web it registers nothing and the
+ * unsubscribe is a no-op.
+ */
+export function onDeepLink(onUrl: (url: string) => void): () => void {
+  if (!isNative()) return () => {};
+  let removed = false;
+  const handle = App.addListener("appUrlOpen", ({ url }) => onUrl(url));
+  void handle.catch(() => {
+    // A shell without the App plugin costs a typed-in room code, not a crash.
+  });
+  return () => {
+    if (removed) return;
+    removed = true;
+    void handle.then((listener) => listener.remove()).catch(() => {});
+  };
+}

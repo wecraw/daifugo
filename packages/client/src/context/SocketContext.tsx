@@ -34,8 +34,15 @@
  * `/` once not. A load that arrives on `/ABC` auto-joins that code when this
  * browser already knows a name to join under — a stored seat's name, whatever
  * room it was for — and otherwise hands the code to `MainMenu` to prefill, since
- * a join without a name is not one the server would accept (§8.1). The captured
- * `initialRoomCode` is read once, before the sync effect below can rewrite it.
+ * a join without a name is not one the server would accept (§8.1). The loaded-on
+ * code is captured once, before the sync effect below can rewrite it.
+ *
+ * Inside the iOS app the same code arrives a second way: a tapped invite link
+ * opens the app rather than the web client (§14), and iOS hands the URL to
+ * `onDeepLink` instead of navigating the web view. That is why `linkedRoomCode`
+ * is state rather than a constant — the app can be pointed at a new room while
+ * it is already running, and lands in it exactly as a fresh load on `/ABC`
+ * would.
  */
 import {
   createContext,
@@ -48,12 +55,12 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import { io, type Socket } from "socket.io-client";
-import { readRoomCodeFromLocation, syncRoomCodeToUrl } from "../roomUrl";
+import { readRoomCodeFromLocation, readRoomCodeFromUrl, syncRoomCodeToUrl } from "../roomUrl";
 import { readStoredPlayerName, writeStoredPlayerName } from "../playerName";
 import { readStoredPlayerIcon, writeStoredPlayerIcon } from "../playerIcon";
 import { SESSION_STORAGE_KEY, readStored, writeStored } from "../storage";
 import { serverUrl, socketUrl } from "../serverUrl";
-import { onAppResume } from "../native";
+import { onAppResume, onDeepLink } from "../native";
 import { SERVER_TO_CLIENT_EVENTS } from "@daifugo/core";
 import type {
   ClientToServerEvents,
@@ -141,8 +148,11 @@ export interface SocketContextValue {
   error: GameErrorPayload | null;
   /** A seat this browser can reclaim without re-entering a name. */
   storedSession: StoredSession | null;
-  /** The room code the page was loaded on, for `MainMenu` to prefill. */
-  initialRoomCode: string | null;
+  /**
+   * The room code this client has been pointed at — the path it loaded on, or
+   * the last invite link opened into the app — for `MainMenu` to prefill.
+   */
+  linkedRoomCode: string | null;
   /** `POST /rooms` (§8: the code must exist before anyone can join it), then join. */
   createRoom: (playerName: string, icon?: string) => Promise<string>;
   joinRoom: (roomId: string, playerName: string, icon?: string) => void;
@@ -193,9 +203,16 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
   const [storedSession, setStoredSession] = useState<StoredSession | null>(() =>
     readStoredSession(),
   );
-  // Captured at first render: the sync effect below rewrites the path as soon as
-  // it runs, so the loaded-on code has to be read before that.
-  const [initialRoomCode] = useState<string | null>(() => readRoomCodeFromLocation());
+  // Seeded at first render: the sync effect below rewrites the path as soon as
+  // it runs, so the loaded-on code has to be read before that. A universal link
+  // tapped later replaces it (`onDeepLink` below). The counter is what makes a
+  // second tap of the *same* link a fresh intent rather than an unchanged value
+  // the join effect would sleep through.
+  const [linkedRoom, setLinkedRoom] = useState<{ code: string | null; taps: number }>(() => ({
+    code: readRoomCodeFromLocation(),
+    taps: 0,
+  }));
+  const linkedRoomCode = linkedRoom.code;
 
   const socketRef = useRef<DaifugoClientSocket | null>(null);
   // The join to replay on `connect`, whether that is the first connect or a
@@ -349,11 +366,23 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
     [],
   );
 
+  // An invite link tapped on the phone points the running app at a room, which
+  // is the same intent as a load on `/ABC` — so it feeds the same code path
+  // rather than joining here. No-op on the web, where the browser navigates.
+  useEffect(
+    () =>
+      onDeepLink((url) => {
+        const code = readRoomCodeFromUrl(url);
+        if (code !== null) setLinkedRoom((prev) => ({ code, taps: prev.taps + 1 }));
+      }),
+    [],
+  );
+
   // A reload replays the seat by itself: no click, no waiting for `MainMenu` to
   // render. Deliberately unguarded against a second run — StrictMode remounts the
   // socket effect above too, and the join has to be replayed onto the new socket.
-  // It runs on mount only, so a `ROOM_NOT_FOUND` for a room the server has
-  // forgotten ends at the menu instead of starting a retry loop.
+  // Nothing but a new link re-runs it, so a `ROOM_NOT_FOUND` for a room the
+  // server has forgotten ends at the menu instead of starting a retry loop.
   useEffect(() => {
     const stored = readStoredSession();
     // A URL code is an explicit, just-expressed intent, so it outranks both the
@@ -361,17 +390,17 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
     // that has been idle for a week is still a link to *this* room. The token is
     // replayed only when the stored seat is for that same room; `joinRoom`
     // decides that on its own.
-    if (initialRoomCode !== null) {
+    if (linkedRoomCode !== null) {
       // The seat's name first, then the name this browser plays under: a link
       // opened by someone whose last seat is long gone still knows who they are.
       const seatName = stored?.playerName ?? "";
       const name = seatName !== "" ? seatName : readStoredPlayerName();
-      if (name !== "") joinRoom(initialRoomCode, name);
+      if (name !== "") joinRoom(linkedRoomCode, name);
       return;
     }
     if (stored === null || !isSessionFresh(stored, Date.now())) return;
     joinRoom(stored.roomId, stored.playerName);
-  }, [joinRoom, initialRoomCode]);
+  }, [joinRoom, linkedRoom]);
 
   // The address bar follows the seat. It is left alone while a join is in flight
   // — clearing it mid-connect would throw away the code a reload needs — and only
@@ -444,7 +473,7 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
       roomId,
       error,
       storedSession,
-      initialRoomCode,
+      linkedRoomCode,
       createRoom,
       joinRoom,
       leaveRoom,
@@ -459,7 +488,7 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
       roomId,
       error,
       storedSession,
-      initialRoomCode,
+      linkedRoomCode,
       createRoom,
       joinRoom,
       leaveRoom,

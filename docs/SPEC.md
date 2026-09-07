@@ -1216,6 +1216,13 @@ Firestore and the boot re-arm restores pending deadlines on startup.
   get a real 404, and `/health`, `/rooms` and `/socket.io` are ordinary routes that
   match first. An image without a client build serves the API alone rather than
   refusing to start.
+* **Invite links open the iOS app when it is installed.** The server serves an
+  `apple-app-site-association` file at `/.well-known/`, claiming the three-character
+  room-code path (`/ABC`, §8.1) and not the bare origin, and the app claims the
+  domain back with an `applinks:` entitlement. iOS hands a tapped link to the
+  running app rather than navigating its web view, so the client reads the code
+  out of Capacitor's `appUrlOpen` and joins it exactly as it would a load on
+  `/ABC`. Details, and the two ways it fails silently, are in `docs/IOS.md`.
 * **Transport is WebSocket-only.** Not for affinity — long-polling across a
   cold-started instance is simply worse, and there is no fallback case worth
   supporting for a known set of modern browsers.

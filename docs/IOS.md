@@ -130,8 +130,9 @@ Everything below is a no-op on the web, which keeps exactly the behaviour it had
   evicted by iOS under storage pressure, and losing the resume token mid-match
   means the seat cannot be reclaimed at all (§8.1).
 - **`src/native.ts`** — reconnects the socket when the app returns to the
-  foreground. iOS suspends the WebView on background, which freezes Socket.IO's
-  reconnect backoff along with everything else.
+  foreground, and delivers tapped invite links (see "Universal links" below).
+  iOS suspends the WebView on background, which freezes Socket.IO's reconnect
+  backoff along with everything else.
 - **`src/styles.css`** — `body` is inset by `env(safe-area-inset-*)`, so the notch
   cutout does not sit over the left rail in landscape.
 - **`packages/server/src/app.ts`** — echoes `Access-Control-Allow-Origin` for the
@@ -139,11 +140,42 @@ Everything below is a no-op on the web, which keeps exactly the behaviour it had
   equivalent: this server is WebSocket-only, and a WebSocket upgrade is not a
   CORS request.
 
+## Universal links
+
+A tapped `https://daifugo.wecraw.com/ABC` opens the app straight into room ABC
+when it is installed, and the web client when it is not. Three pieces, all of
+which have to agree or the link silently stays a web link:
+
+- **The server** answers `/.well-known/apple-app-site-association` with JSON
+  naming `2FVQPZ94T9.org.ccrawford.daifugo` and the path pattern `/???` — three
+  characters, so the room code and nothing else (`packages/server/src/app.ts`).
+  The bare origin is deliberately not claimed: "come play" should open the site.
+- **The app** claims that domain back, in
+  `ios/App/App/App.entitlements` (`applinks:daifugo.wecraw.com`), wired in as
+  `CODE_SIGN_ENTITLEMENTS` on both build configurations. Xcode adds the
+  Associated Domains capability to the App ID when it signs with it.
+- **The client** joins on the URL rather than navigating to it: iOS hands a
+  universal link to the running app without touching the web view, so `native.ts`
+  reads the code out of `appUrlOpen` and the provider joins it exactly as it
+  would a load on `/ABC` (`SocketContext.tsx`).
+
+Set `VITE_PUBLIC_WEB_URL=https://daifugo.wecraw.com` in `.env.native`. The
+lobby's invite link defaults to `VITE_SERVER_URL`, and a `run.app` link is not
+one the entitlement claims — the app would share a link that does not open the
+app.
+
+Two things worth knowing when it does not work:
+
+- **iOS fetches the association file at install time**, through Apple's CDN. A
+  change to it needs the app re-installed, and the domain has to serve it over
+  HTTPS with no redirect. `curl -sI https://daifugo.wecraw.com/.well-known/apple-app-site-association`
+  should be a 200 of `application/json`.
+- **A link typed into Safari's address bar never opens an app** — only a tapped
+  link does, and long-pressing one offers "Open in Daifugo" when the association
+  is live. Swiping down on the banner after opening a link in Safari once tells
+  iOS to keep using Safari for that domain; reinstalling the app resets it.
+
 ## What is deliberately not here
 
-- **Universal links.** A shared invite opens the web client, not the app. Making
-  it open the app needs an `apple-app-site-association` file served from the
-  Cloud Run origin and an associated-domains entitlement — an afternoon of
-  certificate plumbing to save typing three letters.
 - **Push notifications, App Store metadata, launch screens beyond the default,
   an Android target.** None of it is wanted; ask before adding any of it.

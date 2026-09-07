@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Universal links: the invite link opens this app rather than Safari.
+	     The other half is the apple-app-site-association file the server
+	     serves from that domain (packages/server/src/app.ts). -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:daifugo.wecraw.com</string>
+	</array>
+</dict>
+</plist>
