@@ -1,7 +1,7 @@
 /**
  * The main menu (§10, §11): create, join, and the terminology toggle.
  */
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "../src/App";
@@ -42,6 +42,21 @@ describe("MainMenu", () => {
     await user.keyboard("{Escape}");
     expect(trigger).toHaveFocus();
     expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  // WKWebView does not focus a button on tap: it blurs whatever was focused and
+  // leaves focus on the body, so the picker sees a focusout naming nothing. That
+  // must not be read as "focus left the picker", or the panel closes on
+  // pointerdown and the tap never becomes a click (iOS could pick no icon).
+  it("keeps the icon picker open when focus is dropped rather than moved", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole("button", { name: "Your icon" }));
+    const panel = screen.getByRole("group", { name: "Your icon" });
+    fireEvent.focusOut(document.activeElement ?? panel, { relatedTarget: null });
+    expect(screen.getByRole("group", { name: "Your icon" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Choose 🦊" }));
+    expect(localStorage.getItem("daifugo.playerIcon")).toBe("🦊");
   });
 
   it("creates a room over HTTP and joins the code it gets back", async () => {

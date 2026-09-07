@@ -37,7 +37,16 @@ export function EmojiPicker({
         }
       }}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+        // Focus leaving the picker closes it — but only when it lands somewhere
+        // this can see. In WKWebView a tap on a button does not focus it, it
+        // blurs whatever was focused (the option the panel focused on open) and
+        // drops focus on the body, so `relatedTarget` is null. Treating that as
+        // "left the picker" tore the panel down on pointerdown, before the tap
+        // could become a click, and no icon on iOS was ever selectable. A tab
+        // out of the panel always names where it went, so the keyboard path
+        // still closes; an outside tap is the document listener's job anyway.
+        if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget))
+          setOpen(false);
       }}
     >
       <button
