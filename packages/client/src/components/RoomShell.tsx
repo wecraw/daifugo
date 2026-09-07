@@ -29,6 +29,7 @@
  * every screen below reads the same input.
  */
 import type { PublicGameState } from "@daifugo/core";
+import { useDaifugoCrowning } from "../hooks/useDaifugoCrowning";
 import { useRoundEndCurtain } from "../hooks/useRoundEndCurtain";
 import { GameTable } from "./GameTable";
 import { Lobby } from "./Lobby";
@@ -40,6 +41,7 @@ function inLobby(room: PublicGameState): boolean {
 }
 
 export function RoomShell({ room }: { room: PublicGameState }) {
+  useDaifugoCrowning(room);
   const curtain = useRoundEndCurtain(room);
 
   if (curtain.showing) {
