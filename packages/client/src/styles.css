@@ -39,7 +39,8 @@ body,
 }
 
 /*
- * The device's unusable edges come out of `body`, not out of the frame.
+ * Menus take the device's unusable edges out of `body`, not out of the frame.
+ * The game table overrides this below so its bottom band can paint to the edge.
  *
  * `viewport-fit=cover` (index.html) hands the page the whole screen, cutout and
  * home indicator included, and in landscape — the only orientation this game has
@@ -79,6 +80,26 @@ body {
   -webkit-touch-callout: none;
   /* No grey flash on tap: the cards animate their own press state. */
   -webkit-tap-highlight-color: transparent;
+}
+
+/* The table paints edge to edge; its individual rows protect their contents.
+   Menus retain the page-level safe box above. */
+body:has(.game-table) {
+  padding: 0;
+}
+
+.viewport {
+  --table-safe-top: env(safe-area-inset-top, 0px);
+  --table-safe-right: env(safe-area-inset-right, 0px);
+  --table-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --table-safe-left: env(safe-area-inset-left, 0px);
+}
+
+.viewport--sideways {
+  --table-safe-top: env(safe-area-inset-right, 0px);
+  --table-safe-right: env(safe-area-inset-bottom, 0px);
+  --table-safe-bottom: env(safe-area-inset-left, 0px);
+  --table-safe-left: env(safe-area-inset-top, 0px);
 }
 
 img,
@@ -1078,10 +1099,11 @@ button:disabled {
      the leave button keep the widths they had. */
   grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.2fr) auto auto;
   align-items: center;
-  flex: 0 0 var(--top-strip-height);
+  flex: 0 0 calc(var(--top-strip-height) + var(--table-safe-top));
   gap: 0.4rem;
-  height: var(--top-strip-height);
-  padding: 0.25rem 0.4rem;
+  height: calc(var(--top-strip-height) + var(--table-safe-top));
+  padding: calc(0.25rem + var(--table-safe-top)) calc(0.4rem + var(--table-safe-right)) 0.25rem
+    calc(0.4rem + var(--table-safe-left));
   border-bottom: 1px solid rgba(245, 243, 238, 0.12);
 }
 
@@ -1091,7 +1113,8 @@ button:disabled {
   flex: 1 1 var(--middle-height);
   gap: 0.3rem;
   min-height: 0;
-  padding: 0.3rem 0.4rem;
+  padding: 0.3rem calc(0.4rem + var(--table-safe-right)) 0.3rem
+    calc(0.4rem + var(--table-safe-left));
 }
 
 .game-table__bottom {
@@ -1099,8 +1122,8 @@ button:disabled {
   position: relative;
   display: flex;
   flex-direction: column;
-  flex: 0 0 var(--hand-row-height);
-  height: var(--hand-row-height);
+  flex: 0 0 calc(var(--hand-row-height) + var(--table-safe-bottom));
+  height: calc(var(--hand-row-height) + var(--table-safe-bottom));
   border-top: 1px solid rgba(245, 243, 238, 0.12);
 }
 
@@ -1766,12 +1789,14 @@ button:disabled {
   align-items: flex-end;
   justify-content: center;
   height: 100%;
-  padding-bottom: var(--hand-fan-floor);
+  padding: 0 var(--table-safe-right) calc(var(--hand-fan-floor) + var(--table-safe-bottom))
+    var(--table-safe-left);
   overflow: visible;
 }
 
 .hand__fan {
   position: relative;
+  flex-shrink: 0;
   height: var(--card-height);
   margin: 0;
   padding: 0;
@@ -2132,6 +2157,11 @@ button:disabled {
   display: flex;
   align-items: stretch;
   justify-content: center;
+}
+
+.exchange > .hand {
+  width: 100%;
+  min-width: 0;
 }
 
 /* Sized and coloured by `.action-bar button` / `.action-bar__submit`: this is

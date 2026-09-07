@@ -28,7 +28,7 @@
  *   because a disabled button fires no pointer events and a drag has to be able
  *   to cross it (§10.4).
  */
-import type { CSSProperties, ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { Card, JokerBinding } from "@daifugo/core";
 import {
   CARD_HEIGHT,
@@ -39,6 +39,7 @@ import {
   UNPLAYABLE_DROP,
   UNPLAYABLE_SATURATION,
   UNPLAYABLE_SCALE,
+  layoutHand,
   type HandFanLayout,
 } from "../layout/handLayout";
 import { CardFace } from "./CardFace";
@@ -70,7 +71,7 @@ export interface CardFanProps {
 
 export function CardFan({
   cards,
-  layout,
+  layout: referenceLayout,
   label,
   className,
   isSelected,
@@ -84,8 +85,32 @@ export function CardFan({
   onExtendTo,
   onEndDrag,
 }: CardFanProps) {
+  const fanRef = useRef<HTMLUListElement>(null);
+  const [availableWidth, setAvailableWidth] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const row = fanRef.current?.parentElement;
+    if (!row || typeof ResizeObserver === "undefined") return;
+    // contentRect uses the row's local axes, including in sideways mode, and
+    // excludes the safe-area padding. Leave room for the rotated card corners.
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry && entry.contentRect.width > 0) {
+        setAvailableWidth(Math.max(CARD_WIDTH, entry.contentRect.width - 32));
+      }
+    });
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, []);
+  const layout =
+    availableWidth !== null && availableWidth < referenceLayout.width
+      ? layoutHand(
+          referenceLayout.cards.map((slot) => slot.weight),
+          availableWidth,
+        )
+      : referenceLayout;
+
   return (
     <ul
+      ref={fanRef}
       className={`hand__fan${className === undefined ? "" : ` ${className}`}`}
       style={{ width: `${layout.width}px` }}
       {...(label === undefined ? {} : { "aria-label": label })}
