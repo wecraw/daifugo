@@ -371,6 +371,21 @@ describe("the action bar (§10.6)", () => {
     fireEvent.click(passButton());
     expect(socket.sentOf("pass")).toEqual([[]]);
   });
+
+  it("clears the selection on a pass, so the next turn starts empty", () => {
+    // The turn key is the hand plus the trick context, and a pass changes
+    // neither, so nothing else would drop a selection the player just abandoned.
+    seat(
+      table(PAIR_HAND, {
+        currentTrick: [{ combo: combo([card("S-11", "S", 11)]), playedBy: "p_2" }],
+      }),
+    );
+    tap("D-13");
+    expect(cardButton("D-13")).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(passButton());
+    expect(cardButton("D-13")).toHaveAttribute("aria-pressed", "false");
+  });
 });
 
 describe("the joker badge (§10.5)", () => {
