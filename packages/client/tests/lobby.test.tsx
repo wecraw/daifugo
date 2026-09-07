@@ -48,6 +48,30 @@ function standingsRows(): string[][] {
 }
 
 describe("Lobby", () => {
+  it("edits only the viewer's profile with explicit save and cancel", async () => {
+    const { socket, user } = await seat(publicState({ players: THREE }));
+    expect(screen.getAllByRole("button", { name: "Edit profile" })).toHaveLength(1);
+
+    await user.click(screen.getByRole("button", { name: "Edit profile" }));
+    const editor = screen.getByRole("group", { name: "Edit profile" });
+    const name = within(editor).getByLabelText("Your name");
+    await user.clear(name);
+    await user.type(name, "Alex");
+    expect(within(editor).getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(within(editor).getByText("That name is already taken")).toBeInTheDocument();
+
+    await user.clear(name);
+    await user.type(name, "Bill");
+    await user.click(within(editor).getByRole("button", { name: "Your icon" }));
+    await user.click(screen.getByRole("button", { name: "Choose 🦊" }));
+    await user.click(within(editor).getByRole("button", { name: "Save" }));
+    expect(socket.sentOf("updateProfile")).toEqual([["Bill", "🦊"]]);
+
+    await user.click(screen.getByRole("button", { name: "Edit profile" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("group", { name: "Edit profile" })).not.toBeInTheDocument();
+  });
+
   it("shows selected player icons in the roster and standings", async () => {
     await seat(
       publicState({

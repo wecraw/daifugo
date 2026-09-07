@@ -40,6 +40,7 @@ describe("socket contracts (§8)", () => {
       "startGame",
       "submit10Discard",
       "submit7Pass",
+      "updateProfile",
       "updateRules",
     ]);
   });

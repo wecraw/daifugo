@@ -83,6 +83,87 @@ describe("RoomManager acceptance (§12.4)", () => {
     expect((await docOf(roomId)).state.players[1]?.icon).toBe("🙂");
   });
 
+  it("updates only the sender's profile between deals", async () => {
+    const roomId = await manager.createRoom();
+    const host = await seatPlayer(manager, roomId, "Will");
+    const alex = await seatPlayer(manager, roomId, "Alex");
+    const before = (await docOf(roomId)).state;
+
+    expect(await manager.updateProfile(roomId, host.playerId, "  Bill  ", "🐸")).toMatchObject({
+      ok: true,
+    });
+    const updated = (await docOf(roomId)).state;
+    expect(updated.players.find((player) => player.id === host.playerId)).toMatchObject({
+      name: "Bill",
+      icon: "🐸",
+    });
+    expect(updated.players.find((player) => player.id === alex.playerId)).toEqual(
+      before.players.find((player) => player.id === alex.playerId),
+    );
+    expect(updated.stateVersion).toBe(before.stateVersion + 1);
+    expect(updated.points).toEqual(before.points);
+    expect(updated.turnOrder).toEqual(before.turnOrder);
+
+    expect(await manager.updateProfile(roomId, host.playerId, "aLeX", "🦊")).toMatchObject({
+      error: "NAME_TAKEN",
+    });
+    expect(await manager.updateProfile(roomId, host.playerId, " ", "🦊")).toMatchObject({
+      error: "INVALID_ACTION",
+    });
+    expect(await manager.updateProfile(roomId, "not-a-player", "Nobody", "🦊")).toMatchObject({
+      error: "PLAYER_NOT_FOUND",
+    });
+  });
+
+  it("updates pending players at round end and refuses active play", async () => {
+    const roomId = await manager.createRoom();
+    const host = await seatPlayer(manager, roomId, "Will");
+    const alex = await seatPlayer(manager, roomId, "Alex");
+
+    await repo.mutate(roomId, (current) => {
+      const pending = current.state.players.find((player) => player.id === alex.playerId)!;
+      const state = {
+        ...current.state,
+        status: "ROUND_END" as const,
+        players: current.state.players.filter((player) => player.id !== alex.playerId),
+        pendingJoins: [pending],
+        stateVersion: current.state.stateVersion + 1,
+      };
+      return { ...current, state, status: state.status, stateVersion: state.stateVersion };
+    });
+    expect(await manager.updateProfile(roomId, alex.playerId, "Alicia", "🦊")).toMatchObject({
+      ok: true,
+    });
+    expect((await docOf(roomId)).state.pendingJoins[0]).toMatchObject({
+      name: "Alicia",
+      icon: "🦊",
+    });
+
+    await repo.mutate(roomId, (current) => {
+      const state = {
+        ...current.state,
+        status: "IN_PROGRESS" as const,
+        stateVersion: current.state.stateVersion + 1,
+      };
+      return { ...current, state, status: state.status, stateVersion: state.stateVersion };
+    });
+    expect(await manager.updateProfile(roomId, host.playerId, "Bill", "🐸")).toMatchObject({
+      error: "WRONG_STATUS",
+    });
+
+    await repo.mutate(roomId, (current) => {
+      const state = {
+        ...current.state,
+        status: "MATCH_END" as const,
+        stateVersion: current.state.stateVersion + 1,
+      };
+      return { ...current, state, status: state.status, stateVersion: state.stateVersion };
+    });
+    expect(await manager.updateProfile(roomId, host.playerId, "Bill", "🐸")).toMatchObject({
+      ok: true,
+    });
+  });
+
   /* ---------------------------------------------------------------------- */
   /* Test 25: reconnect reclaims the correct seat via resumeToken           */
   /* ---------------------------------------------------------------------- */

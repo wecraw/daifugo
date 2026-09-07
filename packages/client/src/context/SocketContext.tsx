@@ -61,7 +61,7 @@ import { readStoredPlayerIcon, writeStoredPlayerIcon } from "../playerIcon";
 import { SESSION_STORAGE_KEY, readStored, writeStored } from "../storage";
 import { serverUrl, socketUrl } from "../serverUrl";
 import { onAppResume, onDeepLink } from "../native";
-import { SERVER_TO_CLIENT_EVENTS } from "@daifugo/core";
+import { normalizePlayerIcon, SERVER_TO_CLIENT_EVENTS } from "@daifugo/core";
 import type {
   ClientToServerEvents,
   GameErrorPayload,
@@ -401,6 +401,27 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
     if (stored === null || !isSessionFresh(stored, Date.now())) return;
     joinRoom(stored.roomId, stored.playerName);
   }, [joinRoom, linkedRoom]);
+
+  // A successful profile mutation arrives through the authoritative room
+  // broadcast. Only then update the reconnect intent and durable identity, so a
+  // rejected name collision can never poison the next reload.
+  useEffect(() => {
+    if (room === null || playerId === null) return;
+    const seat = [...room.players, ...room.pendingJoins].find((player) => player.id === playerId);
+    const join = pendingJoin.current;
+    if (seat === undefined || join === null) return;
+    const icon = normalizePlayerIcon(seat.icon);
+    if (join.playerName === seat.name && normalizePlayerIcon(join.icon) === icon) return;
+
+    pendingJoin.current = { ...join, playerName: seat.name, icon };
+    writeStoredPlayerName(seat.name);
+    writeStoredPlayerIcon(icon);
+    const stored = readStoredSession();
+    if (stored !== null && stored.roomId === room.roomId) {
+      const session = writeStoredSession({ ...stored, playerName: seat.name });
+      setStoredSession(session);
+    }
+  }, [playerId, room]);
 
   // The address bar follows the seat. It is left alone while a join is in flight
   // — clearing it mid-connect would throw away the code a reload needs — and only

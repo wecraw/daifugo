@@ -65,6 +65,8 @@ describe("the address bar", () => {
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Leave room" }));
+    const [ack] = socket.sentOf("leaveRoom")[0] ?? [];
+    if (typeof ack === "function") act(() => ack());
 
     await waitFor(() => expect(location.pathname).toBe("/"));
   });

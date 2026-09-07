@@ -93,6 +93,27 @@ describe("the round-end curtain (§10.12)", () => {
     vi.useRealTimers();
   });
 
+  it("edits the viewer's profile on round-end and match-over curtains", async () => {
+    const { socket, user } = await seat(inProgress());
+    act(() => socket.fire("roomState", { ...ended(), myPlayerId: "p_1" }));
+
+    await user.click(screen.getByRole("button", { name: "Edit profile" }));
+    const editor = screen.getByRole("group", { name: "Edit profile" });
+    const name = within(editor).getByLabelText("Your name");
+    await user.clear(name);
+    await user.type(name, "Bill");
+    await user.click(within(editor).getByRole("button", { name: "Save" }));
+    expect(socket.sentOf("updateProfile")).toEqual([["Bill", "🙂"]]);
+
+    act(() =>
+      socket.fire("roomState", {
+        ...ended({ status: "MATCH_END" }),
+        myPlayerId: "p_1",
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Edit profile" })).toBeInTheDocument();
+  });
+
   it("holds the table with the result over it rather than warping to the lobby", async () => {
     const { socket } = await seat(inProgress());
     act(() => socket.fire("roomState", { ...ended(), myPlayerId: "p_1" }));

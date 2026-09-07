@@ -13,6 +13,7 @@
 import {
   applyAction,
   normalizePlayerIcon,
+  normalizePlayerName,
   canCancelLeave,
   cancelLeave,
   createGameState,
@@ -136,12 +137,14 @@ export class RoomManager {
     resumeToken?: string,
     icon?: string,
   ): Promise<Result<JoinOutcome, ErrorCode>> {
+    const name = normalizePlayerName(playerName);
+    if (name === null) return err("INVALID_ACTION");
     let captured: Result<JoinOutcome, ErrorCode> | null = null;
 
     let doc: RoomDoc;
     try {
       doc = await this.repo.mutate(roomId, (current) => {
-        const decided = this.decideJoin(current, playerName, resumeToken, icon);
+        const decided = this.decideJoin(current, name, resumeToken, icon);
         captured = decided.outcome;
         return decided.next;
       });
@@ -345,6 +348,72 @@ export class RoomManager {
     ready: boolean,
   ): Promise<Result<GameState, ErrorCode>> {
     return this.dispatch(roomId, playerId, { type: "SET_READY", ready: ready === true });
+  }
+
+  /** Update the sender's display identity while the table is between deals. */
+  async updateProfile(
+    roomId: string,
+    playerId: string,
+    playerName: string,
+    icon: string,
+  ): Promise<Result<GameState, ErrorCode>> {
+    const name = normalizePlayerName(playerName);
+    if (name === null) return err("INVALID_ACTION");
+
+    let captured: Result<GameState, ErrorCode> | null = null;
+    let changed = false;
+    let doc: RoomDoc;
+    try {
+      doc = await this.repo.mutate(roomId, (current) => {
+        const state = current.state;
+        if (
+          state.status !== "LOBBY" &&
+          state.status !== "ROUND_END" &&
+          state.status !== "MATCH_END"
+        ) {
+          captured = err("WRONG_STATUS");
+          return null;
+        }
+        const roster = [...state.players, ...state.pendingJoins];
+        const seat = roster.find((player) => player.id === playerId);
+        if (seat === undefined) {
+          captured = err("PLAYER_NOT_FOUND");
+          return null;
+        }
+        if (
+          roster.some(
+            (player) => player.id !== playerId && player.name.toLowerCase() === name.toLowerCase(),
+          )
+        ) {
+          captured = err("NAME_TAKEN");
+          return null;
+        }
+
+        const normalizedIcon = normalizePlayerIcon(icon);
+        if (seat.name === name && seat.icon === normalizedIcon) {
+          captured = ok(state);
+          return null;
+        }
+        const update = (player: Player): Player =>
+          player.id === playerId ? { ...player, name, icon: normalizedIcon } : player;
+        const next: GameState = {
+          ...state,
+          players: state.players.map(update),
+          pendingJoins: state.pendingJoins.map(update),
+          stateVersion: state.stateVersion + 1,
+        };
+        changed = true;
+        captured = ok(next);
+        return withState(current, next, this.scheduler.now());
+      });
+    } catch (error) {
+      if (error instanceof RoomNotFoundError) return err("ROOM_NOT_FOUND");
+      throw error;
+    }
+
+    const result: Result<GameState, ErrorCode> = captured ?? err<ErrorCode>("INVALID_ACTION");
+    if (changed) await this.emit(doc);
+    return result;
   }
 
   playCards(

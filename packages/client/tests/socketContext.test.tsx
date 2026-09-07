@@ -142,6 +142,42 @@ describe("SocketContext", () => {
     expect(screen.getByText("Will")).toBeInTheDocument();
   });
 
+  it("persists profile changes only after the authoritative room state", async () => {
+    const socket = new FakeSocket();
+    render(<App connect={() => socket.asSocket()} />);
+    await joinAs(socket, "Will");
+    act(() => socket.fire("joined", { roomId: "ABC", playerId: "p_1", resumeToken: "tok-1" }));
+    act(() => socket.fire("roomState", publicState()));
+
+    expect(localStorage.getItem("daifugo.playerName")).toBe("Will");
+    act(() => socket.fire("gameError", { code: "NAME_TAKEN" }));
+    expect(localStorage.getItem("daifugo.playerName")).toBe("Will");
+
+    act(() =>
+      socket.fire(
+        "roomState",
+        publicState({
+          stateVersion: 2,
+          players: [
+            {
+              ...publicState().players[0]!,
+              name: "Bill",
+              icon: "🦊",
+            },
+          ],
+        }),
+      ),
+    );
+    await waitFor(() => expect(localStorage.getItem("daifugo.playerName")).toBe("Bill"));
+    expect(localStorage.getItem("daifugo.playerIcon")).toBe("🦊");
+    expect(readStoredSession()).toMatchObject({ playerName: "Bill", resumeToken: "tok-1" });
+
+    act(() => socket.disconnect());
+    act(() => socket.connect());
+    await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(2));
+    expect(socket.sentOf("joinRoom")[1]).toEqual(["ABC", "Bill", "tok-1", "🦊"]);
+  });
+
   it("replays the token on reconnect rather than taking a new seat", async () => {
     const socket = new FakeSocket();
     render(<App connect={() => socket.asSocket()} />);

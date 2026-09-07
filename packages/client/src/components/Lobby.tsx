@@ -51,6 +51,7 @@ import { inviteUrl } from "../serverUrl";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { HostPanel } from "./HostPanel";
 import { NextRoundActions, rosterSize } from "./NextRoundActions";
+import { ProfileEditor } from "./ProfileEditor";
 
 /** Where a row stands relative to the next deal, or null for a settled seat. */
 type PendingChange = "joining" | "leaving" | null;
@@ -235,6 +236,16 @@ export function Lobby({ room }: { room: PublicGameState }) {
               )}
               {seat.id === playerId && (
                 <span className="badge badge--you">{t("ui.lobby.you")}</span>
+              )}
+              {seat.id === playerId && (
+                <ProfileEditor
+                  name={seat.name}
+                  icon={seat.icon}
+                  takenNames={seats
+                    .filter(({ seat: other }) => other.id !== seat.id)
+                    .map(({ seat: other }) => other.name)}
+                  disabled={!seat.isConnected}
+                />
               )}
               {/* A round boundary this promises never comes once the match is over
                   (§7.7) — a queued join/leave from just before `MATCH_END` still

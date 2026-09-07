@@ -38,6 +38,7 @@ import { useEffect, useRef } from "react";
 import { CURTAIN_ENTER_MS, CURTAIN_ROW_STAGGER_MS } from "../animation/roundEnd";
 import { useTranslate } from "../i18n/index";
 import { NextRoundActions } from "./NextRoundActions";
+import { ProfileEditor } from "./ProfileEditor";
 
 /** One line of the curtain: where a seat placed, and what it earned for it. */
 interface Place {
@@ -131,6 +132,18 @@ export function RoundEndCurtain({
               <span className="round-end__player">
                 <PlayerIcon icon={room.players.find((seat) => seat.id === row.playerId)?.icon} />
                 {nameOf(room, row.playerId)}
+                {row.playerId === room.myPlayerId && (
+                  <ProfileEditor
+                    name={nameOf(room, row.playerId)}
+                    icon={room.players.find((seat) => seat.id === row.playerId)?.icon}
+                    takenNames={room.players
+                      .filter((seat) => seat.id !== row.playerId)
+                      .map((seat) => seat.name)}
+                    disabled={
+                      room.players.find((seat) => seat.id === row.playerId)?.isConnected === false
+                    }
+                  />
+                )}
               </span>
               <span className="round-end__role">
                 {row.role === null ? "" : t(`role.${row.role.kind}`)}
