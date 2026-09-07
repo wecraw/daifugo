@@ -58,6 +58,13 @@ export const UI_I18N_KEYS = [
   "ui.room.share",
   "ui.room.linkCopied",
 
+  // The seated player's editable display identity.
+  "ui.profile.edit",
+  "ui.profile.title",
+  "ui.profile.save",
+  "ui.profile.cancel",
+  "ui.profile.nameTaken",
+
   // Lobby (§10.11, §9): the roster, the round line, and the start control.
   "ui.lobby.roster",
   "ui.lobby.host",

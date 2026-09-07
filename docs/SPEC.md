@@ -651,6 +651,7 @@ export interface ServerToClientEvents {
 
 export interface ClientToServerEvents {
   joinRoom: (roomId: string, playerName: string, resumeToken?: string) => void;
+  updateProfile: (playerName: string, icon: string) => void;
   updateRules: (config: Partial<HouseRulesConfig>) => void;
   setRoundLimit: (limit: number | null) => void;
   setReady: (ready: boolean) => void;
@@ -695,6 +696,12 @@ token reaches the client on `joined`, emitted to that socket alone before the fi
 `roomState`; a successful resume echoes the same token back, so the client can store
 the payload unconditionally. Without this event the token would have no channel and
 every reconnect would be a fresh join.
+
+Player names are trimmed, non-empty, at most 16 characters, and unique within a
+room ignoring case. A seated player may atomically replace their own name and icon
+with `updateProfile` in `LOBBY`, `ROUND_END`, or `MATCH_END`; active play and exchange
+reject it with `WRONG_STATUS`. The stored session and remembered identity are updated
+only after the authoritative `roomState` broadcasts the change.
 
 A page load replays the stored seat automatically, with no click: reloading
 mid-round puts you back at the table rather than at the main menu. The stored
@@ -959,6 +966,10 @@ centred during `EXCHANGE`.
 ### 10.11 Host panel
 Rule toggles are hidden behind a disclosure in the lobby, collapsed by default with
 all ten rules ON. Round limit lives here too.
+
+The viewer's own roster row also offers an explicit-save profile editor for their
+name and icon. The same editor appears on their row in the round-end and match-end
+curtains, so a player need not dismiss the result to change their identity.
 
 The panel renders for **every** seat, because the rules decide how the next round
 plays for the whole table and a change to them has to be visible to everyone. Only

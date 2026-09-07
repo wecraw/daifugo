@@ -14,4 +14,5 @@ export * from "./sanitizer.js";
 export * from "./network.js";
 
 export * from "./playerIcon.js";
+export * from "./playerName.js";
 export * from "./reactions.js";

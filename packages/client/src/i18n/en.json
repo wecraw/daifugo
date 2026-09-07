@@ -138,6 +138,11 @@
   "ui.room.leave": "Leave room",
   "ui.room.share": "Share invite",
   "ui.room.linkCopied": "Link copied",
+  "ui.profile.edit": "Edit profile",
+  "ui.profile.title": "Edit profile",
+  "ui.profile.save": "Save",
+  "ui.profile.cancel": "Cancel",
+  "ui.profile.nameTaken": "That name is already taken",
 
   "ui.lobby.roster": "Players",
   "ui.lobby.host": "Host",

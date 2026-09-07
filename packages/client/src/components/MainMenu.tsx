@@ -21,6 +21,7 @@ import {
   type CSSProperties,
   type FormEvent,
 } from "react";
+import { PLAYER_NAME_MAX_LENGTH } from "@daifugo/core";
 import { useCopy, type I18nKey } from "../i18n/index";
 import { useSocket } from "../context/SocketContext";
 import { useKeyboardInset } from "../hooks/useKeyboardInset";
@@ -30,7 +31,6 @@ import { readStoredPlayerName } from "../playerName";
 import { EmojiPicker } from "./EmojiPicker";
 import { readStoredPlayerIcon, writeStoredPlayerIcon } from "../playerIcon";
 
-const NAME_MAX_LENGTH = 16;
 const CODE_MAX_LENGTH = 3;
 /** Matches `name-spotlight-out` in `styles.css`. */
 const SPOTLIGHT_EXIT_MS = 240;
@@ -196,7 +196,7 @@ export function MainMenu() {
               ref={nameRef}
               type="text"
               value={name}
-              maxLength={NAME_MAX_LENGTH}
+              maxLength={PLAYER_NAME_MAX_LENGTH}
               enterKeyHint="done"
               autoCorrect="off"
               placeholder={t("ui.menu.namePlaceholder")}

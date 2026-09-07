@@ -74,6 +74,12 @@ export class RoomHub {
       void this.onJoin(socket, roomId, playerName, resumeToken, icon);
     });
 
+    socket.on("updateProfile", (playerName, icon) => {
+      void this.guarded(socket, (roomId, playerId) =>
+        this.manager.updateProfile(roomId, playerId, playerName, icon),
+      );
+    });
+
     socket.on("leaveRoom", (ack) => {
       void this.onLeave(socket, ack);
     });

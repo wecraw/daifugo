@@ -64,6 +64,7 @@ export interface ServerToClientEvents {
 
 export interface ClientToServerEvents {
   joinRoom: (roomId: string, playerName: string, resumeToken?: string, icon?: string) => void;
+  updateProfile: (playerName: string, icon: string) => void;
   leaveRoom: (ack: () => void) => void;
   updateRules: (config: Partial<HouseRulesConfig>) => void;
   setRoundLimit: (limit: number | null) => void;
@@ -96,6 +97,7 @@ export const SERVER_TO_CLIENT_EVENTS = [
 
 export const CLIENT_TO_SERVER_EVENTS = [
   "joinRoom",
+  "updateProfile",
   "leaveRoom",
   "updateRules",
   "setRoundLimit",

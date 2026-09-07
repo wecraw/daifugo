@@ -122,6 +122,31 @@ describe("Socket.IO contract (§8, §12.4)", () => {
     expect(resumed.state.players[0]?.icon).toBe("🦊");
   });
 
+  it("broadcasts profile updates and returns collisions only to the sender", async () => {
+    const roomId = await createRoom();
+    const will = await join(roomId, "Will", undefined, "🦊");
+    const alexState = once(will.socket, "roomState");
+    const alex = await join(roomId, "Alex", undefined, "🐸");
+    await alexState;
+
+    const seenByWill = once(will.socket, "roomState");
+    const seenByAlex = once(alex.socket, "roomState");
+    will.socket.emit("updateProfile", "Bill", "🐲");
+    const [[willView], [alexView]] = await Promise.all([seenByWill, seenByAlex]);
+    expect(willView.players[0]).toMatchObject({ name: "Bill", icon: "🐲" });
+    expect(alexView.players[0]).toMatchObject({ name: "Bill", icon: "🐲" });
+
+    let observerError = false;
+    alex.socket.once("gameError", () => {
+      observerError = true;
+    });
+    const rejected = once(will.socket, "gameError");
+    will.socket.emit("updateProfile", "aLeX", "🦊");
+    const [error] = await rejected;
+    expect(error.code).toBe("NAME_TAKEN");
+    expect(observerError).toBe(false);
+  });
+
   it("delivers `joined` with the resumeToken before the first `roomState` (test 30a)", async () => {
     const roomId = await createRoom();
     const socket = connect();
