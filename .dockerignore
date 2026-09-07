@@ -17,3 +17,8 @@ docs
 README.md
 CLAUDE.md
 scripts
+
+# The iOS shell (docs/IOS.md) is built on a Mac, never in this image, and the
+# Xcode project is large enough to be worth keeping out of the build context.
+packages/client/ios
+.env.native

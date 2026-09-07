@@ -23,6 +23,15 @@ dist-ssr
 # Coverage output (§12.3 gate)
 coverage
 
+# Capacitor / iOS (docs/IOS.md). The generated `ios/` project IS committed — the
+# Info.plist edits (landscape lock, hidden status bar) live in it — but its build
+# output and the deployment config baked into the app are not.
+packages/client/.env.native
+packages/client/ios/App/build
+packages/client/ios/App/Pods
+packages/client/ios/App/App/public
+DerivedData
+
 # Firebase / Firestore emulator (§14)
 .firebase
 firebase-debug.log

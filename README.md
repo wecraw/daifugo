@@ -29,7 +29,15 @@ npm run typecheck               # project-referenced tsc across all packages
 npm run lint                    # eslint
 npm run build                   # build core, server, then client
 npm run smoke -- <url>          # deploy smoke check against a running service
+npm run ios:build               # build the client and sync it into the iOS app
+npm run ios:open                # open the iOS project in Xcode
 ```
+
+## iOS
+
+The same client also ships as a sideloadable iOS app — the web bundle in a
+WKWebView, pointed at the deployed server. See [`docs/IOS.md`](docs/IOS.md) for
+the one-time Xcode setup and what the native build changes.
 
 ## State and configuration (§14)
 
