@@ -40,6 +40,12 @@ export interface ComboContext {
    * which keeps `combo.ts` at the bottom of the dependency chain.
    */
   isLegal?: (combo: PlayCombo) => boolean;
+  /**
+   * Whether a candidate establishes a suit lock (§6). Provided by the evaluator
+   * so default binding resolution can prefer locking the trick over an arbitrary
+   * suit tie-break.
+   */
+  locksTrick?: (combo: PlayCombo) => boolean;
 }
 
 const NO_BINDINGS: ReadonlyMap<string, JokerBinding> = new Map();
@@ -208,7 +214,7 @@ function resolveDefaultBindings(
   const legal = candidates.filter((candidate) =>
     isLegalCandidate(candidate, top, inverted, context),
   );
-  const best = legal.sort((a, b) => compareCandidates(a, b, inverted))[0];
+  const best = legal.sort((a, b) => compareCandidates(a, b, inverted, context))[0];
   return best === undefined ? err("NO_LEGAL_BINDING") : ok(best);
 }
 
@@ -224,11 +230,23 @@ function isLegalCandidate(
   return context.isLegal?.(candidate) ?? true;
 }
 
-/** Best first: effective strength, then pure, then a total tie-break on suits. */
-function compareCandidates(a: PlayCombo, b: PlayCombo, inverted: boolean): number {
+/** Best first: effective strength, then pure, then suit lock, then a total tie-break on suits. */
+function compareCandidates(
+  a: PlayCombo,
+  b: PlayCombo,
+  inverted: boolean,
+  context?: ComboContext,
+): number {
   const byStrength = compareStrength(comboStrength(b), comboStrength(a), inverted);
   if (byStrength !== 0) return byStrength;
   if (a.isPureJokerPlay !== b.isPureJokerPlay) return a.isPureJokerPlay ? -1 : 1;
+
+  // Prefer a binding that establishes a suit lock (§6).
+  if (context?.locksTrick !== undefined) {
+    const aLocks = context.locksTrick(a);
+    const bLocks = context.locksTrick(b);
+    if (aLocks !== bLocks) return aLocks ? -1 : 1;
+  }
 
   // Suits never affect strength, so every remaining candidate is equally strong
   // and the choice is arbitrary — but it must be a *function of the selection*,

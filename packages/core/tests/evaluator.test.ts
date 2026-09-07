@@ -16,6 +16,7 @@ import {
   generateLegalMoves,
   hasLegalMove,
   legalMovesKey,
+  locksTrick,
   matchesSuitLock,
 } from "../src/evaluator.js";
 import type { Card, JokerBinding, PlayCombo, Rank, Suit } from "../src/types.js";
@@ -179,6 +180,14 @@ describe("shibari: matching an active suit lock (§6)", () => {
     expect(matchesSuitLock(combo(["H-9", "S-9"]), ["S", "H"])).toBe(true);
     expect(matchesSuitLock(combo(["H-9"]), ["H", "S"])).toBe(false);
   });
+
+  it("determines whether a play establishes a new suit lock via locksTrick", () => {
+    const top = combo(["D-10", "C-10"]);
+    expect(locksTrick(combo(["D-12", "C-12"]), { top })).toBe(true);
+    expect(locksTrick(combo(["D-12", "S-12"]), { top })).toBe(false);
+    // When already locked, locksTrick is false (does not establish a new lock)
+    expect(locksTrick(combo(["D-12", "C-12"]), { top, suitLock: ["D", "C"] })).toBe(false);
+  });
 });
 
 describe("generateLegalMoves (§10.3)", () => {
@@ -233,6 +242,16 @@ describe("generateLegalMoves (§10.3)", () => {
     const moves = generateLegalMoves(hand, { top, suitLock: ["H", "D"] });
     expect(moveIds(moves)).toEqual(["H-8+JKR-1"]);
     expect(moves[0]?.suits.slice().sort()).toEqual(["D", "H"]);
+  });
+
+  it("binds a joker to establish a suit lock when one is available", () => {
+    const hand = cards("JKR-1", "D-12");
+    const top = combo(["D-10", "C-10"]);
+    const moves = generateLegalMoves(hand, { top });
+    expect(moveIds(moves)).toEqual(["D-12+JKR-1"]);
+    // Binds JKR-1 to C-12 to lock, instead of default S-12
+    expect(moves[0]?.suits.slice().sort()).toEqual(["C", "D"]);
+    expect(moves[0]?.bindings).toEqual([{ cardId: "JKR-1", rank: 12, suit: "C" }]);
   });
 
   it("pairs the two jokers, and binds them when pure cannot win", () => {

@@ -35,7 +35,7 @@ import {
   reseat,
   shuffle,
 } from "./deck.js";
-import { checkLegality, generateLegalMoves, invertedIn, trickContextOf } from "./evaluator.js";
+import { checkLegality, generateLegalMoves, invertedIn, locksTrick, trickContextOf } from "./evaluator.js";
 import { takeFromHand } from "./hand.js";
 import { type ErrorCode, history, roleKey } from "./i18n-keys.js";
 import {
@@ -546,6 +546,7 @@ function playCards(
     top: ctx.top ?? null,
     inverted: invertedIn(ctx),
     isLegal: (candidate) => checkLegality(candidate, ctx).ok,
+    locksTrick: (candidate) => locksTrick(candidate, ctx),
   });
   if (!parsed.ok) return parsed;
 

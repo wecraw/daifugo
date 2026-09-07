@@ -260,6 +260,16 @@ describe("default binding resolution (§5.5)", () => {
     expect(combo.suits).toEqual(["D", "H"]);
   });
 
+  it("prefers a binding that establishes a suit lock via locksTrick", () => {
+    const combo = parsed(cards("JKR-1", "D-12"), undefined, {
+      top: top(["D-10", "C-10"]),
+      locksTrick: (c) => c.suits.includes("D") && c.suits.includes("C"),
+    });
+    // With locksTrick, the joker resolves to C (Club) to lock, rather than default S (Spade)
+    expect(combo.suits).toEqual(["C", "D"]);
+    expect(combo.bindings).toEqual([{ cardId: "JKR-1", rank: 12, suit: "C" }]);
+  });
+
   it("distinguishes an empty bindings array from an absent one", () => {
     // Absent asks for the default, which binds the joker to the 8 (§5.5).
     expect(parsed(cards("JKR-1", "H-8")).resolvedRank).toBe(8);
