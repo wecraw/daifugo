@@ -29,7 +29,7 @@ import { TerminologyToggle } from "./TerminologyToggle";
 import { readStoredPlayerName } from "../playerName";
 
 import { EmojiPicker } from "./EmojiPicker";
-import { readStoredPlayerIcon, writeStoredPlayerIcon } from "../playerIcon";
+import { readOrCreateStoredPlayerIcon, writeStoredPlayerIcon } from "../playerIcon";
 
 const CODE_MAX_LENGTH = 3;
 /** Matches `name-spotlight-out` in `styles.css`. */
@@ -63,7 +63,7 @@ export function MainMenu() {
     const seatName = storedSession?.playerName ?? "";
     return seatName !== "" ? seatName : readStoredPlayerName();
   });
-  const [icon, setIcon] = useState(readStoredPlayerIcon);
+  const [icon, setIcon] = useState(readOrCreateStoredPlayerIcon);
   const [code, setCode] = useState(() => linkedRoomCode ?? "");
   const [notice, setNotice] = useState<I18nKey | null>(null);
   const [creating, setCreating] = useState(false);

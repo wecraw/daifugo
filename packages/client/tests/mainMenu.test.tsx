@@ -68,7 +68,12 @@ describe("MainMenu", () => {
 
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(1));
     expect(fetchImpl).toHaveBeenCalledWith("/rooms", { method: "POST" });
-    expect(socket.sentOf("joinRoom")[0]).toEqual(["ABC234", "Will", undefined]);
+    expect(socket.sentOf("joinRoom")[0]).toEqual([
+      "ABC234",
+      "Will",
+      undefined,
+      localStorage.getItem("daifugo.playerIcon"),
+    ]);
   });
 
   it("joins by code", async () => {
@@ -81,7 +86,12 @@ describe("MainMenu", () => {
 
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(1));
     // The code is normalised to uppercase letters only, and truncated to 3 chars, as it is typed.
-    expect(socket.sentOf("joinRoom")[0]).toEqual(["ABC", "Alex", undefined]);
+    expect(socket.sentOf("joinRoom")[0]).toEqual([
+      "ABC",
+      "Alex",
+      undefined,
+      localStorage.getItem("daifugo.playerIcon"),
+    ]);
   });
 
   it("refuses to join without a name, through a key", async () => {

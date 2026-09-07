@@ -103,7 +103,12 @@ describe("a page loaded on a room code", () => {
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(1));
     // The URL's room outranks the stored seat's room, and the token belongs to
     // the other room, so it is not replayed.
-    expect(socket.sentOf("joinRoom")[0]).toEqual(["XYZ", "Will", undefined]);
+    expect(socket.sentOf("joinRoom")[0]).toEqual([
+      "XYZ",
+      "Will",
+      undefined,
+      localStorage.getItem("daifugo.playerIcon"),
+    ]);
   });
 
   it("auto-joins even when the stored seat is too old to replay on its own", async () => {
@@ -121,7 +126,12 @@ describe("a page loaded on a room code", () => {
     render(<App connect={() => socket.asSocket()} />);
 
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(1));
-    expect(socket.sentOf("joinRoom")[0]).toEqual(["ABC", "Will", "tok-old"]);
+    expect(socket.sentOf("joinRoom")[0]).toEqual([
+      "ABC",
+      "Will",
+      "tok-old",
+      localStorage.getItem("daifugo.playerIcon"),
+    ]);
   });
 
   it("prefills the code and waits for a name when it knows none", async () => {
@@ -137,6 +147,11 @@ describe("a page loaded on a room code", () => {
     await user.click(screen.getByRole("button", { name: "Join room" }));
 
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(1));
-    expect(socket.sentOf("joinRoom")[0]).toEqual(["ABC", "Alex", undefined]);
+    expect(socket.sentOf("joinRoom")[0]).toEqual([
+      "ABC",
+      "Alex",
+      undefined,
+      localStorage.getItem("daifugo.playerIcon"),
+    ]);
   });
 });

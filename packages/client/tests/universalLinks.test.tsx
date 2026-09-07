@@ -70,7 +70,12 @@ describe("a tapped invite link", () => {
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(2));
     // The link's room outranks the stored seat's, and that seat's token belongs
     // to the other room, so it is not replayed.
-    expect(socket.sentOf("joinRoom")[1]).toEqual(["XYZ", "Will", undefined]);
+    expect(socket.sentOf("joinRoom")[1]).toEqual([
+      "XYZ",
+      "Will",
+      undefined,
+      localStorage.getItem("daifugo.playerIcon"),
+    ]);
   });
 
   it("prefills the menu and waits for a name when it knows none", async () => {
@@ -98,7 +103,12 @@ describe("a tapped invite link", () => {
     tapInviteLink("https://daifugo.wecraw.com/XYZ");
 
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(2));
-    expect(socket.sentOf("joinRoom")[1]).toEqual(["XYZ", "Will", undefined]);
+    expect(socket.sentOf("joinRoom")[1]).toEqual([
+      "XYZ",
+      "Will",
+      undefined,
+      localStorage.getItem("daifugo.playerIcon"),
+    ]);
   });
 
   it("rejoins the same room when the same link is tapped again", async () => {

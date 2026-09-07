@@ -191,7 +191,12 @@ describe("SocketContext", () => {
 
     act(() => socket.connect());
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(2));
-    expect(socket.sentOf("joinRoom")[1]).toEqual(["ABC", "Will", "tok-1"]);
+    expect(socket.sentOf("joinRoom")[1]).toEqual([
+      "ABC",
+      "Will",
+      "tok-1",
+      localStorage.getItem("daifugo.playerIcon"),
+    ]);
   });
 
   it("replays a token stored by an earlier page load", async () => {
@@ -206,7 +211,12 @@ describe("SocketContext", () => {
     await user.click(screen.getByRole("button", { name: "Rejoin ABC" }));
 
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(1));
-    expect(socket.sentOf("joinRoom")[0]).toEqual(["ABC", "Will", "tok-old"]);
+    expect(socket.sentOf("joinRoom")[0]).toEqual([
+      "ABC",
+      "Will",
+      "tok-old",
+      localStorage.getItem("daifugo.playerIcon"),
+    ]);
   });
 
   it("replays a fresh stored session on mount without a click", async () => {
@@ -223,7 +233,12 @@ describe("SocketContext", () => {
     render(<App connect={() => socket.asSocket()} />);
 
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(1));
-    expect(socket.sentOf("joinRoom")[0]).toEqual(["ABC", "Will", "tok-old"]);
+    expect(socket.sentOf("joinRoom")[0]).toEqual([
+      "ABC",
+      "Will",
+      "tok-old",
+      localStorage.getItem("daifugo.playerIcon"),
+    ]);
 
     act(() => socket.fire("joined", { roomId: "ABC", playerId: "p_1", resumeToken: "tok-old" }));
     act(() => socket.fire("roomState", publicState()));
@@ -257,7 +272,12 @@ describe("SocketContext", () => {
 
     const live = sockets[sockets.length - 1];
     await waitFor(() => expect(live.sentOf("joinRoom").length).toBe(1));
-    expect(live.sentOf("joinRoom")[0]).toEqual(["ABC", "Will", "tok-old"]);
+    expect(live.sentOf("joinRoom")[0]).toEqual([
+      "ABC",
+      "Will",
+      "tok-old",
+      localStorage.getItem("daifugo.playerIcon"),
+    ]);
 
     act(() => live.fire("joined", { roomId: "ABC", playerId: "p_1", resumeToken: "tok-old" }));
     act(() => live.fire("roomState", publicState()));
@@ -385,7 +405,12 @@ describe("SocketContext", () => {
     await user.click(screen.getByRole("button", { name: "Join room" }));
     await waitFor(() => expect(socket.sentOf("joinRoom").length).toBe(1));
     // No token was replayed for the room we mistyped, so none of it was at stake.
-    expect(socket.sentOf("joinRoom")[0]).toEqual(["ZZZ", "Will", undefined]);
+    expect(socket.sentOf("joinRoom")[0]).toEqual([
+      "ZZZ",
+      "Will",
+      undefined,
+      localStorage.getItem("daifugo.playerIcon"),
+    ]);
 
     act(() => socket.fire("gameError", { code: "ROOM_NOT_FOUND" }));
 
