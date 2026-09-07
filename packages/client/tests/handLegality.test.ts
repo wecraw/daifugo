@@ -113,16 +113,39 @@ describe("joker bindings (§10.5)", () => {
     expect(options.some((option) => option.bindings.length === 0)).toBe(true);
   });
 
-  it("keeps the suit that would set a lock as its own choice (§6)", () => {
+  it("keeps the suit that would set a lock as its own choice, and offers it first (§6)", () => {
     // A heart on the table: binding the joker to a heart locks the trick to
     // hearts, any other suit does not — so those are two different plays and the
-    // badge has to be able to reach both.
+    // badge has to be able to reach both, with the lock-setting option first.
     const ctx: TrickContext = { top: top([card("H-5", "H", 5)]) };
     const options = bindingOptions([joker], ctx);
     const sixes = options.filter((option) => option.combo.resolvedRank === 6);
     expect(sixes).toHaveLength(2);
-    expect(sixes.some((option) => option.combo.suits[0] === "H")).toBe(true);
-    expect(sixes.some((option) => option.combo.suits[0] !== "H")).toBe(true);
+    expect(sixes[0]?.combo.suits[0]).toBe("H");
+    expect(sixes[1]?.combo.suits[0]).not.toBe("H");
+  });
+
+  it("auto-suggests a suit that establishes a suit lock over default suit order", () => {
+    // Attached user scenario: top is 10♦ 10♣, hand plays Q♦ + Joker.
+    // The player prefers Q♣ to suit lock the trick, rather than default Q♠.
+    const ctx: TrickContext = {
+      top: top([card("D-10", "D", 10), card("C-10", "C", 10)]),
+    };
+    const selection = [card("D-12", "D", 12), joker];
+    const options = bindingOptions(selection, ctx);
+
+    expect(options).toHaveLength(2);
+    // Primary auto-suggestion: Q♣ (establishes suit lock)
+    expect(options[0]?.combo.suits).toEqual(["D", "C"]);
+    expect(options[0]?.bindings).toEqual([{ cardId: joker.id, rank: 12, suit: "C" }]);
+    // Secondary option when cycling badge: Q♠ (non-locking)
+    expect(options[1]?.combo.suits).toEqual(["D", "S"]);
+    expect(options[1]?.bindings).toEqual([{ cardId: joker.id, rank: 12, suit: "S" }]);
+
+    // Core default resolution agrees with options[0]
+    const core = resolveSelection(selection, null, ctx);
+    expect(core.ok).toBe(true);
+    expect(options[0]?.combo).toEqual(core.ok ? core.value : null);
   });
 
   it("collapses the suits nothing can tell apart", () => {

@@ -9,7 +9,7 @@ export default [
     // `.claude/worktrees` holds throwaway checkouts of branches being worked on
     // elsewhere. They are excluded from git and are not this tree's code, so
     // linting them only ever reports the same problems twice.
-    ignores: ["**/dist/**", "**/node_modules/**", ".claude/**"],
+    ignores: ["**/dist/**", "**/node_modules/**", ".claude/**", "packages/client/ios/**"],
   },
   js.configs.recommended,
   {

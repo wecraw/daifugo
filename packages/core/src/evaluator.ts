@@ -20,6 +20,7 @@
 import { comboStrength, parseCombo } from "./combo.js";
 import { DEFAULT_HOUSE_RULES } from "./config.js";
 import type { ErrorCode } from "./i18n-keys.js";
+import { shibariLock } from "./rules/shibari.js";
 import { spade3BeatsJoker } from "./rules/spade3BeatsJoker.js";
 import { compareStrength, effectiveInverted, isStronger, strengthOf } from "./strength.js";
 import type { Card, GameState, HouseRulesConfig, PlayCombo, Rank, Result, Suit } from "./types.js";
@@ -69,6 +70,17 @@ export function invertedIn(ctx: TrickContext): boolean {
 
 function configIn(ctx: TrickContext): Readonly<HouseRulesConfig> {
   return ctx.config ?? DEFAULT_HOUSE_RULES;
+}
+
+/**
+ * Whether `combo` establishes a new suit lock (§6) on the trick.
+ *
+ * True only when no lock is currently active and the combo matches the top
+ * play's suit multiset under Shibari.
+ */
+export function locksTrick(combo: PlayCombo, ctx: TrickContext): boolean {
+  if ((ctx.suitLock ?? null) !== null) return false;
+  return shibariLock(ctx.top ?? null, combo, null, configIn(ctx)) !== null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -226,7 +238,12 @@ function forEachLegalMove(
   const jokers = hand.filter((card) => card.isJoker);
   const jokerSubsets = subsets(jokers);
   const isLegal = (combo: PlayCombo): boolean => checkLegality(combo, ctx).ok;
-  const comboContext = { top: ctx.top ?? null, inverted: invertedIn(ctx), isLegal };
+  const comboContext = {
+    top: ctx.top ?? null,
+    inverted: invertedIn(ctx),
+    isLegal,
+    locksTrick: (combo: PlayCombo) => locksTrick(combo, ctx),
+  };
 
   const tryCards = (selection: readonly Card[]): boolean => {
     if (selection.length === 0) return true;
@@ -299,10 +316,12 @@ function moveKey(combo: PlayCombo): string {
  * resolved view as well as its cards, since a joker played bound and the same
  * joker played pure are different tops.
  *
- * `spade3BeatsJoker` joins the five because it is the one config flag that
- * changes a legality answer here. It is constant for a round, so it never causes
- * a miss in practice; leaving it out would make the cache wrong across a rules
- * change in the lobby, which is cheaper to prevent than to debug.
+ * `spade3BeatsJoker` and `shibari` join the five because they are the config
+ * flags that change a legality or binding answer here — `shibari` now also
+ * steers default joker-suit resolution (§5.5) via `locksTrick`. Both are
+ * constant for a round, so they never cause a miss in practice; leaving them
+ * out would make the cache wrong across a rules change in the lobby, which is
+ * cheaper to prevent than to debug.
  */
 export function legalMovesKey(hand: readonly Card[], ctx: TrickContext = {}): string {
   const cardIds = hand
@@ -319,6 +338,7 @@ export function legalMovesKey(hand: readonly Card[], ctx: TrickContext = {}): st
     lock,
     kaidan,
     configIn(ctx).spade3BeatsJoker ? "S3" : "-",
+    configIn(ctx).shibari ? "SB" : "-",
   ].join("|");
 }
 

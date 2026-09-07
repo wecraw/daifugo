@@ -18,7 +18,6 @@
  * resolve by default — a test pins that.
  */
 import {
-  DEFAULT_HOUSE_RULES,
   RANKS,
   SUITS,
   checkLegality,
@@ -26,8 +25,8 @@ import {
   compareStrength,
   err,
   invertedIn,
+  locksTrick,
   parseCombo,
-  shibariLock,
   type Card,
   type ComboContext,
   type ErrorCode,
@@ -142,11 +141,15 @@ export function bindingOptions(cards: readonly Card[], ctx: TrickContext): Bindi
     }
   }
 
-  // Strongest first; within one rank, core's own default (the `preferSuits`
-  // minimum) leads and the lock-setting variant sits next to it.
+  // Strongest first; within one rank, a lock-setting variant leads, then
+  // core's tie-break (prefer fewer duplicate suits, then S, H, D, C).
   return [...distinct.values()].sort((a, b) => {
     const byStrength = compareStrength(comboStrength(b.combo), comboStrength(a.combo), inverted);
-    return byStrength !== 0 ? byStrength : preferSuits(a.combo, b.combo);
+    if (byStrength !== 0) return byStrength;
+    const aLocks = locksTrick(a.combo, ctx);
+    const bLocks = locksTrick(b.combo, ctx);
+    if (aLocks !== bLocks) return aLocks ? -1 : 1;
+    return preferSuits(a.combo, b.combo);
   });
 }
 
@@ -167,10 +170,7 @@ export function bindingOptions(cards: readonly Card[], ctx: TrickContext): Bindi
  */
 function choiceKey(combo: PlayCombo, ctx: TrickContext): string {
   const rank = combo.resolvedRank === null ? "pure" : String(combo.resolvedRank);
-  const existing = ctx.suitLock ?? null;
-  const locks =
-    existing === null &&
-    shibariLock(ctx.top ?? null, combo, null, ctx.config ?? DEFAULT_HOUSE_RULES) !== null;
+  const locks = locksTrick(combo, ctx);
   return `${rank}|${locks ? "lock" : "-"}`;
 }
 
@@ -199,6 +199,7 @@ function comboContextOf(ctx: TrickContext): ComboContext {
     top: ctx.top ?? null,
     inverted: invertedIn(ctx),
     isLegal: (combo: PlayCombo) => checkLegality(combo, ctx).ok,
+    locksTrick: (combo: PlayCombo) => locksTrick(combo, ctx),
   };
 }
 
