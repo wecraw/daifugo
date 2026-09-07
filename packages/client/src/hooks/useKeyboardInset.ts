@@ -26,7 +26,12 @@ export function useKeyboardInset(): number {
       const shown = Keyboard.addListener("keyboardWillShow", (info) => {
         setInset(info.keyboardHeight);
       });
-      const hidden = Keyboard.addListener("keyboardWillHide", () => setInset(0));
+      // `did`, not `will`, on the way down: `keyboardWillHide` fires as the
+      // dismissal *starts*, and zeroing the inset there would drop the field
+      // back down the screen — under the keyboard still sliding off it — while
+      // its own closing animation was mid-flight. Holding the last height until
+      // the keyboard has actually gone lets the two finish together.
+      const hidden = Keyboard.addListener("keyboardDidHide", () => setInset(0));
       // A shell without the plugin costs the lift, not a crash.
       void shown.catch(() => {});
       void hidden.catch(() => {});
