@@ -30,6 +30,16 @@
  * A refusal with no explanation teaches a new player nothing except that the game
  * is ignoring them; the point of the gate is to keep them out of a bad selection,
  * not to keep them in the dark about why.
+ *
+ * **A pending action selects out of the same row (§7.2).** An owed 7-pass or
+ * 10-discard is a choice over the hand, so it is made in the hand, and this hook
+ * owns it for the same reason it owns a play: what is selected decides what the
+ * button above the row says. Only the rules of the selection change. There is no
+ * legality to compute — any `count` cards will do (§7.2) — so nothing dims and
+ * nothing is refused; the cap is enforced by swapping out the oldest pick, the
+ * way `useCardSelection` does it for the exchange, because a dead tap on a full
+ * selection is indistinguishable from a broken one. When the action owes the
+ * whole hand the row goes read-only with everything selected (§7.3).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -54,6 +64,7 @@ import {
   resolveSelection,
   turnBlocker,
 } from "../hand/legality";
+import { pendingChoiceOf, type PendingChoice } from "../hand/pendingAction";
 import { sortHand } from "../hand/sort";
 import {
   AUTO_PASS_DELAY_MS,
@@ -69,6 +80,14 @@ export interface SelectionNotice {
   key: I18nKey;
   params: TranslateParams;
   id: number;
+}
+
+/** The owed action, plus how far along the selection for it is (§7.2). */
+export interface PendingSubmission extends PendingChoice {
+  /** How many more cards the choice needs. Zero means it can be submitted. */
+  missing: number;
+  complete: boolean;
+  submit: () => void;
 }
 
 export interface HandController {
@@ -108,6 +127,12 @@ export interface HandController {
   pass: () => void;
   /** §10.7: the 1.2s "no legal play, passing" card is up. */
   autoPassing: boolean;
+  /**
+   * The 7-pass or 10-discard this seat owes, or null (§7.2). While it is set the
+   * row is selecting for it rather than for a play, and the action column shows
+   * its submit in place of Play and Pass.
+   */
+  pending: PendingSubmission | null;
 }
 
 export function useHandController(room: PublicGameState): HandController {
@@ -116,9 +141,20 @@ export function useHandController(room: PublicGameState): HandController {
 
   const ctx = useMemo(() => trickContextOf(room), [room]);
   const inverted = invertedIn(ctx);
-  const turnKey = legalMovesKey(room.myHand, ctx);
+  const pending = useMemo(() => pendingChoiceOf(room), [room]);
+  // The pending action is part of what identifies the choice on screen: the hand
+  // it is made over does change as it starts and ends, but a key that says so
+  // outright is what keeps a play's selection from surviving into a 7-pass.
+  const turnKey = `${legalMovesKey(room.myHand, ctx)}|${pending === null ? "" : `${pending.event}:${pending.count}`}`;
 
-  const [selected, setSelected] = useState<string[]>([]);
+  // Nothing starts selected (§7.6) — except when the action owes every card
+  // there is, where there is nothing to choose (§7.3).
+  const initialSelection = useMemo(
+    () => (pending?.takesWholeHand === true ? room.myHand.map((card) => card.id) : []),
+    [pending, room.myHand],
+  );
+
+  const [selected, setSelected] = useState<string[]>(() => initialSelection);
   const [optionIndex, setOptionIndex] = useState(0);
   const [lastTurnKey, setLastTurnKey] = useState(turnKey);
   const dragging = useRef(false);
@@ -141,8 +177,8 @@ export function useHandController(room: PublicGameState): HandController {
   // rendering the stale value first.
   if (turnKey !== lastTurnKey) {
     setLastTurnKey(turnKey);
-    selectedNow.current = [];
-    setSelected([]);
+    selectedNow.current = initialSelection;
+    setSelected(initialSelection);
     setOptionIndex(0);
     setNotice(null);
   }
@@ -211,6 +247,17 @@ export function useHandController(room: PublicGameState): HandController {
   const toggle = useCallback(
     (cardId: string) => {
       const current = selectedNow.current;
+      if (pending !== null) {
+        // Read-only: the action takes the hand whole (§7.3).
+        if (pending.takesWholeHand) return;
+        if (current.includes(cardId)) {
+          setSelection(current.filter((id) => id !== cardId));
+          return;
+        }
+        const next = [...current, cardId];
+        setSelection(next.length <= pending.count ? next : next.slice(next.length - pending.count));
+        return;
+      }
       if (current.includes(cardId)) {
         setSelection(current.filter((id) => id !== cardId));
         setOptionIndex(0);
@@ -226,7 +273,7 @@ export function useHandController(room: PublicGameState): HandController {
       setSelection([...current, cardId]);
       setOptionIndex(0);
     },
-    [refusalOf, blockerParams, setSelection],
+    [pending, refusalOf, blockerParams, setSelection],
   );
 
   const beginDrag = useCallback(
@@ -245,11 +292,19 @@ export function useHandController(room: PublicGameState): HandController {
     (cardId: string) => {
       if (!dragging.current) return;
       const current = selectedNow.current;
-      if (current.includes(cardId) || refusalOf(current, cardId) !== null) return;
+      if (current.includes(cardId)) return;
+      if (pending !== null) {
+        // A drag adds, so it stops at the cap rather than swapping cards out
+        // from under the finger that is still moving.
+        if (pending.takesWholeHand || current.length >= pending.count) return;
+        setSelection([...current, cardId]);
+        return;
+      }
+      if (refusalOf(current, cardId) !== null) return;
       setSelection([...current, cardId]);
       setOptionIndex(0);
     },
-    [refusalOf, setSelection],
+    [pending, refusalOf, setSelection],
   );
 
   const endDrag = useCallback(() => {
@@ -301,6 +356,11 @@ export function useHandController(room: PublicGameState): HandController {
     setOptionIndex(0);
   }, [playBlocker, resolved, selectedCards, send, setSelection]);
 
+  const submitPending = useCallback(() => {
+    if (pending === null || selected.length !== pending.count) return;
+    send(pending.event, selected);
+  }, [pending, selected, send]);
+
   const passReason = passBlocker(room);
   const pass = useCallback(() => {
     if (passReason !== null) return;
@@ -345,7 +405,10 @@ export function useHandController(room: PublicGameState): HandController {
     isUnplayable: (cardId) => yourTurn && !turnPlayable.has(cardId),
     isDimmed: (cardId) => yourTurn && !stillPlayable.has(cardId),
     isSelected: (cardId) => selected.includes(cardId),
-    isSelectable: (cardId) => selected.includes(cardId) || stillPlayable.has(cardId),
+    isSelectable: (cardId) =>
+      pending !== null
+        ? !pending.takesWholeHand
+        : selected.includes(cardId) || stillPlayable.has(cardId),
     selectionNotice: notice,
     bindingOf: (cardId) => option?.bindings.find((binding) => binding.cardId === cardId) ?? null,
     bindingChoices: options.length,
@@ -361,5 +424,14 @@ export function useHandController(room: PublicGameState): HandController {
     passBlocker: passReason,
     pass,
     autoPassing,
+    pending:
+      pending === null
+        ? null
+        : {
+            ...pending,
+            missing: Math.max(0, pending.count - selected.length),
+            complete: selected.length === pending.count,
+            submit: submitPending,
+          },
   };
 }

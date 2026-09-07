@@ -225,8 +225,6 @@
   "ui.exchange.send": "Send {count}",
   "ui.exchange.sent": "Sent to {player}",
   "ui.exchange.waiting": "Waiting for the other players",
-
-  "ui.pending.title": "Your play is not finished",
   "ui.pending.sevenPass": "Seven: pass {count} card(s) to {player}",
   "ui.pending.tenDiscard": "Ten: discard {count} card(s)",
   "ui.pending.submitPass": "Pass {count}",

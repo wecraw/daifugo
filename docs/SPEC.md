@@ -55,6 +55,7 @@ daifugo-monorepo/
             ├── i18n/             # Typed English copy and terminology overrides
             ├── context/SocketContext.tsx
             ├── layout/handLayout.ts   # Weighted fan geometry (Section 10.2)
+            ├── hand/pendingAction.ts  # The owed 7-pass / 10-discard (Section 7.2)
             └── components/
                 ├── MainMenu.tsx
                 ├── Lobby.tsx
@@ -64,7 +65,6 @@ daifugo-monorepo/
                 ├── TrickArea.tsx
                 ├── Hand.tsx
                 ├── ExchangeScreen.tsx
-                ├── PendingActionModal.tsx
                 ├── TurnTimer.tsx
                 └── ActionBar.tsx
 ```
@@ -920,6 +920,16 @@ control that would have sent it, or, for a selection the player was not allowed 
 make at all, on the hand's own notice (§10.4).
 
 Also in the bar: Sort toggle, and the turn timer ring.
+
+An owed `pendingAction` of the player's own replaces both buttons (§7.2). The 7-pass
+and the 10-discard are choices over the player's own hand, so they are made **in the
+hand row**, with the same taps and drag-across as a play — but with no legality to
+compute, so nothing dims and no tap is refused: any `count` cards will do, and the
+cap swaps the oldest pick out. The bar carries the prompt, what the clock would send
+instead (§7.6), and a submit in place of Play; Pass is gone, because the pipeline is
+halted. Everything outside the hand row and the bar is inert while the action is
+owed, including the leave button (§7.7). When the action takes the whole hand (§7.3)
+the row is read-only with every card selected.
 
 ### 10.7 Auto-pass
 Fires only when the legal move set is empty, never merely when the player has nothing

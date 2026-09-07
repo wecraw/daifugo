@@ -883,7 +883,6 @@ button:disabled {
  * difference rather than the hand row falling off the bottom (§10.2).
  */
 .game-table {
-  /* The pending-action modal covers this frame, not the page (§7.2). */
   position: relative;
   display: flex;
   flex: 1 1 auto;
@@ -1713,8 +1712,59 @@ button:disabled {
 }
 
 /*
- * The exchange row (§4.3) and the pending-action modal (§7.2): a flat tray of
- * cards, not the fan of §10.2, because neither choice has a legality to show.
+ * An owed 7-pass or 10-discard (§7.2). The choice is made in the hand row like
+ * any other, so this band changes only what it says: the prompt and the clock's
+ * fallback (§7.6) beside a submit that stands in for Play, and no Pass at all —
+ * the pipeline is halted and there is nothing to pass on.
+ *
+ * The text takes pointer events back because it sits over the felt beside the
+ * button, and the band as a whole is `pointer-events: none` so the trick area
+ * above the hand stays tappable.
+ */
+.action-bar--pending {
+  gap: 0.6rem;
+}
+
+.action-bar__pending {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.1rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.4rem;
+  background: rgba(10, 22, 16, 0.82);
+  text-align: right;
+}
+
+.action-bar__prompt {
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.action-bar__note {
+  opacity: 0.65;
+  font-size: 0.6rem;
+  line-height: 1.15;
+}
+
+.action-bar__submit {
+  background: var(--accent);
+  color: #14110d;
+}
+
+.action-bar__submit:disabled {
+  box-shadow: none;
+  background: rgba(245, 243, 238, 0.14);
+  color: rgba(245, 243, 238, 0.7);
+  font-weight: 500;
+}
+
+/*
+ * The exchange row (§4.3): a flat tray of cards, not the fan of §10.2, because
+ * that choice has no legality to show and no turn to belong to.
  */
 .card-tray {
   display: flex;
@@ -1745,7 +1795,7 @@ button.card-tray__card {
   transform: translateY(-6px);
 }
 
-/* Read-only by rule: the poor side's cards, and a hand the action takes whole. */
+/* Read-only by rule: the poor side's cards are chosen for them (§4.3). */
 .card-tray__card--fixed {
   opacity: 0.9;
 }
@@ -1783,63 +1833,6 @@ button.card-tray__card {
 }
 
 .exchange__send:disabled {
-  background: rgba(245, 243, 238, 0.12);
-  color: rgba(245, 243, 238, 0.65);
-  font-weight: 400;
-}
-
-/* The modal covers the table: while the action is owed, nothing else is (§7.2). */
-.pending-action {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(10, 59, 37, 0.82);
-}
-
-.pending-action__panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.4rem;
-  max-width: 90%;
-  padding: 0.6rem 0.9rem;
-  border: 1px solid var(--accent);
-  border-radius: 0.5rem;
-  background: var(--felt);
-}
-
-.pending-action__header,
-.pending-action__footer {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.pending-action__prompt {
-  margin: 0;
-  color: var(--accent);
-  font-size: 0.8rem;
-}
-
-.pending-action__note {
-  margin: 0;
-  opacity: 0.6;
-  font-size: 0.6rem;
-}
-
-.pending-action__submit {
-  padding: 0.3rem 0.8rem;
-  border-radius: 0.3rem;
-  background: var(--accent);
-  color: #14110d;
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.pending-action__submit:disabled {
   background: rgba(245, 243, 238, 0.12);
   color: rgba(245, 243, 238, 0.65);
   font-weight: 400;

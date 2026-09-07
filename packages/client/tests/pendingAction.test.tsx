@@ -1,20 +1,17 @@
 /**
- * The pending-action modals (#19, §7.2, §7.3).
+ * The owed 7-pass and 10-discard (#19, §7.2, §7.3).
  *
  * A pending action is the one moment the table waits on a player who is not
- * choosing a play, so the modal has to do three things: block the rest of the
- * table's input while it is owed, open with nothing selected and say what the
- * deadline would send instead (§7.6), and stay honest when the transfer empties
- * the hand — that is a normal agari (§7.3), not a bug to hide.
+ * choosing a play. It is still a choice over their own hand, so it is made in the
+ * hand row (§10.4) with the action column carrying the prompt and the submit —
+ * which leaves four things to hold: the rest of the table is inert while it is
+ * owed, the hand row is not, the selection opens empty and says what the deadline
+ * would send instead (§7.6), and it stays honest when the transfer empties the
+ * hand, which is a normal agari (§7.3) rather than a bug to hide.
  */
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import {
-  parseCombo,
-  type Card,
-  type PendingAction,
-  type PublicGameState,
-} from "@daifugo/core";
+import { parseCombo, type Card, type PendingAction, type PublicGameState } from "@daifugo/core";
 import { App } from "../src/App";
 import { FakeSocket } from "./fakeSocket";
 import { player, publicState } from "./publicState";
@@ -73,20 +70,26 @@ function seat(state: PublicGameState): FakeSocket {
   return socket;
 }
 
-function trayCard(id: string): HTMLElement {
-  const found = document.querySelector<HTMLElement>(`.card-tray__card[data-card-id="${id}"]`);
-  if (found === null) throw new Error(`no card ${id} in the tray`);
+function handCard(id: string): HTMLElement {
+  const found = document.querySelector<HTMLElement>(`.hand__card[data-card-id="${id}"]`);
+  if (found === null) throw new Error(`no card ${id} in the hand`);
   return found;
 }
 
+/** The row selects on `pointerdown`, the same as it does for a play (§10.4). */
+function tap(id: string): void {
+  fireEvent.pointerDown(handCard(id));
+  fireEvent.pointerUp(handCard(id));
+}
+
 function selectedIds(): string[] {
-  return [...document.querySelectorAll<HTMLElement>('.card-tray__card[aria-pressed="true"]')].map(
+  return [...document.querySelectorAll<HTMLElement>('.hand__card[aria-pressed="true"]')].map(
     (element) => element.dataset["cardId"] ?? "",
   );
 }
 
 function submitButton(): HTMLButtonElement {
-  return document.querySelector<HTMLButtonElement>(".pending-action__submit") as HTMLButtonElement;
+  return document.querySelector<HTMLButtonElement>(".action-bar__submit") as HTMLButtonElement;
 }
 
 describe("RESOLVE_7_PASS (§7.2)", () => {
@@ -95,12 +98,11 @@ describe("RESOLVE_7_PASS (§7.2)", () => {
     expect(screen.getByText("Seven: pass 1 card(s) to Alex")).toBeInTheDocument();
   });
 
-  it("blocks the rest of the table's input while it is owed", () => {
+  it("replaces Play and Pass with the submit while it is owed", () => {
     seat(owed(SEVEN_PASS));
-    const dialog = screen.getByRole("dialog");
-    expect(dialog).toHaveAttribute("aria-modal", "true");
-    const play = document.querySelector<HTMLButtonElement>(".action-bar__play");
-    expect(play).toBeDisabled();
+    expect(document.querySelector(".action-bar__play")).toBeNull();
+    expect(document.querySelector(".action-bar__pass")).toBeNull();
+    expect(submitButton()).toBeInTheDocument();
   });
 
   it("opens with nothing selected and cannot be submitted yet", () => {
@@ -114,22 +116,41 @@ describe("RESOLVE_7_PASS (§7.2)", () => {
     seat(owed(SEVEN_PASS));
     const note = "If the clock runs out, your weakest 1 card(s) are passed";
     expect(screen.getByText(note)).toBeInTheDocument();
-    // It is the clock's fallback, not a description of the tray, so choosing
-    // cards does not change it.
-    fireEvent.click(trayCard("H-9"));
+    // It is the clock's fallback, not a description of the selection, so
+    // choosing cards does not change it.
+    tap("H-9");
     expect(screen.getByText(note)).toBeInTheDocument();
   });
 
-  it("makes the covered table inert, not merely hidden", () => {
+  it("makes the rest of the table inert, and leaves the hand row alone", () => {
     seat(owed(SEVEN_PASS));
-    for (const band of ["top", "middle", "bottom"]) {
+    for (const band of ["top", "middle"]) {
       expect(document.querySelector(`.game-table__${band}`)).toHaveAttribute("inert");
     }
-    // The dialog's own controls are still reachable — they are not inside the
-    // bands, and choosing a card there enables the submit.
-    expect(trayCard("H-9").closest("[inert]")).toBeNull();
-    fireEvent.click(trayCard("H-9"));
+    expect(document.querySelector(".game-table__bottom")).not.toHaveAttribute("inert");
+    // The choice is made in the hand, so the hand takes taps and choosing there
+    // enables the submit.
+    expect(handCard("H-9").closest("[inert]")).toBeNull();
+    tap("H-9");
+    expect(selectedIds()).toEqual(["H-9"]);
     expect(submitButton()).not.toBeDisabled();
+  });
+
+  it("takes any card, whatever the trick top would allow (§7.2)", () => {
+    // The trick top is a single 7 this seat just played, so a lone 3 is not a
+    // legal *play* — but the pass has no legality to compute, and the row must
+    // not dim or refuse a card the action is entitled to take.
+    seat(owed(SEVEN_PASS));
+    expect(document.querySelector(".hand__card--dimmed")).toBeNull();
+    tap("S-3");
+    expect(selectedIds()).toEqual(["S-3"]);
+  });
+
+  it("swaps the oldest pick out once the count is full", () => {
+    seat(owed(SEVEN_PASS));
+    tap("S-3");
+    tap("H-9");
+    expect(selectedIds()).toEqual(["H-9"]);
   });
 
   it("leaves the table alone once nothing is owed", () => {
@@ -139,7 +160,7 @@ describe("RESOLVE_7_PASS (§7.2)", () => {
 
   it("submits the chosen cards", () => {
     const socket = seat(owed(SEVEN_PASS));
-    fireEvent.click(trayCard("H-9"));
+    tap("H-9");
     fireEvent.click(submitButton());
     expect(socket.sentOf("submit7Pass")).toEqual([[["H-9"]]]);
     expect(socket.sentOf("submit10Discard")).toEqual([]);
@@ -158,8 +179,8 @@ describe("RESOLVE_10_DISCARD (§7.2)", () => {
     fireEvent.click(submitButton());
     expect(socket.sentOf("submit10Discard")).toEqual([]);
 
-    fireEvent.click(trayCard("C-4"));
-    fireEvent.click(trayCard("H-9"));
+    tap("C-4");
+    tap("H-9");
     fireEvent.click(submitButton());
     expect(socket.sentOf("submit10Discard")).toHaveLength(1);
     const sent = socket.sentOf("submit10Discard")[0]?.[0] as string[];
@@ -173,7 +194,13 @@ describe("agari by pass or discard (§7.3)", () => {
   it("shows the whole hand going, and says it is the agari", () => {
     seat(owed({ ...SEVEN_PASS, count: 1 }, lastCard));
     expect(screen.getByText("Your last card(s) — this is your agari")).toBeInTheDocument();
-    expect(trayCard("D-13").tagName).toBe("LI");
+    // Nothing to choose: the card is already selected, and the row will not
+    // give it up.
+    expect(selectedIds()).toEqual(["D-13"]);
+    expect(handCard("D-13")).toHaveAttribute("aria-disabled", "true");
+    tap("D-13");
+    expect(selectedIds()).toEqual(["D-13"]);
+    expect(submitButton()).not.toBeDisabled();
   });
 
   it("still submits every card the action owes", () => {
@@ -184,12 +211,15 @@ describe("agari by pass or discard (§7.3)", () => {
 });
 
 describe("someone else's pending action", () => {
-  it("renders no modal for the seats that only wait", () => {
+  it("gives the seats that only wait no submit, and no inert table", () => {
     seat(
       owed({ type: "RESOLVE_10_DISCARD", count: 2, playerId: "p_2" }, HAND, {
         activePlayerIndex: 1,
       }),
     );
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.querySelector(".action-bar__submit")).toBeNull();
+    expect(document.querySelector(".game-table__top")).not.toHaveAttribute("inert");
+    // Their Play button carries the reason it is disabled instead (§10.6).
+    expect(document.querySelector(".action-bar__play")).toBeDisabled();
   });
 });

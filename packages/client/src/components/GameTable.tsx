@@ -29,6 +29,7 @@ import { TURN_DURATION_MS, seatingOf, type Player, type PublicGameState } from "
 import { miyakoOchiTarget } from "../animation/events";
 import { useTableAnimations } from "../animation/useTableAnimations";
 import { useSocket } from "../context/SocketContext";
+import { owesPendingAction } from "../hand/pendingAction";
 import { useHandController } from "../hooks/useHandController";
 import { useTranslate } from "../i18n/index";
 import { FAN_FLOOR_INSET, liftOverhang } from "../layout/handLayout";
@@ -45,7 +46,6 @@ import { AnimationLayer } from "./AnimationLayer";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { ExchangeScreen } from "./ExchangeScreen";
 import { Hand } from "./Hand";
-import { PendingActionModal, owesPendingAction } from "./PendingActionModal";
 import { HistoryLog } from "./HistoryLog";
 import { PlayerSeat } from "./PlayerSeat";
 import { TrickArea } from "./TrickArea";
@@ -78,9 +78,10 @@ export function GameTable({ room }: { room: PublicGameState }) {
   const inTurn = room.status === "IN_PROGRESS";
 
   // A pending action of this seat's halts everything until it is answered
-  // (§7.2), so the table behind its modal is inert rather than merely covered:
-  // an overlay stops a finger, but a Tab key would still reach the hand, the
-  // sort toggle, and the leave button that ends the player's round (§7.7).
+  // (§7.2), so the rest of the table goes inert while it is owed — including the
+  // leave button, which would otherwise end the player's round mid-action
+  // (§7.7). The hand row and the action column above it are the exception: that
+  // is where the choice is made (§7.2, see `hand/pendingAction.ts`).
   const blocked = owesPendingAction(room);
 
   const renderEdge = (edge: SeatEdge) =>
@@ -108,7 +109,7 @@ export function GameTable({ room }: { room: PublicGameState }) {
   const activeName = room.players.find((seat) => seat.id === activeId)?.name ?? "";
   // Somebody else is up: the hand is covered and cannot be touched until it
   // comes back round.
-  const waitingOnOther = inTurn && activeId !== null && activeId !== room.myPlayerId;
+  const waitingOnOther = inTurn && activeId !== null && activeId !== room.myPlayerId && !blocked;
 
   return (
     <div
@@ -178,7 +179,7 @@ export function GameTable({ room }: { room: PublicGameState }) {
         </div>
       </div>
 
-      <div className="game-table__bottom" inert={blocked}>
+      <div className="game-table__bottom">
         {/* The exchange is a different choice from a play, over a hand that is
             not yet in a round (§4.3), so it takes the row rather than sharing
             it. */}
@@ -230,9 +231,6 @@ export function GameTable({ room }: { room: PublicGameState }) {
       {/* Fires off the turn itself, not off history, so it sits beside the
           animation layer rather than inside its queue (§10.9). */}
       <YourTurnPopup room={room} />
-
-      {/* Owed by this seat, it covers the table until it is answered (§7.2). */}
-      <PendingActionModal room={room} />
     </div>
   );
 }

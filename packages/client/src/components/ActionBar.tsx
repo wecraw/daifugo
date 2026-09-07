@@ -17,6 +17,13 @@
  *
  * The ring here is the player's own turn clock, so it shows only on their turn;
  * the strip's ring (§10.1) is the table's, and counts down for whoever is up.
+ *
+ * **An owed 7-pass or 10-discard takes the column over (§7.2).** The selection
+ * for it is made in the hand row like any other (see `hand/pendingAction.ts`), so
+ * what changes here is the buttons: the submit replaces Play, Pass has nothing to
+ * do while the pipeline is halted, and the prompt sits beside them because the
+ * player has to be told what the count is for and what the clock will do if they
+ * never answer (§7.6).
  */
 import { TURN_DURATION_MS } from "@daifugo/core";
 import { blockerText } from "../hand/blockerText";
@@ -33,7 +40,10 @@ export interface ActionBarProps {
 
 export function ActionBar({ hand, deadline, isMyTurn }: ActionBarProps) {
   const t = useTranslate();
-  const { playBlocker, playLabel } = hand;
+  const { pending } = hand;
+  // The action is owed by this seat whether or not the turn is nominally theirs,
+  // and nothing else can happen until it is answered (§7.1).
+  const active = pending !== null || isMyTurn;
 
   return (
     // Off-turn the row is not merely disabled, it is gone: nothing here is
@@ -41,9 +51,44 @@ export function ActionBar({ hand, deadline, isMyTurn }: ActionBarProps) {
     // already saying so. It fades rather than cuts so the turn arriving reads as
     // the controls coming to you. `inert` keeps the faded-out buttons out of the
     // tab order and the a11y tree, which `opacity: 0` alone would not.
-    <div className={`action-bar${isMyTurn ? " action-bar--active" : ""}`} inert={!isMyTurn}>
-      {isMyTurn && <TurnTimer deadline={deadline} durationMs={TURN_DURATION_MS} size="seat" />}
+    <div
+      className={`action-bar${active ? " action-bar--active" : ""}${
+        pending !== null ? " action-bar--pending" : ""
+      }`}
+      inert={!active}
+    >
+      {active && <TurnTimer deadline={deadline} durationMs={TURN_DURATION_MS} size="seat" />}
 
+      {pending !== null ? (
+        <>
+          <span className="action-bar__pending">
+            <span className="action-bar__prompt">{t(...pending.prompt)}</span>
+            <span className="action-bar__note">{t(...pending.note)}</span>
+          </span>
+          <button
+            type="button"
+            className="action-bar__submit"
+            disabled={!pending.complete}
+            onClick={pending.submit}
+          >
+            {pending.complete
+              ? t(...pending.submitLabel)
+              : t("ui.select.more", { count: pending.missing })}
+          </button>
+        </>
+      ) : (
+        <PlayAndPass hand={hand} />
+      )}
+    </div>
+  );
+}
+
+function PlayAndPass({ hand }: { hand: HandController }) {
+  const t = useTranslate();
+  const { playBlocker, playLabel } = hand;
+
+  return (
+    <>
       <button
         type="button"
         className="action-bar__play"
@@ -70,6 +115,6 @@ export function ActionBar({ hand, deadline, isMyTurn }: ActionBarProps) {
       >
         {t("ui.action.pass")}
       </button>
-    </div>
+    </>
   );
 }

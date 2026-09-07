@@ -172,9 +172,9 @@ export const UI_I18N_KEYS = [
   "ui.exchange.sent",
   "ui.exchange.waiting",
 
-  // The pending-action modals (§7.2). Both name the count; the 7-pass names the
-  // target, and either can empty the hand, which is a normal agari (§7.3).
-  "ui.pending.title",
+  // The owed 7-pass and 10-discard (§7.2), chosen in the hand row and submitted
+  // from the action column. Both name the count; the 7-pass names the target,
+  // and either can empty the hand, which is a normal agari (§7.3).
   "ui.pending.sevenPass",
   "ui.pending.tenDiscard",
   "ui.pending.submitPass",
@@ -186,7 +186,7 @@ export const UI_I18N_KEYS = [
   // Shared by both: how many more cards a selection needs. What the clock will
   // do is worded per screen — the exchange pre-selects the weakest cards and so
   // its note depends on whether that default still stands (§4.4), while the
-  // pending modal starts empty and always names the weakest cards (§7.6).
+  // pending action starts empty and always names the weakest cards (§7.6).
   "ui.select.more",
   "ui.select.timeout",
   "ui.select.timeoutChanged",
