@@ -69,8 +69,8 @@ export class RoomHub {
     socket.data.playerId = null;
     socket.data.resumeToken = null;
 
-    socket.on("joinRoom", (roomId, playerName, resumeToken) => {
-      void this.onJoin(socket, roomId, playerName, resumeToken);
+    socket.on("joinRoom", (roomId, playerName, resumeToken, icon) => {
+      void this.onJoin(socket, roomId, playerName, resumeToken, icon);
     });
 
     socket.on("updateRules", (config) => {
@@ -151,8 +151,9 @@ export class RoomHub {
     roomId: string,
     playerName: string,
     resumeToken?: string,
+    icon?: string,
   ): Promise<void> {
-    const result = await this.manager.join(roomId, playerName, resumeToken);
+    const result = await this.manager.join(roomId, playerName, resumeToken, icon);
     if (!result.ok) {
       socket.emit("gameError", { code: result.error });
       return;

@@ -63,13 +63,14 @@ async function join(
   roomId: string,
   name: string,
   resumeToken?: string,
+  icon?: string,
 ): Promise<{ socket: Client; joined: JoinedPayload; state: PublicGameState }> {
   const socket = connect();
   // Emits buffer until the socket connects, and both listeners are registered
   // before the emit, so neither event can be missed.
   const joinedP = once(socket, "joined");
   const stateP = once(socket, "roomState");
-  socket.emit("joinRoom", roomId, name, resumeToken);
+  socket.emit("joinRoom", roomId, name, resumeToken, icon);
   const [joined] = await joinedP;
   const [state] = await stateP;
   return { socket, joined, state };
@@ -109,6 +110,18 @@ async function close(socket: Client, roomId: string): Promise<void> {
 }
 
 describe("Socket.IO contract (§8, §12.4)", () => {
+  it("broadcasts selected icons to other players and preserves them on resume", async () => {
+    const roomId = await createRoom();
+    const first = await join(roomId, "Will", undefined, "🦊");
+    const update = once(first.socket, "roomState");
+    const second = await join(roomId, "Alex", undefined, "🐸");
+    const [state] = await update;
+    expect(state.players.map((player) => player.icon)).toEqual(["🦊", "🐸"]);
+    expect(second.state.players[0]?.icon).toBe("🦊");
+    const resumed = await join(roomId, "Will", first.joined.resumeToken);
+    expect(resumed.state.players[0]?.icon).toBe("🦊");
+  });
+
   it("delivers `joined` with the resumeToken before the first `roomState` (test 30a)", async () => {
     const roomId = await createRoom();
     const socket = connect();

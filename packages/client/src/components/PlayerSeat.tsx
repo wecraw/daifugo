@@ -1,3 +1,4 @@
+import { PlayerIcon } from "./PlayerIcon";
 /**
  * One opponent's chip on the edge of the table (§10.1).
  *
@@ -79,6 +80,7 @@ export function PlayerSeat({
     <div className={classes.join(" ")} data-player-id={player.id} data-seat-edge={edge}>
       <div className="player-seat__line">
         {player.role !== null && <RoleMark role={player.role} />}
+        <PlayerIcon icon={player.icon} />
         <span className="player-seat__name">{player.name}</span>
         {isActive && <TurnTimer deadline={deadline} durationMs={turnDurationMs} size="seat" />}
       </div>

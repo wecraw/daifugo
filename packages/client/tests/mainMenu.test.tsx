@@ -19,6 +19,31 @@ function renderApp() {
 }
 
 describe("MainMenu", () => {
+  it("remembers a chosen icon and sends it when joining and reconnecting", async () => {
+    const user = userEvent.setup();
+    const { socket } = renderApp();
+    await user.click(screen.getByRole("button", { name: "Your icon" }));
+    await user.click(screen.getByRole("button", { name: "Choose 🦊" }));
+    expect(localStorage.getItem("daifugo.playerIcon")).toBe("🦊");
+    expect(screen.queryByRole("group", { name: "Your icon" })).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText("Your name"), "Will");
+    await user.type(screen.getByLabelText("Room code"), "ABC");
+    await user.click(screen.getByRole("button", { name: "Join room" }));
+    expect(socket.sentOf("joinRoom")[0]).toEqual(["ABC", "Will", undefined, "🦊"]);
+    socket.fire("connect");
+    expect(socket.sentOf("joinRoom").at(-1)).toEqual(["ABC", "Will", undefined, "🦊"]);
+  });
+
+  it("dismisses the icon picker with Escape and returns focus", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    const trigger = screen.getByRole("button", { name: "Your icon" });
+    await user.click(trigger);
+    await user.keyboard("{Escape}");
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("creates a room over HTTP and joins the code it gets back", async () => {
     const user = userEvent.setup();
     const { socket, fetchImpl } = renderApp();

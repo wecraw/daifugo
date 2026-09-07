@@ -48,6 +48,18 @@ function standingsRows(): string[][] {
 }
 
 describe("Lobby", () => {
+  it("shows selected player icons in the roster and standings", async () => {
+    await seat(
+      publicState({
+        status: "ROUND_END",
+        players: THREE.map((seat) => ({ ...seat, icon: "🦊" })),
+        finishOrder: ["p_1", "p_2", "p_3"],
+      }),
+    );
+    expect(document.querySelectorAll(".lobby__roster .player-icon")).toHaveLength(3);
+    expect(within(screen.getByRole("table")).getAllByText("🦊")).toHaveLength(3);
+  });
+
   it("shows the join code and the roster with host and connection state", async () => {
     await seat(
       publicState({
@@ -319,9 +331,9 @@ describe("Lobby", () => {
     );
 
     expect(standingsRows()).toEqual([
-      ["1", "Sam", "Daifugo", "2"],
-      ["2", "Alex", "Heimin", "1"],
-      ["3", "Will", "Daihinmin", "1"],
+      ["1", "🙂Sam", "Daifugo", "2"],
+      ["2", "🙂Alex", "Heimin", "1"],
+      ["3", "🙂Will", "Daihinmin", "1"],
     ]);
   });
 
@@ -347,7 +359,7 @@ describe("Lobby", () => {
     expect(
       screen.getByText("Sam won from Daihinmin — Will falls to last with 9 card(s)"),
     ).toBeInTheDocument();
-    expect(standingsRows()[2]).toEqual(["3", "Will", "Daihinmin", "0"]);
+    expect(standingsRows()[2]).toEqual(["3", "🙂Will", "Daihinmin", "0"]);
   });
 
   it("orders the match-end standings by cumulative points, captioned as the match result", async () => {
@@ -372,9 +384,9 @@ describe("Lobby", () => {
 
     expect(screen.getByText("Match result")).toBeInTheDocument();
     expect(standingsRows()).toEqual([
-      ["1", "Alex", "Hinmin", "5"],
-      ["2", "Sam", "Daifugo", "3"],
-      ["3", "Will", "Daihinmin", "1"],
+      ["1", "🙂Alex", "Hinmin", "5"],
+      ["2", "🙂Sam", "Daifugo", "3"],
+      ["3", "🙂Will", "Daihinmin", "1"],
     ]);
   });
 

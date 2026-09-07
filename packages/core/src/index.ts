@@ -12,3 +12,5 @@ export * from "./rules/index.js";
 export * from "./engine.js";
 export * from "./sanitizer.js";
 export * from "./network.js";
+
+export * from "./playerIcon.js";

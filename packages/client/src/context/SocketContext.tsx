@@ -48,6 +48,7 @@ import type { ReactNode } from "react";
 import { io, type Socket } from "socket.io-client";
 import { readRoomCodeFromLocation, syncRoomCodeToUrl } from "../roomUrl";
 import { readStoredPlayerName, writeStoredPlayerName } from "../playerName";
+import { readStoredPlayerIcon, writeStoredPlayerIcon } from "../playerIcon";
 import type {
   ClientToServerEvents,
   GameErrorPayload,
@@ -141,8 +142,8 @@ export interface SocketContextValue {
   /** The room code the page was loaded on, for `MainMenu` to prefill. */
   initialRoomCode: string | null;
   /** `POST /rooms` (§8: the code must exist before anyone can join it), then join. */
-  createRoom: (playerName: string) => Promise<string>;
-  joinRoom: (roomId: string, playerName: string) => void;
+  createRoom: (playerName: string, icon?: string) => Promise<string>;
+  joinRoom: (roomId: string, playerName: string, icon?: string) => void;
   leaveRoom: () => void;
   clearError: () => void;
   /** Typed passthrough for every other client-to-server event; false when dropped offline. */
@@ -180,7 +181,7 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
   // The join to replay on `connect`, whether that is the first connect or a
   // reconnect after a drop. Held in a ref so the socket handlers, registered once,
   // always see the current intent.
-  const pendingJoin = useRef<{ roomId: string; playerName: string } | null>(null);
+  const pendingJoin = useRef<{ roomId: string; playerName: string; icon?: string } | null>(null);
   // Whether the current join attempt has been seated. A room-lifecycle error
   // before that is a failed join — including a replayed one after a reconnect —
   // and drops the stored seat *for that room*; the same code once seated is just
@@ -203,7 +204,13 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
       const stored = readStoredSession();
       const token = stored?.roomId === join.roomId ? stored.resumeToken : undefined;
       seated.current = false;
-      socket.emit("joinRoom", join.roomId, join.playerName, token);
+      socket.emit(
+        "joinRoom",
+        join.roomId,
+        join.playerName,
+        token,
+        ...(join.icon === undefined ? [] : [join.icon]),
+      );
     });
 
     socket.on("joined", (payload) => {
@@ -270,25 +277,35 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
     };
   }, []);
 
-  const joinRoom = useCallback((nextRoomId: string, playerName: string) => {
-    const socket = socketRef.current;
-    if (socket === null) return;
-    pendingJoin.current = { roomId: nextRoomId, playerName };
-    // Every join runs through here, so this is the one place the name has to be
-    // remembered — menu, rejoin link, and the mount-time auto-join alike.
-    writeStoredPlayerName(playerName);
-    seated.current = false;
-    setRoomId(nextRoomId);
-    setError(null);
-    setStatus("connecting");
-    if (socket.connected) {
-      const stored = readStoredSession();
-      const token = stored?.roomId === nextRoomId ? stored.resumeToken : undefined;
-      socket.emit("joinRoom", nextRoomId, playerName, token);
-    } else {
-      socket.connect();
-    }
-  }, []);
+  const joinRoom = useCallback(
+    (nextRoomId: string, playerName: string, icon = readStoredPlayerIcon()) => {
+      const socket = socketRef.current;
+      if (socket === null) return;
+      pendingJoin.current = { roomId: nextRoomId, playerName, icon };
+      if (icon !== undefined) writeStoredPlayerIcon(icon);
+      // Every join runs through here, so this is the one place the name has to be
+      // remembered — menu, rejoin link, and the mount-time auto-join alike.
+      writeStoredPlayerName(playerName);
+      seated.current = false;
+      setRoomId(nextRoomId);
+      setError(null);
+      setStatus("connecting");
+      if (socket.connected) {
+        const stored = readStoredSession();
+        const token = stored?.roomId === nextRoomId ? stored.resumeToken : undefined;
+        socket.emit(
+          "joinRoom",
+          nextRoomId,
+          playerName,
+          token,
+          ...(icon === undefined ? [] : [icon]),
+        );
+      } else {
+        socket.connect();
+      }
+    },
+    [],
+  );
 
   // A reload replays the seat by itself: no click, no waiting for `MainMenu` to
   // render. Deliberately unguarded against a second run — StrictMode remounts the
@@ -326,12 +343,12 @@ export function SocketProvider({ children, connect, fetchImpl }: SocketProviderP
   }, [activeRoomCode, status]);
 
   const createRoom = useCallback(
-    async (playerName: string): Promise<string> => {
+    async (playerName: string, icon?: string): Promise<string> => {
       const doFetch = fetchImpl ?? globalThis.fetch.bind(globalThis);
       const response = await doFetch("/rooms", { method: "POST" });
       if (!response.ok) throw new Error(`POST /rooms failed: ${response.status}`);
       const body = (await response.json()) as { roomId: string };
-      joinRoom(body.roomId, playerName);
+      joinRoom(body.roomId, playerName, icon);
       return body.roomId;
     },
     [fetchImpl, joinRoom],

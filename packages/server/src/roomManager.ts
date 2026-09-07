@@ -12,6 +12,7 @@
  */
 import {
   applyAction,
+  normalizePlayerIcon,
   canCancelLeave,
   cancelLeave,
   createGameState,
@@ -133,13 +134,14 @@ export class RoomManager {
     roomId: string,
     playerName: string,
     resumeToken?: string,
+    icon?: string,
   ): Promise<Result<JoinOutcome, ErrorCode>> {
     let captured: Result<JoinOutcome, ErrorCode> | null = null;
 
     let doc: RoomDoc;
     try {
       doc = await this.repo.mutate(roomId, (current) => {
-        const decided = this.decideJoin(current, playerName, resumeToken);
+        const decided = this.decideJoin(current, playerName, resumeToken, icon);
         captured = decided.outcome;
         return decided.next;
       });
@@ -171,6 +173,7 @@ export class RoomManager {
     doc: RoomDoc,
     playerName: string,
     resumeToken?: string,
+    icon?: string,
   ): { next: RoomDoc | null; outcome: Result<JoinOutcome, ErrorCode> } {
     const now = this.scheduler.now();
 
@@ -183,7 +186,17 @@ export class RoomManager {
         // here would show one browser at the table twice, once as the ghost still
         // leaving at the boundary and once as the new arrival.
         const revived = cancelLeave(doc.state, playerId) ?? doc.state;
-        const reconnected = setConnected(revived, playerId, true) ?? revived;
+        let reconnected = setConnected(revived, playerId, true) ?? revived;
+        // Socket.IO serializes an explicit undefined argument as null.
+        if (icon != null) {
+          const updateIcon = (player: Player): Player =>
+            player.id === playerId ? { ...player, icon: normalizePlayerIcon(icon) } : player;
+          reconnected = {
+            ...reconnected,
+            players: reconnected.players.map(updateIcon),
+            pendingJoins: reconnected.pendingJoins.map(updateIcon),
+          };
+        }
         const outcome = ok({ playerId, resumeToken, reconnected: true });
         // Already-connected reconnect with nothing to cancel is a no-op write, but
         // still a valid resume.
@@ -198,6 +211,7 @@ export class RoomManager {
     const player: Player = {
       id: playerId,
       name: playerName,
+      icon: normalizePlayerIcon(icon),
       role: null,
       seatIndex: doc.state.players.length,
       isReady: false,

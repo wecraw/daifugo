@@ -68,6 +68,8 @@ export type PendingAction =
 export interface Player {
   id: string; // stable across reconnect
   name: string;
+  /** Optional for rooms persisted before icons were introduced. */
+  icon?: string;
   role: Role | null; // from the PREVIOUS round; drives exchange
   seatIndex: number;
   isReady: boolean;

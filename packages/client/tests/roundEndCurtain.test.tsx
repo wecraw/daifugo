@@ -105,9 +105,9 @@ describe("the round-end curtain (§10.12)", () => {
     act(() => socket.fire("roomState", { ...ended(), myPlayerId: "p_1" }));
 
     expect(placeRows()).toEqual([
-      ["1", "Alex", "Daifugo"],
-      ["2", "Will", "Heimin"],
-      ["3", "Sam", "Daihinmin"],
+      ["1", "🙂Alex", "Daifugo"],
+      ["2", "🙂Will", "Heimin"],
+      ["3", "🙂Sam", "Daihinmin"],
     ]);
     // §9: the round pays `N - position`, and the total is what the lobby ranks on.
     expect(screen.getByText("+2")).not.toBeNull();
@@ -226,7 +226,7 @@ describe("the round-end curtain (§10.12)", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Match over" });
     expect(within(dialog).getByRole("heading").textContent).toBe("Will wins the match");
-    expect(placeRows().map((row) => row[1])).toEqual(["Will", "Alex", "Sam"]);
+    expect(placeRows().map((row) => row[1])).toEqual(["🙂Will", "🙂Alex", "🙂Sam"]);
     // Nothing left to deal or ready for (§9), and the standings are a link away.
     expect(within(dialog).getByText("The match is over")).toBeInTheDocument();
     expect(
