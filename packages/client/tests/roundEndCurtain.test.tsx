@@ -127,6 +127,10 @@ describe("the round-end curtain (§10.12)", () => {
 
     await user.click(screen.getByRole("button", { name: "Edit profile" }));
     const editor = screen.getByRole("group", { name: "Edit profile" });
+    // The animated result row is also inside an overflow scroller. Keeping the
+    // panel there captures even `position: fixed` and slices the editor to the
+    // standings rectangle, so it must be portalled to the app frame.
+    expect(editor.parentElement).toHaveClass("viewport");
     const name = within(editor).getByLabelText("Your name");
     await user.clear(name);
     await user.type(name, "kim");

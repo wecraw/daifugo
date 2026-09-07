@@ -1,5 +1,6 @@
 import { normalizePlayerIcon, normalizePlayerName, PLAYER_NAME_MAX_LENGTH } from "@daifugo/core";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSocket } from "../context/SocketContext";
 import { useTranslate } from "../i18n/index";
 import { EmojiPicker } from "./EmojiPicker";
@@ -57,49 +58,53 @@ export function ProfileEditor({
         }}
         disabled={disabled || status !== "connected"}
       />
-      {open && (
-        <span
-          className="profile-editor__panel"
-          role="group"
-          aria-label={t("ui.profile.title")}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") close();
-          }}
-        >
-          <span className="profile-editor__fields">
-            <EmojiPicker value={draftIcon} onChange={setDraftIcon} />
-            <label className="field profile-editor__name">
-              <span>{t("ui.menu.nameLabel")}</span>
-              <input
-                ref={input}
-                type="text"
-                value={draftName}
-                maxLength={PLAYER_NAME_MAX_LENGTH}
-                autoCorrect="off"
-                enterKeyHint="done"
-                aria-invalid={normalizedName === null || duplicate}
-                onChange={(event) => setDraftName(event.target.value)}
-              />
-            </label>
-          </span>
-          {duplicate && <span className="profile-editor__error">{t("ui.profile.nameTaken")}</span>}
-          <span className="profile-editor__actions">
-            <button type="button" onClick={close}>
-              {t("ui.profile.cancel")}
-            </button>
-            <button
-              type="button"
-              disabled={cannotSave}
-              onClick={() => {
-                if (normalizedName === null || duplicate) return;
-                if (send("updateProfile", normalizedName, draftIcon)) close();
-              }}
-            >
-              {t("ui.profile.save")}
-            </button>
-          </span>
-        </span>
-      )}
+      {open &&
+        createPortal(
+          <span
+            className="profile-editor__panel"
+            role="group"
+            aria-label={t("ui.profile.title")}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") close();
+            }}
+          >
+            <span className="profile-editor__fields">
+              <EmojiPicker value={draftIcon} onChange={setDraftIcon} />
+              <label className="field profile-editor__name">
+                <span>{t("ui.menu.nameLabel")}</span>
+                <input
+                  ref={input}
+                  type="text"
+                  value={draftName}
+                  maxLength={PLAYER_NAME_MAX_LENGTH}
+                  autoCorrect="off"
+                  enterKeyHint="done"
+                  aria-invalid={normalizedName === null || duplicate}
+                  onChange={(event) => setDraftName(event.target.value)}
+                />
+              </label>
+            </span>
+            {duplicate && (
+              <span className="profile-editor__error">{t("ui.profile.nameTaken")}</span>
+            )}
+            <span className="profile-editor__actions">
+              <button type="button" onClick={close}>
+                {t("ui.profile.cancel")}
+              </button>
+              <button
+                type="button"
+                disabled={cannotSave}
+                onClick={() => {
+                  if (normalizedName === null || duplicate) return;
+                  if (send("updateProfile", normalizedName, draftIcon)) close();
+                }}
+              >
+                {t("ui.profile.save")}
+              </button>
+            </span>
+          </span>,
+          trigger.current?.closest(".viewport") ?? document.body,
+        )}
     </span>
   );
 }
