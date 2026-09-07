@@ -10,6 +10,7 @@ import { ErrorBanner } from "./components/ErrorBanner";
 import { MainMenu } from "./components/MainMenu";
 import { RoomShell } from "./components/RoomShell";
 import { CopyProvider } from "./i18n/index";
+import { useNativeGestureGuard } from "./hooks/useNativeGestureGuard";
 import { SocketProvider, useSocket, type SocketProviderProps } from "./context/SocketContext";
 import type { TranslateParams } from "./i18n/index";
 
@@ -41,6 +42,7 @@ export interface AppProps {
 }
 
 export function App({ connect, fetchImpl }: AppProps = {}) {
+  useNativeGestureGuard();
   return (
     <CopyProvider>
       <SocketProvider connect={connect} fetchImpl={fetchImpl}>

@@ -43,6 +43,10 @@ body {
     "Noto Sans JP",
     sans-serif;
   -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Anything but `auto` takes double-tap zoom off the table; `manipulation`
+     keeps taps and the scrolls below responsive. iOS Safari's pinch and the
+     long-press callout need the JS half of this — see useNativeGestureGuard. */
   touch-action: manipulation;
   /* Tapping and dragging on the table is a game gesture, never a text
      selection — a long-press on a card should not paint it blue. Inputs opt
@@ -50,12 +54,31 @@ body {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+  /* No grey flash on tap: the cards animate their own press state. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+img,
+svg {
+  -webkit-user-drag: none;
+  user-drag: none;
 }
 
 input,
 textarea {
   -webkit-user-select: text;
   user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* `touch-action` is only consulted up to the nearest scroll container, so the
+   scrollers below have to restate it or double-tap zoom comes back inside them.
+   `pan-y` is the one axis they scroll, and it is not `auto`, so zoom stays off. */
+.lobby__rail,
+.lobby__roster ul,
+.host-panel__dialog,
+.round-end__places {
+  touch-action: pan-y;
 }
 
 /*
@@ -754,6 +777,7 @@ button:disabled {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
     overflow-y: auto;
+    touch-action: pan-y;
   }
 
   .lobby__rail {
