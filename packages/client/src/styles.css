@@ -934,7 +934,7 @@ button:disabled {
 
 .game-table__top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto auto;
   align-items: center;
   flex: 0 0 var(--top-strip-height);
   gap: 0.4rem;
@@ -1039,22 +1039,30 @@ button:disabled {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0.1rem;
+  gap: 0.18rem;
   min-width: 0;
   min-height: 0;
   /* The bands are fixed heights: a chip clips rather than growing past its edge. */
   max-height: 100%;
   overflow: hidden;
-  padding: 0.15rem 0.3rem;
-  border: 1px solid rgba(245, 243, 238, 0.18);
-  border-radius: 0.35rem;
-  background: rgba(0, 0, 0, 0.2);
-  font-size: 0.7rem;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid rgba(245, 243, 238, 0.2);
+  border-radius: 0.45rem;
+  /* Sunk into the felt rather than laid on it, so an empty edge still reads as
+     a place at the table. */
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.2));
+  box-shadow: inset 0 1px 0 rgba(245, 243, 238, 0.06);
+  font-size: 0.8rem;
 }
 
-/* Top chips share the strip evenly; side chips are only as tall as they need. */
+/*
+ * Top chips share the strip evenly, but never grow past a side chip: a table
+ * with one opponent on the top edge should seat them in a chair, not spread
+ * them across the whole strip.
+ */
 .player-seat--top {
   flex: 1 1 0;
+  max-width: var(--side-column-width);
 }
 
 .player-seat--left,
@@ -1062,9 +1070,14 @@ button:disabled {
   flex: 0 0 auto;
 }
 
+/* The seat that is up is lit, not merely outlined: the ring on the chip and the
+   warm ground under it are the same signal the countdown is already giving. */
 .player-seat--active {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  background: linear-gradient(180deg, rgba(232, 182, 76, 0.16), rgba(0, 0, 0, 0.24));
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 0 14px rgba(232, 182, 76, 0.28);
 }
 
 .player-seat--finished {
@@ -1091,13 +1104,15 @@ button:disabled {
  */
 .player-seat .badge {
   overflow: hidden;
+  flex: 0 1 auto;
+  font-size: 0.68rem;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .player-seat__line--quiet {
-  font-size: 0.62rem;
-  opacity: 0.8;
+  font-size: 0.68rem;
+  opacity: 0.85;
 }
 
 .player-seat__name {
@@ -1108,8 +1123,9 @@ button:disabled {
 }
 
 .player-seat__role {
+  flex: 0 0 auto;
   color: var(--accent);
-  font-size: 0.6rem;
+  font-size: 0.72rem;
   letter-spacing: -0.05em;
 }
 
@@ -1123,11 +1139,11 @@ button:disabled {
  * card-backs so the chip reads as their actual stack rather than a digit.
  */
 .player-seat__stack-card {
-  width: 0.6rem;
-  height: 0.85rem;
+  width: var(--seat-pip-width, 11px);
+  height: calc(var(--seat-pip-width, 11px) * 1.55);
   flex: 0 0 auto;
-  border: 1px solid rgba(245, 243, 238, 0.5);
-  border-radius: 0.12rem;
+  border: 1px solid rgba(245, 243, 238, 0.6);
+  border-radius: 0.15rem;
   background: repeating-linear-gradient(
     45deg,
     var(--felt-dark),
@@ -1135,15 +1151,20 @@ button:disabled {
     var(--felt) 2px,
     var(--felt) 4px
   );
+  /* Each back throws a hairline onto the one behind it, so a tightly fanned
+     hand still reads as separate cards rather than as a bar. */
+  box-shadow: -1px 0 2px rgba(0, 0, 0, 0.45);
 }
 
+/* `seatStackStep` decides how far each pip sits along from the last, so a hand
+   of eighteen tightens instead of running off the edge of the chip. */
 .player-seat__stack-card + .player-seat__stack-card {
-  margin-left: -0.2rem;
+  margin-left: calc(var(--seat-pip-step, 7px) - var(--seat-pip-width, 11px));
 }
 
 .player-seat__offline {
   color: var(--danger);
-  font-size: 0.5rem;
+  font-size: 0.6rem;
 }
 
 .badge--good {
@@ -1157,23 +1178,42 @@ button:disabled {
   text-transform: none;
 }
 
-/* Trick area and banners. */
+/*
+ * Trick area and banners.
+ *
+ * The turn controls float up out of the hand row and take the bottom ~76px of
+ * this band (see `.game-table__turn-actions`), so the pile is centred in what is
+ * left rather than in the band: the padding below is what keeps the newest play
+ * and its caption clear of the Play button.
+ */
 .trick-area {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0.3rem;
   min-width: 0;
   min-height: 0;
+  padding-bottom: 3.6rem;
   overflow: hidden;
 }
 
+/*
+ * The rule badges belong to the pile: each one is a condition on what may beat
+ * it, so they sit under the pile's caption instead of off in the corner of the
+ * band. The row holds its height empty, so a lock coming on mid-trick never
+ * shunts the cards.
+ */
 .trick-area__banners {
-  position: absolute;
-  top: 0;
   display: flex;
+  align-items: center;
+  flex: 0 0 auto;
   gap: 0.3rem;
+  min-height: 1.15rem;
+  /* The stack is centred on the whole trick, so the newest play drifts right of
+     the band's centre as the history grows; the badges ride along with it. */
+  transform: translateX(var(--trick-live-offset, 0px));
 }
 
 .trick-area__centre {
@@ -1213,18 +1253,61 @@ button:disabled {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.25rem;
   /*
    * How far each play tucks under the one that beat it. `fitTrickStack` widens
    * it when the trick would otherwise outgrow the band; the resting value here
    * is the 0.9rem it starts from.
    */
   margin-left: calc(var(--trick-overlap, 14.4px) * -1);
-  /*
-   * Each beaten play sits a step higher, so the trick reads as a history — but
-   * only for the first few, or a long trick would climb out of the band.
-   */
-  transform: translateY(calc(min(var(--depth), 4) * -10px));
+}
+
+/*
+ * Only the newest play is live, and it should never be mistaken for the heap it
+ * was laid on. It keeps its colour, sits on the baseline, and casts a shadow
+ * onto the felt; the beaten plays step back and up, shrink, and drain.
+ */
+.trick-area__play--live .card-face {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55);
+}
+
+/* The pile's own hollow in the felt — what makes the live play sit *in* the
+   table rather than float above it, and what separates it from the beaten
+   cards tucked underneath. */
+.trick-area__play--live::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: 50%;
+  width: calc(100% + 5.5rem);
+  height: calc(100% + 2.6rem);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.24) 0%,
+    rgba(0, 0, 0, 0.17) 38%,
+    rgba(0, 0, 0, 0.06) 64%,
+    rgba(0, 0, 0, 0) 84%
+  );
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/*
+ * Each beaten play sits a step higher and further back, so the trick reads as a
+ * history — but only for the first few, or a long trick would climb out of the
+ * band. They shrink towards the play that beat them, which is also what keeps
+ * them tucked under it as they go.
+ */
+.trick-area__play--beaten {
+  transform-origin: 100% 65%;
+  transform: translateY(calc(min(var(--depth), 3) * -7px))
+    rotate(calc(min(var(--depth), 3) * -2.5deg)) scale(0.85);
+  /* Dimmed, never drained: a red suit that reads black is the one thing a card
+     may not do, so the pile loses light rather than colour. */
+  filter: brightness(0.62);
+  opacity: max(0.42, calc(1 - var(--depth) * 0.16));
 }
 
 .trick-area__play:first-child {
@@ -1236,13 +1319,15 @@ button:disabled {
   gap: 0.15rem;
 }
 
+/* The caption belongs to the live play, so it carries the pile's weight rather
+   than the band's. */
 .trick-area__player {
   max-width: 9rem;
   overflow: hidden;
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   white-space: nowrap;
   text-overflow: ellipsis;
-  opacity: 0.75;
+  opacity: 0.85;
 }
 
 /* Card faces. The hand row sizes them at the full 64x90 of §10.2. */
@@ -1780,13 +1865,22 @@ button:disabled {
   font-weight: 500;
 }
 
-.action-bar__pass {
+.action-bar button.action-bar__pass {
+  /*
+   * Pass is the secondary CTA, so it is deliberately about half the footprint of
+   * Play: the sizing set on `.action-bar button` is scaled down here rather than
+   * inherited, so the two never read as equal choices (§10.6).
+   */
+  padding: 0.35rem 0.9rem;
+  border-radius: 0.45rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  font-size: 0.8rem;
   background: rgba(10, 22, 16, 0.85);
   color: var(--ink);
   border: 1px solid rgba(245, 243, 238, 0.35);
 }
 
-.action-bar__pass:disabled {
+.action-bar button.action-bar__pass:disabled {
   box-shadow: none;
   opacity: 0.5;
 }

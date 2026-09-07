@@ -6,10 +6,13 @@
  * trick, and whether they are actually there. The turn ring rides on the active
  * seat (§10.10).
  *
- * A chip is at most 96px wide and, on the top edge, 48px tall, so the count is a
- * stack of face-down pips and presence is a dot. Both carry the sentence they
- * stand for as their accessible name, which is also what a test reads them by —
- * the shorthand is a size, not a loss.
+ * A chip is a little over 100px wide and, on the top edge, under 60px tall, so
+ * the count is a stack of face-down pips and presence is a dot. Both carry the
+ * sentence they stand for as their accessible name, which is also what a test
+ * reads them by — the shorthand is a size, not a loss. How far each pip sits
+ * along from the last is `seatStackStep`, sized off the table's opening hand, so
+ * eighteen cards still end inside the chip and the fan still shortens as they
+ * are played.
  *
  * The chip does not decide any of that. `status` comes from core's eligibility
  * helpers via `seatStatus` — a finished or demoted player keeps their chair in
@@ -20,10 +23,11 @@
  * not fit in a 56px strip; the translated name is the chip's title, so it stays
  * reachable.
  */
+import type { CSSProperties } from "react";
 import { roleKey, type Player, type Role } from "@daifugo/core";
 import { ROLE_GLYPH } from "../glyphs";
 import { useTranslate } from "../i18n/index";
-import type { SeatEdge, SeatStatus } from "../layout/tableLayout";
+import { seatStackStep, type SeatEdge, type SeatStatus } from "../layout/tableLayout";
 import { TurnTimer } from "./TurnTimer";
 
 export interface PlayerSeatProps {
@@ -37,6 +41,9 @@ export interface PlayerSeatProps {
   isActive: boolean;
   /** Mid-miyako-ochi (§4.5): this chip is emptying and dropping to last. */
   demoted?: boolean;
+  /** The largest hand this table deals; the pip fan is sized off it, not off
+   *  `cardCount`, so the fan's length stays the count (see `seatStackStep`). */
+  stackCapacity: number;
   /** `state.deadline`; only the active seat rings against it (§10.10). */
   deadline: number | null;
   turnDurationMs: number;
@@ -50,6 +57,7 @@ export function PlayerSeat({
   edge,
   isActive,
   demoted = false,
+  stackCapacity,
   deadline,
   turnDurationMs,
 }: PlayerSeatProps) {
@@ -73,6 +81,7 @@ export function PlayerSeat({
       <div className="player-seat__line player-seat__line--quiet">
         <span
           className="player-seat__stack"
+          style={{ "--seat-pip-step": `${seatStackStep(stackCapacity, edge)}px` } as CSSProperties}
           title={t("ui.seat.cards", { count: cardCount })}
           aria-label={t("ui.seat.cards", { count: cardCount })}
         >

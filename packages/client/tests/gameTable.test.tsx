@@ -28,6 +28,8 @@ import {
   MIDDLE_HEIGHT,
   MAX_TRICK_PLAY_OVERLAP,
   SEAT_CAPACITY,
+  SEAT_PIP_WIDTH,
+  SEAT_STACK_WIDTH,
   TOP_STRIP_HEIGHT,
   TRICK_CARD_WIDTH,
   TRICK_PLAY_OVERLAP,
@@ -36,7 +38,10 @@ import {
   VIEWPORT_WIDTH,
   distributeSeats,
   fitTrickStack,
+  liveTrickOffset,
   opponentIds,
+  seatStackCapacity,
+  seatStackStep,
 } from "../src/layout/tableLayout";
 import { FakeSocket } from "./fakeSocket";
 import { player, publicState } from "./publicState";
@@ -318,6 +323,37 @@ describe("TrickArea", () => {
   });
 });
 
+describe("seat card fan (§10.1)", () => {
+  /** How wide a fan of `count` pips is, as the stylesheet lays it out. */
+  function fanWidth(count: number, step: number): number {
+    return SEAT_PIP_WIDTH + Math.max(0, count - 1) * step;
+  }
+
+  it("fits the opening hand of the tightest table inside its chip", () => {
+    // Three players is eighteen cards each, the largest hand the deck deals.
+    const capacity = seatStackCapacity(3);
+    expect(capacity).toBe(18);
+    for (const edge of ["left", "top", "right"] as const) {
+      const step = seatStackStep(capacity, edge);
+      expect(fanWidth(capacity, step)).toBeLessThanOrEqual(SEAT_STACK_WIDTH[edge]);
+    }
+  });
+
+  it("keeps the step for the round, so the fan's length is the count", () => {
+    const step = seatStackStep(seatStackCapacity(4), "left");
+    expect(fanWidth(5, step)).toBeLessThan(fanWidth(13, step));
+  });
+
+  it("lays a small table's hands out loosely rather than stretching them", () => {
+    // Eight players is seven cards each, well inside the chip: the step should
+    // be the resting one, not whatever would fill the width.
+    const loose = seatStackStep(seatStackCapacity(8), "left");
+    const tight = seatStackStep(seatStackCapacity(3), "left");
+    expect(loose).toBeGreaterThan(tight);
+    expect(fanWidth(7, loose)).toBeLessThan(SEAT_STACK_WIDTH.left);
+  });
+});
+
 describe("trick stack fit (§10.9)", () => {
   /** Total width of a stack, as the stylesheet lays it out. */
   function stackWidth(cardCounts: number[], overlap: number): number {
@@ -348,6 +384,25 @@ describe("trick stack fit (§10.9)", () => {
     expect(stackWidth(trick.slice(fit.firstVisibleIndex), fit.overlap)).toBeLessThanOrEqual(
       TRICK_STACK_WIDTH,
     );
+  });
+
+  it("leaves the badges centred while the trick is one play deep", () => {
+    expect(liveTrickOffset([2], fitTrickStack([2]))).toBe(0);
+    expect(liveTrickOffset([], fitTrickStack([]))).toBe(0);
+  });
+
+  it("walks the badges right with the newest play as the history grows", () => {
+    const shallow = liveTrickOffset([1, 1], fitTrickStack([1, 1]));
+    const deep = liveTrickOffset([1, 1, 1, 1], fitTrickStack([1, 1, 1, 1]));
+    expect(shallow).toBeGreaterThan(0);
+    expect(deep).toBeGreaterThan(shallow);
+  });
+
+  it("never walks them past the edge of the band", () => {
+    const trick = [3, 3, 3, 3, 3, 3, 3];
+    const fit = fitTrickStack(trick);
+    const live = 3 * TRICK_CARD_WIDTH + 2 * 2.4;
+    expect(liveTrickOffset(trick, fit)).toBeLessThanOrEqual((TRICK_STACK_WIDTH - live) / 2);
   });
 
   it("shows the newest play even when it alone fills the band", () => {

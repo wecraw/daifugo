@@ -4,10 +4,16 @@
  * The three badges are the ones §10.9 calls out as secondary feedback — the suit
  * lock, the 11-back, and the revolution — and they are read straight off the
  * state rather than inferred from the trick, because `isRevolution` persists for
- * the round while `trickInverted` and `suitLock` reset on a clear (§2).
+ * the round while `trickInverted` and `suitLock` reset on a clear (§2). They sit
+ * under the pile, beneath the name of whoever laid it: every one of them is a
+ * condition on what may beat that pile, so they belong beside it rather than
+ * off in the corner of the band. The row keeps its height when it is empty, so
+ * a lock appearing mid-trick never shunts the cards.
  *
  * The stack keeps every play of the current trick rather than only the top one,
- * so you can see what was beaten and by how much. Jokers render under their
+ * so you can see what was beaten and by how much — but only the newest is live:
+ * the beaten plays shrink back, drain of colour and lose their shadow, so the
+ * one card that has to be answered is never confused with the heap under it. Jokers render under their
  * binding (§5.4). A trick wider than the band tightens its overlap and then
  * sheds its oldest plays, because the newest one — the one that has to be beaten
  * — is the one that may never be clipped; `fitTrickStack` owns that arithmetic.
@@ -19,7 +25,7 @@ import type { CSSProperties } from "react";
 import { EXCHANGE_DURATION_MS, type PublicGameState } from "@daifugo/core";
 import { kaidanLockGlyph, suitLockGlyphs } from "../glyphs";
 import { useTranslate } from "../i18n/index";
-import { fitTrickStack } from "../layout/tableLayout";
+import { fitTrickStack, liveTrickOffset } from "../layout/tableLayout";
 import { CardFace } from "./CardFace";
 import { TurnTimer } from "./TurnTimer";
 
@@ -35,33 +41,16 @@ export function TrickArea({ room }: { room: PublicGameState }) {
   const isMyTurn = room.status === "IN_PROGRESS" && activeId === room.myPlayerId;
   const waiting = room.status === "IN_PROGRESS" && !isMyTurn && activeId !== null;
   const top = room.currentTrick.length - 1;
-  const { firstVisibleIndex, overlap } = fitTrickStack(
-    room.currentTrick.map((play) => play.combo.cards.length),
-  );
+  const cardCounts = room.currentTrick.map((play) => play.combo.cards.length);
+  const fit = fitTrickStack(cardCounts);
+  const { firstVisibleIndex, overlap } = fit;
 
   return (
-    <section className="trick-area" aria-label={t("ui.table.trickArea")}>
-      <div className="trick-area__banners">
-        {room.isRevolution && <span className="badge badge--rule">{t("rule.kakumei")}</span>}
-        {room.trickInverted && <span className="badge badge--rule">{t("rule.elevenBack")}</span>}
-        {lock.length > 0 && (
-          <span
-            className="badge badge--rule"
-            title={t("ui.trick.suitLock", { suits: suitLockGlyphs(lock) })}
-          >
-            {t("rule.shibari")} {suitLockGlyphs(lock)}
-          </span>
-        )}
-        {kaidan !== null && (
-          <span
-            className="badge badge--rule"
-            title={t("ui.trick.kaidanLock", { rank: kaidanLockGlyph(kaidan) })}
-          >
-            {t("rule.kaidan")} {kaidanLockGlyph(kaidan)}
-          </span>
-        )}
-      </div>
-
+    <section
+      className="trick-area"
+      aria-label={t("ui.table.trickArea")}
+      style={{ "--trick-live-offset": `${liveTrickOffset(cardCounts, fit)}px` } as CSSProperties}
+    >
       {room.status === "EXCHANGE" ? (
         <div className="trick-area__centre">
           <TurnTimer deadline={room.deadline} durationMs={EXCHANGE_DURATION_MS} size="banner" />
@@ -81,11 +70,10 @@ export function TrickArea({ room }: { room: PublicGameState }) {
             return (
               <li
                 key={`${index}-${play.playedBy}`}
-                className="trick-area__play"
+                className={`trick-area__play trick-area__play--${index === top ? "live" : "beaten"}`}
                 style={
                   {
                     zIndex: index,
-                    opacity: Math.max(0.35, 1 - (top - index) * 0.22),
                     "--depth": top - index,
                   } as CSSProperties
                 }
@@ -109,6 +97,27 @@ export function TrickArea({ room }: { room: PublicGameState }) {
           })}
         </ol>
       )}
+
+      <div className="trick-area__banners">
+        {room.isRevolution && <span className="badge badge--rule">{t("rule.kakumei")}</span>}
+        {room.trickInverted && <span className="badge badge--rule">{t("rule.elevenBack")}</span>}
+        {lock.length > 0 && (
+          <span
+            className="badge badge--rule"
+            title={t("ui.trick.suitLock", { suits: suitLockGlyphs(lock) })}
+          >
+            {t("rule.shibari")} {suitLockGlyphs(lock)}
+          </span>
+        )}
+        {kaidan !== null && (
+          <span
+            className="badge badge--rule"
+            title={t("ui.trick.kaidanLock", { rank: kaidanLockGlyph(kaidan) })}
+          >
+            {t("rule.kaidan")} {kaidanLockGlyph(kaidan)}
+          </span>
+        )}
+      </div>
     </section>
   );
 }

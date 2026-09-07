@@ -37,6 +37,7 @@ import {
   distributeSeats,
   finishPositionOf,
   opponentIds,
+  seatStackCapacity,
   seatStatus,
   tableCssVariables,
   type SeatEdge,
@@ -71,6 +72,9 @@ export function GameTable({ room }: { room: PublicGameState }) {
   const activeId = room.turnOrder[room.activePlayerIndex] ?? null;
 
   const seats = opponents.map((id, index) => ({ id, edge: edges[index] ?? "top" }));
+  // Every chip fans its cards at the same step, sized off the largest hand this
+  // table deals, so a fan's length reads as a count across the whole ring.
+  const stackCapacity = seatStackCapacity(room.players.length);
 
   // Nobody is on turn outside `IN_PROGRESS`: `activePlayerIndex` still points at
   // the seat that will lead, but during `EXCHANGE` the deadline belongs to the
@@ -105,6 +109,7 @@ export function GameTable({ room }: { room: PublicGameState }) {
             edge={edge}
             isActive={inTurn && id === activeId}
             demoted={id === demotedId}
+            stackCapacity={stackCapacity}
             deadline={room.deadline}
             turnDurationMs={TURN_DURATION_MS}
           />

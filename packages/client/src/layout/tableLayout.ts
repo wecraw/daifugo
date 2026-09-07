@@ -1,7 +1,7 @@
 /**
  * The 844x390 landscape frame of §10.1, as numbers rather than as CSS.
  *
- * The three bands — 56px top strip, ~218px middle, 116px hand row — have to add
+ * The three bands — 66px top strip, ~208px middle, 116px hand row — have to add
  * up to the viewport exactly, and the hand region has to be the full 844px width
  * that §10.2's step formula is derived from, now that the action bar sits above
  * the hand rather than beside it. Keeping the figures here rather than in
@@ -13,15 +13,22 @@
  * layout engine.
  */
 import type { PublicGameState } from "@daifugo/core";
-import { hasDropped, hasFinished, hasPassed, isInRound, type SeatingContext } from "@daifugo/core";
+import {
+  DECK_SIZE,
+  hasDropped,
+  hasFinished,
+  hasPassed,
+  isInRound,
+  type SeatingContext,
+} from "@daifugo/core";
 
 export const VIEWPORT_WIDTH = 844;
 export const VIEWPORT_HEIGHT = 390;
 
 /** Seats, history log and the turn clock (§10.1). */
-export const TOP_STRIP_HEIGHT = 56;
+export const TOP_STRIP_HEIGHT = 66;
 /** Trick area and banners, flanked by the left and right seat columns. */
-export const MIDDLE_HEIGHT = 218;
+export const MIDDLE_HEIGHT = 208;
 /** The single fanned row of §10.2. */
 export const HAND_ROW_HEIGHT = 116;
 
@@ -36,7 +43,7 @@ export const ACTION_ROW_HEIGHT = 30;
 export const HAND_REGION_WIDTH = VIEWPORT_WIDTH;
 
 /** The left and right seat columns of the middle band: two chips each, stacked. */
-export const SIDE_COLUMN_WIDTH = 108;
+export const SIDE_COLUMN_WIDTH = 124;
 export const TRICK_AREA_WIDTH = VIEWPORT_WIDTH - SIDE_COLUMN_WIDTH * 2;
 
 /** Card 64 x 90 (§10.2). The trick renders them smaller; the hand does not. */
@@ -113,12 +120,35 @@ export function fitTrickStack(
   return { firstVisibleIndex: 0, overlap: TRICK_PLAY_OVERLAP };
 }
 
+/**
+ * How far right of the band's centre the newest play sits, in px.
+ *
+ * The stack is centred on the whole trick, so the play that has to be beaten
+ * drifts right as the history behind it grows. Its caption already follows it
+ * there; this is what lets the rule badges follow too, instead of staying under
+ * the middle of a pile nobody is reading. Clamped so a deep trick pushes them to
+ * the band's edge and no further.
+ */
+export function liveTrickOffset(
+  cardCounts: readonly number[],
+  fit: TrickStackFit,
+  available: number = TRICK_STACK_WIDTH,
+): number {
+  const shown = cardCounts.slice(fit.firstVisibleIndex);
+  const live = shown[shown.length - 1];
+  if (live === undefined || shown.length <= 1) return 0;
+  const laid =
+    shown.reduce((sum, count) => sum + trickPlayWidth(count), 0) - fit.overlap * (shown.length - 1);
+  const liveWidth = trickPlayWidth(live);
+  return Math.max(0, Math.min((laid - liveWidth) / 2, (available - liveWidth) / 2));
+}
+
 export type SeatEdge = "left" | "top" | "right";
 
 /**
  * How many seats each edge can hold without overflowing. The top strip shares
- * its 56px with the history log and the clock, so three chips is its limit; the
- * side columns are 218px tall, which takes two.
+ * its 66px with the history log and the clock, so three chips is its limit; the
+ * side columns are 208px tall, which takes two.
  */
 export const SEAT_CAPACITY: Readonly<Record<SeatEdge, number>> = Object.freeze({
   left: 2,
@@ -128,6 +158,47 @@ export const SEAT_CAPACITY: Readonly<Record<SeatEdge, number>> = Object.freeze({
 
 /** 8 players (§0) is 7 opponents, which is exactly the capacity above. */
 export const MAX_OPPONENTS = SEAT_CAPACITY.left + SEAT_CAPACITY.top + SEAT_CAPACITY.right;
+
+/**
+ * The seat chip's card stack (§10.1), as px rather than as CSS.
+ *
+ * The pips are a fan of card-backs, and how far each one sits along from the
+ * last is the only thing that decides whether a hand fits its chip. Three
+ * players is eighteen cards each, which at a loose step overruns the chip and is
+ * clipped — the fan then says a lie about the count, and the count is the whole
+ * point of the fan.
+ *
+ * So the step is sized once, off the largest hand the table can deal, and every
+ * chip at that table keeps it for the round. Sizing it off the current count
+ * instead would fit just as well and cost the thing worth having: a fan whose
+ * length is the count, shortening as a hand is played out.
+ *
+ * Top chips share the strip with the history log and the clock, so their fan has
+ * less room than a side chip's; the edge is what says which.
+ */
+export const SEAT_PIP_WIDTH = 11;
+
+/** Room a chip's fan has, inside its own padding, per edge. */
+export const SEAT_STACK_WIDTH: Readonly<Record<SeatEdge, number>> = Object.freeze({
+  left: 108,
+  top: 75,
+  right: 108,
+});
+
+/** The step when even the opening hand is small enough to lay out loosely. */
+const SEAT_PIP_STEP = SEAT_PIP_WIDTH * (2 / 3);
+
+/** The largest hand a table of `playerCount` deals — what the fan is sized for. */
+export function seatStackCapacity(playerCount: number): number {
+  return Math.ceil(DECK_SIZE / Math.max(playerCount, 1));
+}
+
+/** How far each pip sits along from the one before it, in px. */
+export function seatStackStep(capacity: number, edge: SeatEdge): number {
+  if (capacity <= 1) return SEAT_PIP_STEP;
+  const room = (SEAT_STACK_WIDTH[edge] - SEAT_PIP_WIDTH) / (capacity - 1);
+  return Math.max(2, Math.min(SEAT_PIP_STEP, room));
+}
 
 /**
  * Which edge each opponent takes, indexed by their distance around the table.
@@ -221,6 +292,7 @@ export function tableCssVariables(): Record<string, string> {
     "--hand-row-height": `${HAND_ROW_HEIGHT}px`,
     "--action-row-height": `${ACTION_ROW_HEIGHT}px`,
     "--side-column-width": `${SIDE_COLUMN_WIDTH}px`,
+    "--seat-pip-width": `${SEAT_PIP_WIDTH}px`,
     "--card-width": `${CARD_WIDTH}px`,
     "--card-height": `${CARD_HEIGHT}px`,
   };

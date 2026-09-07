@@ -822,9 +822,9 @@ finish order.
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
-│  [seat] [seat] [seat]        history log       [timer]   │  56px
+│  [seat] [seat] [seat]        history log       [timer]   │  66px
 │                                                          │
-│ [seat]          TRICK AREA / BANNERS          [seat]     │  ~218px
+│ [seat]          TRICK AREA / BANNERS          [seat]     │  ~208px
 │                                                          │
 ├──────────────────────────────────────────────────────────┤
 │                 [ Play ]              [ Pass ]           │
