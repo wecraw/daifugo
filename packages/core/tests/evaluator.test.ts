@@ -8,6 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { parseCombo } from "../src/combo.js";
+import { DEFAULT_HOUSE_RULES } from "../src/config.js";
 import { createDeck } from "../src/deck.js";
 import {
   canBeat,
@@ -334,6 +335,9 @@ describe("memoisation on (hand, trickTop, isRevolution, trickInverted, suitLock)
       legalMovesKey(hand, { top, trickInverted: true }),
     );
     expect(legalMovesKey(hand, { top })).not.toBe(legalMovesKey(hand, { top, suitLock: ["H"] }));
+    expect(legalMovesKey(hand, { top, config: { ...DEFAULT_HOUSE_RULES, shibari: true } })).not.toBe(
+      legalMovesKey(hand, { top, config: { ...DEFAULT_HOUSE_RULES, shibari: false } }),
+    );
     expect(legalMovesKey(hand, { top: combo(["JKR-1"]) })).not.toBe(
       legalMovesKey(hand, { top: combo(["JKR-1"], [bind("JKR-1", 9, "S")]) }),
     );

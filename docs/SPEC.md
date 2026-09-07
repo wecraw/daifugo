@@ -450,7 +450,11 @@ them blindly. When `bindings` is absent, the server applies the default rule.
    trick top when the trick is non-empty.
 2. Enumerate all bindings that produce a legal play.
 3. Select the one with the greatest effective strength. Pure counts as a binding
-   candidate and wins ties.
+   candidate and wins ties. Among remaining candidates tied on strength (same
+   rank, different suit), prefer whichever suit establishes a Shibari lock
+   (Section 6) before falling back to suit order. This never changes which rank
+   is chosen — only the suit among candidates already at maximum strength — so it
+   does not conflict with maximising raw strength below.
 
 **The default is a recommendation, not a commitment.** The client pre-selects the
 resolved binding in the binding picker and the player may override it before

@@ -316,10 +316,12 @@ function moveKey(combo: PlayCombo): string {
  * resolved view as well as its cards, since a joker played bound and the same
  * joker played pure are different tops.
  *
- * `spade3BeatsJoker` joins the five because it is the one config flag that
- * changes a legality answer here. It is constant for a round, so it never causes
- * a miss in practice; leaving it out would make the cache wrong across a rules
- * change in the lobby, which is cheaper to prevent than to debug.
+ * `spade3BeatsJoker` and `shibari` join the five because they are the config
+ * flags that change a legality or binding answer here — `shibari` now also
+ * steers default joker-suit resolution (§5.5) via `locksTrick`. Both are
+ * constant for a round, so they never cause a miss in practice; leaving them
+ * out would make the cache wrong across a rules change in the lobby, which is
+ * cheaper to prevent than to debug.
  */
 export function legalMovesKey(hand: readonly Card[], ctx: TrickContext = {}): string {
   const cardIds = hand
@@ -336,6 +338,7 @@ export function legalMovesKey(hand: readonly Card[], ctx: TrickContext = {}): st
     lock,
     kaidan,
     configIn(ctx).spade3BeatsJoker ? "S3" : "-",
+    configIn(ctx).shibari ? "SB" : "-",
   ].join("|");
 }
 
