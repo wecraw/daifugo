@@ -1,31 +1,21 @@
 /**
- * The hand row: the fan of §10.2, the selection of §10.4, and the joker binding
- * badge of §10.5.
+ * The hand row: the fan of §10.2 in its own row, the selection of §10.4, and the
+ * joker binding badge of §10.5.
  *
- * Every figure comes from `layout/handLayout.ts` and every decision from
- * `useHandController`; this file is the DOM they land on. Two things about that
- * DOM are load-bearing:
+ * Every figure comes from `layout/handLayout.ts`, every decision from
+ * `useHandController`, and the fan's DOM from `CardFan` — which the exchange
+ * (§4.3) renders too, out of a different hook. What is left here is what only
+ * the hand row has: the drag-across selection, the badge, and the two notices
+ * the row raises over its own cards.
  *
- * * **The button is the exposed strip, not the card.** A card's visual box is
- *   64x90 and overflows its own hit target to the right, where the next card
- *   covers it. The strip is what takes the tap (§10.2), the last card's strip is
- *   its full width because nothing overlaps it, and the 6px of vertical slop is
- *   on the button rather than the card so it does not show up as a gap. The box
- *   itself takes no pointer events at all, so a selected card's lift and growth
- *   cannot put its overflow over the neighbour's strip. Selection does not
- *   raise the slot's `z-index` either: the fan stacks left to right whatever is
- *   selected, so a selected card rises out of the fan rather than over the top
- *   of the card to its right (§10.4).
  * * **Nothing here plays a card.** Tap selects and tap again deselects; the Play
  *   button is the only way a card reaches the table (§10.4).
- * * **A dimmed card refuses the tap, and says why.** The controller will not add a
- *   card no legal move contains, so the dark cards are inert rather than merely
- *   discouraging; they carry `aria-disabled` rather than `disabled` because a
- *   disabled button fires no pointer events, and a drag has to be able to cross
- *   them. The refusal raises a notice over the row for a couple of seconds, in
- *   the same words the Play button would have used (§10.4, §10.6) — keyed on the
- *   notice id so tapping the same dead card twice replays it rather than looking
- *   like the second tap did nothing at all.
+ * * **A dimmed card refuses the tap, and says why.** The controller will not add
+ *   a card no legal move contains, so the dark cards are inert rather than merely
+ *   discouraging. The refusal raises a notice over the row for a couple of
+ *   seconds, in the same words the Play button would have used (§10.4, §10.6) —
+ *   keyed on the notice id so tapping the same dead card twice replays it rather
+ *   than looking like the second tap did nothing at all.
  *
  * The shrinking and dimming are turn-scoped: off turn the controller reports every
  * card playable, so the row reads as a plain fan (§10.3).
@@ -39,123 +29,45 @@ import type { CSSProperties } from "react";
 import { JOKER_GLYPH, bindingGlyph } from "../glyphs";
 import type { HandController } from "../hooks/useHandController";
 import { useTranslate } from "../i18n/index";
-import {
-  AUTO_PASS_DELAY_MS,
-  SELECTION_NOTICE_MS,
-  CARD_HEIGHT,
-  CARD_WIDTH,
-  HIT_SLOP_Y,
-  SELECTION_LIFT,
-  SELECTION_SCALE,
-  UNPLAYABLE_DROP,
-  UNPLAYABLE_SATURATION,
-  UNPLAYABLE_SCALE,
-} from "../layout/handLayout";
-import { CardFace } from "./CardFace";
+import { AUTO_PASS_DELAY_MS, SELECTION_NOTICE_MS } from "../layout/handLayout";
+import { CardFan } from "./CardFan";
 
 export function Hand({ hand }: { hand: HandController }) {
   const t = useTranslate();
 
   return (
     <div className="hand">
-      <ul
-        className={`hand__fan${hand.autoPassing ? " hand__fan--passing" : ""}`}
-        style={{ width: `${hand.layout.width}px` }}
-      >
-        {hand.cards.map((card, index) => {
-          const slot = hand.layout.cards[index];
-          if (slot === undefined) return null;
-
-          const selected = hand.isSelected(card.id);
-          const unplayable = hand.isUnplayable(card.id);
-          const dimmed = hand.isDimmed(card.id) && !selected;
-          const selectable = hand.isSelectable(card.id);
-          const binding = selected ? hand.bindingOf(card.id) : null;
-          // Unplayable cards give up their rotation as well as their size (§10.3),
-          // which is what makes the playable run read as a straight, brighter band.
-          const rotation = unplayable ? 0 : slot.rotation;
-          const lift =
-            slot.rise + (selected ? SELECTION_LIFT : 0) - (unplayable ? UNPLAYABLE_DROP : 0);
-          const scale = selected ? SELECTION_SCALE : unplayable ? UNPLAYABLE_SCALE : 1;
-
-          return (
-            <li
-              key={card.id}
-              className="hand__slot"
-              style={{
-                left: `${slot.hitLeft}px`,
-                width: `${slot.hitWidth}px`,
-                zIndex: slot.zIndex,
-              }}
+      <CardFan
+        cards={hand.cards}
+        layout={hand.layout}
+        {...(hand.autoPassing ? { className: "hand__fan--passing" } : {})}
+        isSelected={hand.isSelected}
+        isUnplayable={hand.isUnplayable}
+        isDimmed={hand.isDimmed}
+        isSelectable={hand.isSelectable}
+        bindingOf={hand.bindingOf}
+        onToggle={hand.toggle}
+        onBeginDrag={hand.beginDrag}
+        onExtendTo={hand.extendTo}
+        onEndDrag={hand.endDrag}
+        renderBadge={(card, binding) =>
+          // §10.5: the badge appears only where there is a choice to make.
+          card.isJoker && hand.isSelected(card.id) && hand.bindingChoices > 1 ? (
+            <button
+              type="button"
+              className="hand__binding"
+              onClick={hand.cycleBinding}
+              title={
+                binding === null
+                  ? t("ui.hand.jokerPure")
+                  : t("ui.hand.jokerBinding", { binding: bindingGlyph(binding) })
+              }
             >
-              <button
-                type="button"
-                className={[
-                  "hand__card",
-                  selected ? "hand__card--selected" : "",
-                  unplayable ? "hand__card--unplayable" : "",
-                  dimmed ? "hand__card--dimmed" : "",
-                ]
-                  .filter((name) => name !== "")
-                  .join(" ")}
-                aria-pressed={selected}
-                aria-disabled={!selectable}
-                data-card-id={card.id}
-                style={
-                  {
-                    height: `${CARD_HEIGHT + HIT_SLOP_Y * 2}px`,
-                    top: `${-HIT_SLOP_Y}px`,
-                    "--hand-hit-slop": `${HIT_SLOP_Y}px`,
-                    "--card-transform": `translateY(${-lift}px) rotate(${rotation}deg) scale(${scale})`,
-                    "--card-saturation": unplayable ? UNPLAYABLE_SATURATION : 1,
-                  } as CSSProperties
-                }
-                onPointerDown={(event) => {
-                  // A touch implicitly captures the pointer to the element it
-                  // started on, which would stop `pointerenter` reaching the
-                  // cards the finger crosses — and on a phone, dragging across
-                  // is how a pair gets selected (§10.4). Releasing the capture
-                  // puts hit testing back on every move.
-                  const target = event.currentTarget;
-                  if (target.hasPointerCapture?.(event.pointerId) === true) {
-                    target.releasePointerCapture(event.pointerId);
-                  }
-                  hand.beginDrag(card.id);
-                }}
-                onPointerEnter={() => hand.extendTo(card.id)}
-                onPointerUp={hand.endDrag}
-                onKeyDown={(event) => {
-                  // The tap is `pointerdown`, so a keyboard press has to select
-                  // here rather than through a click the card does not listen for.
-                  if (event.key !== "Enter" && event.key !== " ") return;
-                  event.preventDefault();
-                  hand.toggle(card.id);
-                }}
-              >
-                <span className="hand__card-box" style={{ width: `${CARD_WIDTH}px` }}>
-                  <CardFace card={card} binding={binding ?? undefined} size="hand" />
-                </span>
-              </button>
-
-              {/* §10.5: the badge appears only where there is a choice to make. */}
-              {card.isJoker && selected && hand.bindingChoices > 1 && (
-                <button
-                  type="button"
-                  className="hand__binding"
-                  onClick={hand.cycleBinding}
-                  title={
-                    binding === null
-                      ? t("ui.hand.jokerPure")
-                      : t("ui.hand.jokerBinding", { binding: bindingGlyph(binding) })
-                  }
-                >
-                  {binding === null ? JOKER_GLYPH : bindingGlyph(binding)}
-                </button>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+              {binding === null ? JOKER_GLYPH : bindingGlyph(binding)}
+            </button>
+          ) : null
+        }
+      />
 
       {/*
         §10.4: the refused tap's answer, over the cards it was about. It sits

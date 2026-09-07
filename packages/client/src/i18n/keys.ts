@@ -171,6 +171,7 @@ export const UI_I18N_KEYS = [
   "ui.exchange.send",
   "ui.exchange.sent",
   "ui.exchange.waiting",
+  "ui.exchange.timeout",
 
   // The owed 7-pass and 10-discard (§7.2), chosen in the hand row and submitted
   // from the action column. Both name the count; the 7-pass names the target,
@@ -188,8 +189,6 @@ export const UI_I18N_KEYS = [
   // its note depends on whether that default still stands (§4.4), while the
   // pending action starts empty and always names the weakest cards (§7.6).
   "ui.select.more",
-  "ui.select.timeout",
-  "ui.select.timeoutChanged",
 
   // The animation layer (§10.9). The rule banners themselves are `rule.*` keys
   // and the miyako-ochi banner is `history.miyakoOchi`; what is here is the

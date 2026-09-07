@@ -3,13 +3,13 @@
  *
  * The three things worth pinning are the ones the spec is explicit about and a
  * refactor could quietly invert: the poor side has nothing to submit and sees a
- * read-only display (§4.3), the rich side's default selection is exactly what
- * the deadline would send for them (§4.4, §7.6), and round 1 never reaches the
- * screen at all (§4.3).
+ * read-only display (§4.3), the rich side chooses for itself with nothing
+ * pre-picked while the clock keeps its weakest-`count` fallback (§4.4, §7.6),
+ * and round 1 never reaches the screen at all (§4.3).
  */
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { forcedSelection, weakestSelection, type Card, type PublicGameState } from "@daifugo/core";
+import { forcedSelection, type Card, type PublicGameState } from "@daifugo/core";
 import { App } from "../src/App";
 import { FakeSocket } from "./fakeSocket";
 import { player, publicState } from "./publicState";
@@ -65,20 +65,29 @@ function seat(state: PublicGameState): FakeSocket {
   return socket;
 }
 
-function trayCard(id: string): HTMLElement {
-  const found = document.querySelector<HTMLElement>(`.card-tray__card[data-card-id="${id}"]`);
-  if (found === null) throw new Error(`no card ${id} in the tray`);
+/** The exchange fans the cards like the hand row does (§10.2), so it is the
+    same DOM the hand tests read. */
+function fanCard(id: string): HTMLElement {
+  const found = document.querySelector<HTMLElement>(`.hand__card[data-card-id="${id}"]`);
+  if (found === null) throw new Error(`no card ${id} in the fan`);
   return found;
 }
 
-function trayIds(): string[] {
-  return [...document.querySelectorAll<HTMLElement>(".card-tray__card")].map(
+function fanIds(): string[] {
+  return [...document.querySelectorAll<HTMLElement>(".hand__card")].map(
     (element) => element.dataset["cardId"] ?? "",
   );
 }
 
+/** A tap, as the fan takes it: `pointerdown` selects, `pointerup` ends the drag. */
+function tap(id: string): void {
+  const card = fanCard(id);
+  fireEvent.pointerDown(card);
+  fireEvent.pointerUp(card);
+}
+
 function selectedIds(): string[] {
-  return [...document.querySelectorAll<HTMLElement>('.card-tray__card[aria-pressed="true"]')].map(
+  return [...document.querySelectorAll<HTMLElement>('.hand__card[aria-pressed="true"]')].map(
     (element) => element.dataset["cardId"] ?? "",
   );
 }
@@ -95,48 +104,48 @@ describe("the rich side (§4.3)", () => {
 
   it("offers the whole hand to choose from", () => {
     seat(exchanging());
-    expect(trayIds().sort()).toEqual(HAND.map((each) => each.id).sort());
+    expect(fanIds().sort()).toEqual(HAND.map((each) => each.id).sort());
   });
 
-  it("pre-selects exactly what the deadline would send (§4.4)", () => {
+  it("starts with nothing selected, and says what the clock would send (§4.4)", () => {
     seat(exchanging());
-    expect(selectedIds().sort()).toEqual([...weakestSelection(HAND, 2)].sort());
+    expect(selectedIds()).toEqual([]);
+    expect(sendButton()).toBeDisabled();
+    expect(
+      screen.getByText("If the clock runs out, your weakest 2 card(s) are sent"),
+    ).toBeInTheDocument();
   });
 
-  it("sends the selection on submit", () => {
+  it("sends what was picked, and only once it is complete", () => {
     const socket = seat(exchanging());
+    tap("D-13");
+    expect(sendButton()).toBeDisabled();
+    expect(screen.getByText("Select 1 more")).toBeInTheDocument();
+
+    tap("S-2");
     fireEvent.click(sendButton());
     expect(socket.sentOf("exchangeCards")).toHaveLength(1);
     const sent = socket.sentOf("exchangeCards")[0]?.[0] as string[];
-    expect([...sent].sort()).toEqual([...weakestSelection(HAND, 2)].sort());
+    expect([...sent].sort()).toEqual(["D-13", "S-2"]);
   });
 
   it("swaps the oldest pick when the count is already full", () => {
     seat(exchanging());
-    const before = selectedIds();
-    fireEvent.click(trayCard("S-2"));
+    tap("S-3");
+    tap("C-4");
+    tap("S-2");
     const after = selectedIds();
     expect(after).toHaveLength(2);
     expect(after).toContain("S-2");
-    expect(after).not.toContain(before[0]);
+    expect(after).not.toContain("S-3");
   });
 
-  it("stops promising the selection once it stops being the default (§4.4)", () => {
+  it("gives a pick back on a second tap", () => {
     seat(exchanging());
-    expect(screen.getByText("If the clock runs out, this selection is sent")).toBeInTheDocument();
-    // Nothing reaches the server until Send: from here the deadline takes the
-    // weakest cards, whatever is on screen.
-    fireEvent.click(trayCard("D-13"));
-    expect(
-      screen.getByText("If the clock runs out, your weakest 2 card(s) go instead"),
-    ).toBeInTheDocument();
-  });
-
-  it("will not submit a short selection", () => {
-    seat(exchanging());
-    fireEvent.click(trayCard(selectedIds()[0] as string));
-    expect(sendButton()).toBeDisabled();
-    expect(screen.getByText("Select 1 more")).toBeInTheDocument();
+    tap("D-13");
+    expect(selectedIds()).toEqual(["D-13"]);
+    tap("D-13");
+    expect(selectedIds()).toEqual([]);
   });
 
   it("waits after submitting, rather than offering to submit twice", () => {
@@ -153,7 +162,7 @@ describe("the rich side (§4.3)", () => {
     );
     expect(sendButton()).toBeNull();
     expect(screen.getByText("Waiting for the other players")).toBeInTheDocument();
-    expect(trayIds()).toEqual(["S-3", "C-4"]);
+    expect(fanIds()).toEqual(["S-3", "C-4"]);
   });
 });
 
@@ -175,20 +184,21 @@ describe("the poor side (§4.3)", () => {
   it("shows the cards leaving the hand and nothing to submit", () => {
     seat(poorState());
     expect(screen.getByText("Your 2 strongest card(s) go to Alex")).toBeInTheDocument();
-    expect(trayIds()).toEqual(forced);
+    expect(fanIds()).toEqual(forced);
     expect(sendButton()).toBeNull();
   });
 
   it("renders those cards read-only", () => {
     seat(poorState());
     for (const id of forced) {
-      expect(trayCard(id).tagName).toBe("LI");
+      // Not a control at all: nothing to press, and nothing that answers a tap.
+      expect(fanCard(id).tagName).toBe("SPAN");
     }
   });
 
   it("never sends an exchange for the side that has nothing to choose", () => {
     const socket = seat(poorState());
-    fireEvent.click(trayCard(forced[0] as string));
+    tap(forced[0] as string);
     expect(socket.sentOf("exchangeCards")).toEqual([]);
   });
 });

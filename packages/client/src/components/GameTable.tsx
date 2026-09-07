@@ -84,6 +84,11 @@ export function GameTable({ room }: { room: PublicGameState }) {
   // is where the choice is made (§7.2, see `hand/pendingAction.ts`).
   const blocked = owesPendingAction(room);
 
+  // The exchange and an owed pending action are the same shape of moment: the
+  // whole choice is in the player's own cards, and nothing else on the table is
+  // theirs to act on. Both dim everything but the hand row (§4.3, §7.2).
+  const handOnly = room.status === "EXCHANGE" || blocked;
+
   const renderEdge = (edge: SeatEdge) =>
     seats
       .filter((seat) => seat.edge === edge)
@@ -178,6 +183,10 @@ export function GameTable({ room }: { room: PublicGameState }) {
           {renderEdge("right")}
         </div>
       </div>
+
+      {/* Under the hand row and the controls, over everything else: see
+          `.table-focus`. */}
+      {handOnly && <div className="table-focus" aria-hidden="true" />}
 
       <div className="game-table__bottom">
         {/* The exchange is a different choice from a play, over a hand that is

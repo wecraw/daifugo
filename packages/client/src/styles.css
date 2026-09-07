@@ -1339,6 +1339,11 @@ button:disabled {
  */
 .game-table__hand {
   position: relative;
+  /* Above `.table-focus`, so the scrim of a hand-only phase stops at the cards
+     — including a selected one lifted over the row's top edge, which is why the
+     row is raised rather than the scrim cut short of it. Still under the
+     animation layer (40) and the controls (45), as it is the rest of the time. */
+  z-index: 38;
   flex: 1 1 auto;
   min-height: 0;
   overflow: visible;
@@ -1361,6 +1366,39 @@ button:disabled {
   inset: 0;
   z-index: 40;
   background: rgba(10, 22, 16, 0.62);
+}
+
+/*
+ * The hand-only phases (§4.3, §7.2): the exchange, and an owed 7-pass or
+ * 10-discard. Nothing on the table is actionable and nothing on it is what the
+ * player should be reading — the choice is entirely in their own cards — so the
+ * felt, the seats and the trick area go under a scrim and the hand row stays
+ * lit. It is the inverse of `.hand-wait`, which covers the cards while the
+ * table waits on somebody else.
+ *
+ * The prompt and its button float clear at z-index 45 and stay above it, which
+ * is the point: the one thing to read and the one thing to press.
+ *
+ * Pointer events pass through. During a pending action the bands beneath are
+ * already `inert` (§7.2, §7.7), and during the exchange leaving is still
+ * allowed, so the scrim is a tint rather than a blocker.
+ */
+.table-focus {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  background: rgba(6, 18, 12, 0.62);
+  pointer-events: none;
+  animation: anim-table-focus 180ms ease both;
+}
+
+@keyframes anim-table-focus {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* The wait, in the band the Play and Pass buttons vacate (§10.9). It is the
@@ -1487,6 +1525,13 @@ button:disabled {
 }
 
 /* Dimmed is not merely discouraging — the tap is refused (§10.4). */
+/* Read-only by rule: the poor side's cards are chosen for it (§4.3), and a
+   transfer that empties the hand takes them all (§7.3). Not a control, so it
+   carries no cursor and no press state — only the card. */
+.hand__card--fixed {
+  cursor: default;
+}
+
 .hand__card--dimmed {
   cursor: not-allowed;
 }
@@ -1737,6 +1782,13 @@ button:disabled {
   text-align: right;
 }
 
+/* Nothing to submit — the poor side, the sitting-out seat, the player who has
+   already sent (§4.3) — so the band is an announcement and centres itself
+   rather than hanging off a button that is not there. */
+.action-bar__pending:only-child {
+  text-align: center;
+}
+
 .action-bar__prompt {
   color: var(--accent);
   font-size: 0.8rem;
@@ -1763,79 +1815,21 @@ button:disabled {
 }
 
 /*
- * The exchange row (§4.3): a flat tray of cards, not the fan of §10.2, because
- * that choice has no legality to show and no turn to belong to.
+ * The exchange (§4.3). The cards are the fan of §10.2 — same row, same shape,
+ * same `.hand__*` DOM — so what is left here is the row it sits in: nothing but
+ * the fan, with the prompt and the send button floating above it in the band the
+ * turn controls own (§10.6), so the cards are never written over.
  */
-.card-tray {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.25rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.card-tray__card {
-  padding: 0.1rem;
-  border: 1px solid transparent;
-  border-radius: 0.35rem;
-  background: none;
-  transition:
-    transform 140ms ease,
-    border-color 140ms ease;
-}
-
-button.card-tray__card {
-  cursor: pointer;
-}
-
-.card-tray__card--selected {
-  border-color: var(--accent);
-  transform: translateY(-6px);
-}
-
-/* Read-only by rule: the poor side's cards are chosen for them (§4.3). */
-.card-tray__card--fixed {
-  opacity: 0.9;
-}
-
 .exchange {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  gap: 0.3rem;
-  padding: 0.25rem;
 }
 
-.exchange__prompt {
-  margin: 0;
-  color: var(--accent);
-  font-size: 0.75rem;
-}
-
-.exchange__note {
-  margin: 0;
-  opacity: 0.6;
-  font-size: 0.6rem;
-  text-align: center;
-}
-
+/* Sized and coloured by `.action-bar button` / `.action-bar__submit`: this is
+   the same primary control as Play, in the same place. */
 .exchange__send {
-  padding: 0.3rem 0.2rem;
-  border-radius: 0.3rem;
-  background: var(--accent);
-  color: #14110d;
-  font-size: 0.65rem;
-  font-weight: 700;
-  line-height: 1.15;
-}
-
-.exchange__send:disabled {
-  background: rgba(245, 243, 238, 0.12);
-  color: rgba(245, 243, 238, 0.65);
-  font-weight: 400;
+  max-width: 40%;
 }
 
 /*
