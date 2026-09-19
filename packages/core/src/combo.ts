@@ -55,9 +55,8 @@ const NO_BINDINGS: ReadonlyMap<string, JokerBinding> = new Map();
  * them by the default rule when they are absent.
  *
  * `undefined` bindings request the default; an empty array is an explicit "no
- * joker is bound", which is how a client plays a joker pure over the default's
- * suggestion — under revolution the default binds a led joker to a 3 (§5.5), so
- * without this distinction a deliberate pure play would be unreachable (§10.5).
+ * joker is bound". Explicit pure plays are validated as requested rather than
+ * rebound to a numbered rank by the default resolver (§5.5, §10.5).
  */
 export function parseCombo(
   cards: readonly Card[],
@@ -179,9 +178,8 @@ function checkShape(
  * overrides by sending explicit bindings (§10), so guessing at intent here would
  * only make the suggestion harder to predict.
  *
- * Leading a lone joker therefore resolves to pure in the standard orientation,
- * where pure is the strongest card there is - and to a 3 under revolution, where
- * pure is the weakest (§5.2) and the 3 is the strongest.
+ * Leading a lone joker resolves to pure in either orientation, including
+ * revolution, because pure remains the strongest card (§5.2).
  */
 function resolveDefaultBindings(
   cards: readonly Card[],

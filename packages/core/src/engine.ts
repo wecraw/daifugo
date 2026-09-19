@@ -35,7 +35,13 @@ import {
   reseat,
   shuffle,
 } from "./deck.js";
-import { checkLegality, generateLegalMoves, invertedIn, locksTrick, trickContextOf } from "./evaluator.js";
+import {
+  checkLegality,
+  generateLegalMoves,
+  invertedIn,
+  locksTrick,
+  trickContextOf,
+} from "./evaluator.js";
 import { takeFromHand } from "./hand.js";
 import { type ErrorCode, history, roleKey } from "./i18n-keys.js";
 import {
@@ -569,7 +575,7 @@ function playCards(
       count: combo.cards.length,
     }),
   );
-  if (spade3BeatsJoker(previousTop, combo, state.config)) {
+  if (spade3BeatsJoker(previousTop, combo, state.config, invertedIn(ctx))) {
     log(next, history("history.spade3BeatsJoker", { player: playerId }));
   }
 
@@ -1292,8 +1298,7 @@ export function cancelLeave(state: GameState, playerId: string): GameState | nul
 export function canCancelLeave(state: GameState, playerId: string): boolean {
   if (!state.pendingLeaves.includes(playerId)) return false;
   const player =
-    playerOf(state, playerId) ??
-    state.pendingJoins.find((seated) => seated.id === playerId);
+    playerOf(state, playerId) ?? state.pendingJoins.find((seated) => seated.id === playerId);
   if (player === undefined) return false;
 
   // The same roster `queueJoin` counts against: seats that are staying, plus the

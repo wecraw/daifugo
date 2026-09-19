@@ -17,10 +17,8 @@
  * still does not qualify, because the counter is that card's privilege, not the
  * rank's (§5.4).
  *
- * Under revolution the exception is inert rather than absent: a 3 is the strongest
- * card while inverted and a pure joker the weakest (§5.2), so the comparison the
- * evaluator would otherwise run says yes on its own. Nothing needs to switch it
- * off, and switching it off would only add a branch no play can distinguish.
+ * The counter is disabled while the effective order is inverted.
+ * Revolution plus 11-back restores the standard order and enables the counter.
  */
 import { DEFAULT_HOUSE_RULES } from "../config.js";
 import { SPADE_3_ID } from "../deck.js";
@@ -31,8 +29,9 @@ export function spade3BeatsJoker(
   top: PlayCombo | null,
   candidate: PlayCombo,
   config: Readonly<HouseRulesConfig> = DEFAULT_HOUSE_RULES,
+  inverted = false,
 ): boolean {
-  if (!config.spade3BeatsJoker) return false;
+  if (inverted || !config.spade3BeatsJoker) return false;
   if (top === null || top.cards.length !== 1 || !top.isPureJokerPlay) return false;
   if (candidate.cards.length !== 1) return false;
   return candidate.cards[0]?.id === SPADE_3_ID;

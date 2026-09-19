@@ -139,7 +139,7 @@ export function canBeat(
 ): boolean {
   if (top === null) return true;
   if (top.cards.length !== candidate.cards.length) return false;
-  if (spade3BeatsJoker(top, candidate, configIn(ctx))) return true;
+  if (spade3BeatsJoker(top, candidate, configIn(ctx), invertedIn(ctx))) return true;
   return isStronger(comboStrength(candidate), comboStrength(top), invertedIn(ctx));
 }
 
@@ -329,7 +329,8 @@ export function legalMovesKey(hand: readonly Card[], ctx: TrickContext = {}): st
     .sort()
     .join(",");
   const lock = ctx.suitLock === null || ctx.suitLock === undefined ? "-" : ctx.suitLock.join("");
-  const kaidan = ctx.kaidanLock === null || ctx.kaidanLock === undefined ? "-" : String(ctx.kaidanLock);
+  const kaidan =
+    ctx.kaidanLock === null || ctx.kaidanLock === undefined ? "-" : String(ctx.kaidanLock);
   return [
     cardIds,
     topKey(ctx.top ?? null),

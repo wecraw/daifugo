@@ -124,11 +124,11 @@ describe("effectiveInverted (§5.2)", () => {
     expect(canBeat(top, combo(["H-7"]), ctx)).toBe(false);
   });
 
-  it("makes the pure joker the weakest card while inverted", () => {
+  it("keeps the pure joker the strongest card while inverted", () => {
     const overTwo = combo(["S-2"]);
-    expect(canBeat(overTwo, combo(["JKR-1"]), { top: overTwo, isRevolution: true })).toBe(false);
+    expect(canBeat(overTwo, combo(["JKR-1"]), { top: overTwo, isRevolution: true })).toBe(true);
     const overJoker = combo(["JKR-1"]);
-    expect(canBeat(overJoker, combo(["H-4"]), { top: overJoker, isRevolution: true })).toBe(true);
+    expect(canBeat(overJoker, combo(["H-4"]), { top: overJoker, isRevolution: true })).toBe(false);
   });
 });
 
@@ -255,7 +255,7 @@ describe("generateLegalMoves (§10.3)", () => {
     expect(moves[0]?.bindings).toEqual([{ cardId: "JKR-1", rank: 12, suit: "C" }]);
   });
 
-  it("pairs the two jokers, and binds them when pure cannot win", () => {
+  it("keeps pairs of jokers pure in either orientation", () => {
     const pure = generateLegalMoves(cards("JKR-1", "JKR-2"), { top: combo(["S-2", "H-2"]) });
     expect(moveIds(pure)).toEqual(["JKR-1+JKR-2"]);
     expect(pure[0]?.isPureJokerPlay).toBe(true);
@@ -264,7 +264,7 @@ describe("generateLegalMoves (§10.3)", () => {
       top: combo(["S-6", "H-6"]),
       isRevolution: true,
     });
-    expect(inverted[0]?.resolvedRank).toBe(3);
+    expect(inverted[0]?.resolvedRank).toBeNull();
   });
 
   it("includes the 3 of Spades over a single pure joker (§6)", () => {
@@ -335,9 +335,9 @@ describe("memoisation on (hand, trickTop, isRevolution, trickInverted, suitLock)
       legalMovesKey(hand, { top, trickInverted: true }),
     );
     expect(legalMovesKey(hand, { top })).not.toBe(legalMovesKey(hand, { top, suitLock: ["H"] }));
-    expect(legalMovesKey(hand, { top, config: { ...DEFAULT_HOUSE_RULES, shibari: true } })).not.toBe(
-      legalMovesKey(hand, { top, config: { ...DEFAULT_HOUSE_RULES, shibari: false } }),
-    );
+    expect(
+      legalMovesKey(hand, { top, config: { ...DEFAULT_HOUSE_RULES, shibari: true } }),
+    ).not.toBe(legalMovesKey(hand, { top, config: { ...DEFAULT_HOUSE_RULES, shibari: false } }));
     expect(legalMovesKey(hand, { top: combo(["JKR-1"]) })).not.toBe(
       legalMovesKey(hand, { top: combo(["JKR-1"], [bind("JKR-1", 9, "S")]) }),
     );

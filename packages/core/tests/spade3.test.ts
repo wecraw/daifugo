@@ -1,7 +1,7 @@
 /**
  * §12.1 test 2: the Spade-3-beats-joker counter (§5.4, §6).
  *
- * It beats a single pure joker in either orientation; it loses to a joker bound
+ * It beats a single pure joker when the effective order is standard; it loses to a joker bound
  * to a 4; it does not beat a joker played as a 10; it is illegal against a pair
  * of jokers; and a joker bound to the 3 of Spades does not qualify as the beater.
  */
@@ -44,10 +44,16 @@ describe("the 3 of Spades over a single pure joker (§6)", () => {
     expect(canBeat(pureJoker, spade3, { top: pureJoker })).toBe(true);
   });
 
-  it("beats it under revolution too, where a 3 already outranks it (§5.2)", () => {
-    // Inert rather than absent: the exception changes nothing here, because the
-    // 3 is the strongest card while inverted and wins on raw strength anyway.
-    expect(canBeat(pureJoker, spade3, { top: pureJoker, isRevolution: true })).toBe(true);
+  it.each([
+    [false, false, true],
+    [true, false, false],
+    [false, true, false],
+    [true, true, true],
+  ])("counter with revolution=%s and 11-back=%s is %s", (isRevolution, trickInverted, allowed) => {
+    const ctx = { top: pureJoker, isRevolution, trickInverted };
+    expect(canBeat(pureJoker, spade3, ctx)).toBe(allowed);
+    expect(checkLegality(spade3, ctx).ok).toBe(allowed);
+    expect(canBeat(spade3, pureJoker, { ...ctx, top: spade3 })).toBe(true);
   });
 
   it("is a legal play, not merely a strong one", () => {
