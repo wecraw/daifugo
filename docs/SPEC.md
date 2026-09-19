@@ -292,21 +292,23 @@ Pair the i-th ranked from the top with the i-th from the bottom, for
 `i = 1 .. floor(N/2)`. That pair exchanges
 
 ```
-count(i) = floor(N / 2) - i + 1
+count(i) = 2 if i = 1, otherwise 1
 ```
 
-cards in each direction. When N is odd the exact middle player exchanges nothing.
+cards in each direction: the best and worst players trade 2, and all other pairs
+trade 1. When N is odd the exact middle player exchanges nothing. No player
+exchanges more than 2 cards, regardless of the number of players.
 
 Worked results:
 
 | N | Pairs (top rank ↔ bottom rank): count |
 | :--- | :--- |
-| 3 | 1↔3: 1. Middle sits out. |
+| 3 | 1↔3: 2. Middle sits out. |
 | 4 | 1↔4: 2, 2↔3: 1 |
 | 5 | 1↔5: 2, 2↔4: 1. Middle sits out. |
-| 6 | 1↔6: 3, 2↔5: 2, 3↔4: 1 |
-| 7 | 1↔7: 3, 2↔6: 2, 3↔5: 1. Middle sits out. |
-| 8 | 1↔8: 4, 2↔7: 3, 3↔6: 2, 4↔5: 1 |
+| 6 | 1↔6: 2, 2↔5: 1, 3↔4: 1 |
+| 7 | 1↔7: 2, 2↔6: 1, 3↔5: 1. Middle sits out. |
+| 8 | 1↔8: 2, 2↔7: 1, 3↔6: 1, 4↔5: 1 |
 
 ### 4.3 Direction rules
 * The **richer** player of each pair chooses freely which cards to give.

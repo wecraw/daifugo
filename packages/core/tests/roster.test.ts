@@ -423,7 +423,7 @@ describe("the round boundary (§7.7, §3.2, §4.2)", () => {
     expect(dealt.hands.p1).toBeUndefined();
     expect(dealt.points.p1).toBeUndefined();
     expect(dealt.pendingLeaves).toEqual([]);
-    expect(dealt.exchange?.required).toEqual({ p2: 1, p0: 1 });
+    expect(dealt.exchange?.required).toEqual({ p2: 2, p0: 2 });
   });
 });
 

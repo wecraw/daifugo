@@ -140,12 +140,12 @@ describe("miyako-ochi, after the engine has recorded the demotion (§4.5)", () =
 /** §12.5 test 33. */
 describe("exchange pairing counts (§4.2)", () => {
   it("matches the §4.2 table for N = 3 through 8", () => {
-    expect(pairTable(3)).toEqual(["1↔3:1"]);
+    expect(pairTable(3)).toEqual(["1↔3:2"]);
     expect(pairTable(4)).toEqual(["1↔4:2", "2↔3:1"]);
     expect(pairTable(5)).toEqual(["1↔5:2", "2↔4:1"]);
-    expect(pairTable(6)).toEqual(["1↔6:3", "2↔5:2", "3↔4:1"]);
-    expect(pairTable(7)).toEqual(["1↔7:3", "2↔6:2", "3↔5:1"]);
-    expect(pairTable(8)).toEqual(["1↔8:4", "2↔7:3", "3↔6:2", "4↔5:1"]);
+    expect(pairTable(6)).toEqual(["1↔6:2", "2↔5:1", "3↔4:1"]);
+    expect(pairTable(7)).toEqual(["1↔7:2", "2↔6:1", "3↔5:1"]);
+    expect(pairTable(8)).toEqual(["1↔8:2", "2↔7:1", "3↔6:1", "4↔5:1"]);
   });
 
   it("leaves the exact middle player out at odd N", () => {
@@ -204,7 +204,7 @@ describe("round 1 (§4.3)", () => {
 
 const ORDER = ["rich", "mid", "poor"];
 
-/** A three-player table: `rich` <-> `poor` swap one card, `mid` sits out. */
+/** A three-player table: `rich` <-> `poor` swap two cards, `mid` sits out. */
 function threeHanded(): { hands: Record<string, Card[]>; exchange: ExchangeState } {
   const hands: Record<string, Card[]> = {
     rich: cards("S-3", "H-4", "D-5"),
@@ -217,14 +217,14 @@ function threeHanded(): { hands: Record<string, Card[]>; exchange: ExchangeState
 describe("exchange state at phase start (§4.3)", () => {
   it("owes both sides the pair count and points each at their partner", () => {
     const { exchange } = threeHanded();
-    expect(exchange.required).toEqual({ rich: 1, poor: 1 });
+    expect(exchange.required).toEqual({ rich: 2, poor: 2 });
     expect(exchange.partner).toEqual({ rich: "poor", poor: "rich" });
     expect(exchange.submitted).toEqual({});
   });
 
   it("pre-computes the poor side only, so they have nothing to submit", () => {
     const { exchange } = threeHanded();
-    expect(exchange.forced).toEqual({ poor: ["S-2"] });
+    expect(exchange.forced).toEqual({ poor: ["S-2", "C-10"] });
   });
 
   it("is empty for a table with no pairs", () => {
@@ -237,7 +237,7 @@ describe("exchange state at phase start (§4.3)", () => {
 describe("submission (§4.3, §8.0)", () => {
   it("records a rich player's choice and completes the phase", () => {
     const { hands, exchange } = threeHanded();
-    const result = submitExchange(exchange, "rich", ["D-5"], hands["rich"] as Card[]);
+    const result = submitExchange(exchange, "rich", ["H-4", "D-5"], hands["rich"] as Card[]);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(isExchangeComplete(exchange)).toBe(false);
@@ -260,16 +260,16 @@ describe("submission (§4.3, §8.0)", () => {
   it("rejects the wrong count, an unheld card, and a second submission", () => {
     const { hands, exchange } = threeHanded();
     const hand = hands["rich"] as Card[];
-    expect(submitExchange(exchange, "rich", ["S-3", "H-4"], hand)).toEqual({
+    expect(submitExchange(exchange, "rich", ["S-3"], hand)).toEqual({
       ok: false,
       error: "WRONG_CARD_COUNT",
     });
-    expect(submitExchange(exchange, "rich", ["C-10"], hand)).toEqual({
+    expect(submitExchange(exchange, "rich", ["S-3", "C-10"], hand)).toEqual({
       ok: false,
       error: "CARD_NOT_IN_HAND",
     });
 
-    const first = submitExchange(exchange, "rich", ["S-3"], hand);
+    const first = submitExchange(exchange, "rich", ["S-3", "H-4"], hand);
     expect(first.ok).toBe(true);
     if (!first.ok) return;
     expect(submitExchange(first.value, "rich", ["H-4"], hand)).toEqual({
@@ -288,16 +288,16 @@ describe("the deadline (§4.4)", () => {
   it("auto-gives an unsubmitted rich player's weakest cards", () => {
     const { hands, exchange } = threeHanded();
     const filled = autoFillExchange(exchange, hands);
-    expect(filled.submitted).toEqual({ rich: ["S-3"] });
+    expect(filled.submitted).toEqual({ rich: ["S-3", "H-4"] });
     expect(isExchangeComplete(filled)).toBe(true);
   });
 
   it("leaves a submission that already arrived alone", () => {
     const { hands, exchange } = threeHanded();
-    const submitted = submitExchange(exchange, "rich", ["D-5"], hands["rich"] as Card[]);
+    const submitted = submitExchange(exchange, "rich", ["H-4", "D-5"], hands["rich"] as Card[]);
     expect(submitted.ok).toBe(true);
     if (!submitted.ok) return;
-    expect(autoFillExchange(submitted.value, hands).submitted).toEqual({ rich: ["D-5"] });
+    expect(autoFillExchange(submitted.value, hands).submitted).toEqual({ rich: ["H-4", "D-5"] });
   });
 });
 
@@ -309,8 +309,8 @@ describe("application (§4.3)", () => {
     if (!result.ok) return;
 
     const next = result.value;
-    expect(next["rich"]?.map((c) => c.id)).toEqual(["H-4", "D-5", "S-2"]);
-    expect(next["poor"]?.map((c) => c.id)).toEqual(["D-9", "C-10", "S-3"]);
+    expect(next["rich"]?.map((c) => c.id)).toEqual(["D-5", "C-10", "S-2"]);
+    expect(next["poor"]?.map((c) => c.id)).toEqual(["D-9", "S-3", "H-4"]);
     expect(next["mid"]).toEqual(hands["mid"]);
 
     const before = Object.values(hands)
@@ -352,7 +352,7 @@ describe("application (§4.3)", () => {
     const result = applyExchange(exchange, hands);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value["poor"]?.map((c) => c.id)).toEqual(["D-9", "C-10", "S-3"]);
+    expect(result.value["poor"]?.map((c) => c.id)).toEqual(["D-9", "S-3", "H-4"]);
   });
 });
 
