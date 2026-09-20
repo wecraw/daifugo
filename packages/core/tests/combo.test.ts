@@ -180,26 +180,30 @@ describe("default binding resolution (§5.5)", () => {
     expect(parsed(cards("JKR-1", "JKR-2"), undefined, { top: null }).isPureJokerPlay).toBe(true);
   });
 
-  it("binds a led joker to a 3 under revolution, where pure is the weakest card", () => {
+  it("keeps a led joker pure under revolution", () => {
     const combo = parsed(cards("JKR-1"), undefined, { top: null, inverted: true });
-    expect(combo.resolvedRank).toBe(3);
-    expect(combo.isPureJokerPlay).toBe(false);
+    expect(combo.resolvedRank).toBeNull();
+    expect(combo.isPureJokerPlay).toBe(true);
   });
 
   it("maximises raw strength only, never a house-rule trigger", () => {
     // A player who wants the joker to be a 7 (to fire 7-pass) overrides the
     // default with explicit bindings; the default never guesses at intent (§6).
-    expect(parsed(cards("JKR-1"), undefined, { top: null, inverted: true }).resolvedRank).toBe(3);
+    expect(
+      parsed(cards("JKR-1"), undefined, { top: null, inverted: true }).resolvedRank,
+    ).toBeNull();
     expect(parsed(cards("JKR-1"), [bind("JKR-1", 7, "H")]).resolvedRank).toBe(7);
   });
 
-  it("beats a 4 under revolution by binding to a 3, but can never beat a 3", () => {
-    const overFour = parsed(cards("JKR-1"), undefined, { top: top(["H-4"]), inverted: true });
-    expect(overFour.resolvedRank).toBe(3);
-    // Nothing is stronger than a 3 while inverted, and equal strength does not beat.
-    expect(error(cards("JKR-1"), undefined, { top: top(["H-3"]), inverted: true })).toBe(
-      "NO_LEGAL_BINDING",
-    );
+  it("beats both a 4 and a 3 under revolution as a pure joker", () => {
+    for (const rank of [3, 4]) {
+      expect(
+        parsed(cards("JKR-1"), undefined, {
+          top: top([`H-${rank}`]),
+          inverted: true,
+        }).isPureJokerPlay,
+      ).toBe(true);
+    }
   });
 
   it("binds a joker to the rank the non-joker cards force", () => {
@@ -217,26 +221,24 @@ describe("default binding resolution (§5.5)", () => {
   });
 
   it("picks the greatest effective strength, which inverts under revolution", () => {
-    // A pure joker is the weakest card during revolution (§5.2), so the strongest
-    // legal binding over a 4 is the 3 - the only rank that beats it inverted.
+    // Pure remains the strongest legal binding under revolution.
     const combo = parsed(cards("JKR-1"), undefined, {
       top: top(["S-4"]),
       inverted: true,
     });
-    expect(combo.resolvedRank).toBe(3);
-    expect(combo.isPureJokerPlay).toBe(false);
+    expect(combo.resolvedRank).toBeNull();
+    expect(combo.isPureJokerPlay).toBe(true);
   });
 
-  it("binds an all-joker pair to a rank when pure cannot beat the top", () => {
-    // Inverted, a pure pair of jokers is the weakest pair there is.
+  it("keeps an all-joker pair pure under revolution", () => {
+    // Pure jokers outrank every numbered pair in either orientation.
     const combo = parsed(cards("JKR-1", "JKR-2"), undefined, {
       top: top(["S-6", "H-6"]),
       inverted: true,
     });
-    expect(combo.resolvedRank).toBe(3);
-    expect(combo.isPureJokerPlay).toBe(false);
-    expect(combo.bindings.length).toBe(2);
-    expect(new Set(combo.suits).size).toBe(2); // never two jokers on one card
+    expect(combo.resolvedRank).toBeNull();
+    expect(combo.isPureJokerPlay).toBe(true);
+    expect(combo.bindings).toEqual([]);
   });
 
   it("never binds a joker to the 3 of Spades to top a pure joker", () => {
@@ -279,9 +281,8 @@ describe("default binding resolution (§5.5)", () => {
   });
 
   it("lets an explicit empty array play a led joker pure under revolution", () => {
-    // The default resolves this to a 3, the strongest card when inverted; sending
-    // no bindings is how the player overrides that and leads the joker pure (§10.5).
-    expect(parsed(cards("JKR-1"), undefined, { inverted: true }).resolvedRank).toBe(3);
+    // Both default and explicit pure bindings remain pure during revolution.
+    expect(parsed(cards("JKR-1"), undefined, { inverted: true }).resolvedRank).toBeNull();
     const pure = parsed(cards("JKR-1"), [], { inverted: true });
     expect(pure.isPureJokerPlay).toBe(true);
     expect(pure.resolvedRank).toBeNull();

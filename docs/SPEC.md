@@ -292,21 +292,23 @@ Pair the i-th ranked from the top with the i-th from the bottom, for
 `i = 1 .. floor(N/2)`. That pair exchanges
 
 ```
-count(i) = floor(N / 2) - i + 1
+count(i) = 2 if i = 1, otherwise 1
 ```
 
-cards in each direction. When N is odd the exact middle player exchanges nothing.
+cards in each direction: the best and worst players trade 2, and all other pairs
+trade 1. When N is odd the exact middle player exchanges nothing. No player
+exchanges more than 2 cards, regardless of the number of players.
 
 Worked results:
 
 | N | Pairs (top rank ↔ bottom rank): count |
 | :--- | :--- |
-| 3 | 1↔3: 1. Middle sits out. |
+| 3 | 1↔3: 2. Middle sits out. |
 | 4 | 1↔4: 2, 2↔3: 1 |
 | 5 | 1↔5: 2, 2↔4: 1. Middle sits out. |
-| 6 | 1↔6: 3, 2↔5: 2, 3↔4: 1 |
-| 7 | 1↔7: 3, 2↔6: 2, 3↔5: 1. Middle sits out. |
-| 8 | 1↔8: 4, 2↔7: 3, 3↔6: 2, 4↔5: 1 |
+| 6 | 1↔6: 2, 2↔5: 1, 3↔4: 1 |
+| 7 | 1↔7: 2, 2↔6: 1, 3↔5: 1. Middle sits out. |
+| 8 | 1↔8: 2, 2↔7: 1, 3↔6: 1, 4↔5: 1 |
 
 ### 4.3 Direction rules
 * The **richer** player of each pair chooses freely which cards to give.
@@ -395,15 +397,15 @@ pure joker → 13
 effectiveInverted = state.isRevolution XOR state.trickInverted
 ```
 
-When inverted, comparison reverses: index 0 is strongest, 13 weakest. The pure
-joker is therefore the *weakest* card during revolution.
+When inverted, comparison reverses for numbered ranks only: 3 is the strongest
+numbered rank and 2 the weakest. Pure jokers remain above every numbered rank in
+either orientation, so a pure joker can beat a 3 during revolution. Equal strength
+still does not beat, and combo counts must match.
 
-A pure joker beats nothing while inverted, so a joker that has to beat something
-must be bound. Bound to a 3 it beats a 4; it can never beat a 3, because equal
-strength does not beat (Section 7.1). The 3 of Spades exception below is
-consequently inert during revolution: a 3 already outranks every other card there,
-and a pure joker sits at the bottom, so nothing needs the exception to get over
-it.
+The 3 of Spades counter is disabled while `effectiveInverted` is true.
+Revolution plus 11-back restores standard numbered-rank order, so the counter
+works again; revolution alone or 11-back alone disables it.
+Wildcard jokers still take the strength of their bound rank.
 
 ### 5.3 N-of-a-kind
 **N-of-a-kind is the only combo shape in this game.** A play is 1 through 4+ cards
@@ -411,7 +413,7 @@ sharing a single resolved rank. There are no sequences, runs, or straights: card
 differing ranks never form a legal play. Comparison is by the strength index of the
 shared rank, and count must match the top play exactly.
 
-Two pure jokers form a legal pair of jokers. Nothing beats it in normal orientation.
+Two pure jokers form a legal pair of jokers. Nothing beats it in either orientation.
 A pure joker cannot combine with a non-joker to form a pair, because its rank is
 "joker", not a number. To pair with an 8 the joker must be bound to an 8.
 
@@ -427,7 +429,8 @@ Consequences, all intentional:
   8s does fire 8-giri. Joker bound to a 5 adds to the skip count. Joker bound to a
   Jack counts toward 11-back parity.
 * A wildcard joker counts toward revolution. `JKR-as-K + K + K + K` is four kings.
-* The 3 of Spades counter applies **only** to a pure joker played as a single.
+* The 3 of Spades counter applies **only** to a pure joker played as a single
+  while the effective order is standard.
   A joker bound to a 4 is a 4 and beats the 3 of Spades normally; a joker bound to
   a 10 is a 10, and the 3 of Spades does not beat it. On the *victim* side the
   check reads the binding, never `card.isJoker`.
@@ -464,11 +467,9 @@ avoid an 8 to dodge 8-giri. A player who wants the joker to be a 7 so it sheds
 cards says so explicitly; guessing at intent would only make the suggestion harder
 to predict.
 
-Leading a lone joker therefore resolves to pure in the standard orientation, where
-pure is the strongest card there is. Under revolution pure is the *weakest* card
-(Section 5.2), so the same rule binds it to a 3, the strongest card while inverted.
-Both are correct: the default is always "the strongest thing this can be right
-now.
+Leading a lone joker therefore resolves to pure in either orientation, including
+revolution: pure remains the strongest card. Players may still explicitly bind it
+to a numbered rank to trigger a house rule.
 
 ---
 
@@ -481,7 +482,7 @@ combo's card count: a pair of 5s skips 2, a triple of 7s passes up to 3.
 
 | Rule | Trigger | Mechanics |
 | :--- | :--- | :--- |
-| **Spade 3 Beats Joker** | Trick top is a **single pure joker**. | A single 3 of Spades is legal over it in any inversion state and is treated as the strongest card over that joker. The beater must be the true `S-3`: a joker bound to the 3 of Spades does not qualify (Section 5.4). Does not apply to a pair of jokers, or to a joker played bound: a joker played as a 10 is a 10 and the 3 of Spades does not beat it. Inert under revolution, where a 3 already outranks a pure joker without the exception (Section 5.2). |
+| **Spade 3 Beats Joker** | Trick top is a **single pure joker**. | A single 3 of Spades is legal over it only while the effective order is standard (including revolution plus 11-back) and is treated as the strongest card over that joker. The beater must be the true `S-3`: a joker bound to the 3 of Spades does not qualify (Section 5.4). Does not apply to a pair of jokers, or to a joker played bound: a joker played as a 10 is a 10 and the 3 of Spades does not beat it. Disabled while effectively inverted; no 3 can beat a pure joker then (Section 5.2). |
 | **5-Skip** | Resolved rank is 5. | `S` = combo count. Skip the next `S` **eligible** players (non-finished and not yet passed). If `S >= (eligible players other than self)`, clear the trick instead and keep the lead. |
 | **7-Pass** | Resolved rank is 7. | `C` = combo count, `k = min(C, cards remaining in hand)`. Sets `RESOLVE_7_PASS`. Target is the nearest **non-finished** player to the left, regardless of whether they have passed or would be skipped. |
 | **8-Giri** | Resolved rank is 8. | Trick clears immediately, lead stays with the player. |
@@ -950,7 +951,7 @@ player's.
 
 ### 10.8 Sorting
 Always rank-then-suit, weakest first. The sort follows the **current effective
-order**, so the hand visually reverses on revolution. That reversal is
+order**, so numbered ranks visually reverse on revolution while pure jokers stay highest. That reversal is
 deliberate feedback.
 
 ### 10.9 Animation priorities
@@ -1077,7 +1078,7 @@ server involvement. It never changes the interface language or the document's
 
 ### 12.1 Unit, single rule
 1. `strength.test.ts` - standard order, inverted order, `effectiveInverted` XOR truth table.
-2. `spade3.test.ts` - beats a single pure joker normally and under revolution; loses to a joker bound to a 4; does not beat a joker played as a 10; illegal against a pair of jokers; a joker bound to the 3 of Spades does **not** beat a pure joker (Section 5.4).
+2. `spade3.test.ts` - beats a single pure joker normally; cannot beat it during revolution alone or 11-back alone; beats it when revolution and 11-back are both active; a pure joker beats a 3 during revolution; loses to a joker bound to a 4; does not beat a joker played as a 10; illegal against a pair of jokers; a joker bound to the 3 of Spades does **not** beat a pure joker (Section 5.4).
 3. `fiveSkip.test.ts` - 1, 2, and 3 fives at 4 players; the stacking case that clears the trick and returns the lead.
 4. `sevenPass.test.ts` - state transition; `k = min(C, remaining)`; k = 0 when playing the last card; target skips finished players but not passed ones.
 5. `nineGiri.test.ts` - single 9 does not clear; pair and triple do.

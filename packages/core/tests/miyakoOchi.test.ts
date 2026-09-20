@@ -261,6 +261,6 @@ describe("the round after a demotion (§4.5 downstream)", () => {
     // The two swap the top and bottom roles outright, so the exchange pairs them.
     expect(dealt.status).toBe("EXCHANGE");
     expect(dealt.exchange?.partner.p0).toBe("p1");
-    expect(dealt.exchange?.required).toEqual({ p0: 1, p1: 1 });
+    expect(dealt.exchange?.required).toEqual({ p0: 2, p1: 2 });
   });
 });

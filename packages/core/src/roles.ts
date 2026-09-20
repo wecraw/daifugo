@@ -103,7 +103,8 @@ export interface ExchangePair {
 
 /**
  * The i-th from the top paired with the i-th from the bottom, for
- * `i = 1 .. floor(N/2)`, exchanging `count(i) = floor(N/2) - i + 1` cards each way.
+ * `i = 1 .. floor(N/2)`. The best and worst exchange 2 cards each way;
+ * every other pair exchanges 1.
  *
  * At odd N the loop simply never reaches the exact middle seat, which is what
  * "the middle player exchanges nothing" means — they are absent from the result
@@ -121,7 +122,7 @@ export function exchangePairs(finishOrder: readonly string[]): ExchangePair[] {
     const richId = finishOrder[i - 1];
     const poorId = finishOrder[count - i];
     if (richId === undefined || poorId === undefined) continue;
-    pairs.push({ richId, poorId, count: pairCount - i + 1 });
+    pairs.push({ richId, poorId, count: i === 1 ? 2 : 1 });
   }
 
   return pairs;
@@ -147,7 +148,7 @@ function strongestFirst(hand: readonly Card[]): Card[] {
  * reaching for the protected card.
  *
  * That short list cannot arise from a legal deal — the exchange runs on full
- * hands, so the smallest is 6 cards against a largest count of 4 — so the engine
+ * hands, so the smallest is 6 cards against a largest count of 2 — so the engine
  * is entitled to treat `forced[p].length < required[p]` as the bug it would be.
  *
  * Returned strongest first: §10 renders this read-only to the poor player, and the

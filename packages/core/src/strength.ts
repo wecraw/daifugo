@@ -12,7 +12,7 @@
  */
 import type { Card, Rank, Suit } from "./types.js";
 
-/** A pure joker outranks every numbered card in the standard orientation. */
+/** A pure joker outranks every numbered card in either orientation. */
 export const JOKER_STRENGTH = 13;
 
 /**
@@ -75,6 +75,7 @@ export function effectiveInverted(isRevolution: boolean, trickInverted: boolean)
  * Suitable directly as an `Array.prototype.sort` comparator (weakest first).
  */
 export function compareStrength(a: number, b: number, inverted: boolean): number {
+  if (a === JOKER_STRENGTH || b === JOKER_STRENGTH) return a - b;
   return inverted ? b - a : a - b;
 }
 

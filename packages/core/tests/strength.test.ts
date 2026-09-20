@@ -84,9 +84,9 @@ describe("comparison (§5.2)", () => {
     expect(isStronger(strengthOf(2), strengthOf(3), true)).toBe(false);
   });
 
-  it("makes the pure joker the weakest card under revolution (§5.2)", () => {
+  it("keeps the pure joker the strongest card under revolution (§5.2)", () => {
     for (const rank of SPEC_ORDER) {
-      expect(isStronger(strengthOf(rank), JOKER_STRENGTH, true)).toBe(true);
+      expect(isStronger(strengthOf(rank), JOKER_STRENGTH, true)).toBe(false);
       expect(isStronger(strengthOf(rank), JOKER_STRENGTH, false)).toBe(false);
     }
   });
@@ -106,9 +106,9 @@ describe("sortByStrength", () => {
     expect(sortByStrength(hand, false).map((c) => c.id)).toEqual(["S-3", "D-8", "H-2", "JKR-1"]);
   });
 
-  it("orders weakest first under inversion, putting the joker at the bottom", () => {
+  it("orders weakest first under inversion, keeping the joker at the top", () => {
     const hand = [card("JKR-1"), card("S-3"), card("H-2"), card("D-8")];
-    expect(sortByStrength(hand, true).map((c) => c.id)).toEqual(["JKR-1", "H-2", "D-8", "S-3"]);
+    expect(sortByStrength(hand, true).map((c) => c.id)).toEqual(["H-2", "D-8", "S-3", "JKR-1"]);
   });
 
   it("breaks ties deterministically and does not mutate its input", () => {

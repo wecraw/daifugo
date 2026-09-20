@@ -123,11 +123,11 @@ describe("sorting (§10.8)", () => {
     // The strengths reverse; the suit tie-break does not, so the two 7s keep
     // their S-before-C order inside the reversed run.
     expect(sortHand(hand, true).map((each) => each.id)).toEqual([
-      "JKR-1",
       "S-2",
       "S-7",
       "C-7",
       "H-3",
+      "JKR-1",
     ]);
   });
 });

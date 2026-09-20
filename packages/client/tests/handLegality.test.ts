@@ -107,9 +107,9 @@ describe("joker bindings (§10.5)", () => {
     expect(options[0]?.bindings).toEqual([]);
   });
 
-  it("defaults a led joker to a 3 under revolution, and still offers pure (§5.5)", () => {
+  it("defaults a led joker to pure under revolution (§5.5)", () => {
     const options = bindingOptions([joker], { isRevolution: true });
-    expect(options[0]?.combo.resolvedRank).toBe(3);
+    expect(options[0]?.combo.resolvedRank).toBeNull();
     expect(options.some((option) => option.bindings.length === 0)).toBe(true);
   });
 
