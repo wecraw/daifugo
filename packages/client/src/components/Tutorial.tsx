@@ -30,7 +30,20 @@ function Entry({ term, children }: { term: string; children: string }) {
   );
 }
 
-export function Tutorial() {
+/**
+ * How the trigger reads. `link` is the main menu's "How to play" text; `icon` is
+ * the subtle "?" the lobby and the table hang in a top corner, where it stays out
+ * of the way until someone forgets a rule.
+ */
+type TutorialVariant = "link" | "icon";
+
+export function Tutorial({
+  variant = "link",
+  className,
+}: {
+  variant?: TutorialVariant;
+  className?: string;
+}) {
   const t = useTranslate();
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState(0);
@@ -55,14 +68,23 @@ export function Tutorial() {
     setOpen(true);
   }
 
+  const triggerClassName = [
+    variant === "icon" ? "tutorial__icon" : "main-menu__link tutorial__trigger",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <>
       <button
         type="button"
-        className="main-menu__link tutorial__trigger"
+        className={triggerClassName}
+        aria-label={variant === "icon" ? t("ui.tutorial.open") : undefined}
         onClick={openTutorial}
       >
-        {t("ui.tutorial.open")}
+        {/* The icon's accessible name is its aria-label; "?" is decorative. */}
+        {variant === "icon" ? "?" : t("ui.tutorial.open")}
       </button>
 
       {open &&

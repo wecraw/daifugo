@@ -52,6 +52,7 @@ import { ConnectionStatus } from "./ConnectionStatus";
 import { HostPanel } from "./HostPanel";
 import { NextRoundActions, rosterSize } from "./NextRoundActions";
 import { ProfileEditor } from "./ProfileEditor";
+import { Tutorial } from "./Tutorial";
 
 /** Where a row stands relative to the next deal, or null for a settled seat. */
 type PendingChange = "joining" | "leaving" | null;
@@ -156,6 +157,9 @@ export function Lobby({ room }: { room: PublicGameState }) {
 
   return (
     <div className="lobby">
+      {/* Subtle help in the top corner: the rules are a tap away without taking
+          space from the roster or the code (§10). */}
+      <Tutorial variant="icon" className="lobby__help" />
       <div className="lobby__rail">
         <div className="lobby__identity">
           <h1 className="lobby__code">
