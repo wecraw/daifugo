@@ -121,6 +121,7 @@ textarea {
 .lobby__rail,
 .lobby__roster ul,
 .host-panel__dialog,
+.tutorial__dialog,
 .round-end__places,
 .emoji-picker__panel {
   touch-action: pan-y;
@@ -3334,6 +3335,152 @@ button:disabled {
   }
 
   .reaction-menu__trigger {
+    transition: none;
+  }
+}
+
+/*
+ * The how-to-play tutorial (`Tutorial.tsx`): a paged popup off the main menu.
+ *
+ * It borrows the host panel's modal shape — a fixed felt backdrop, an accent-
+ * edged dialog that scrolls its own body — but sizes itself for prose and adds a
+ * pager footer. The landscape frame is short, so the body is the one part that
+ * scrolls; the header and footer stay put.
+ */
+.tutorial__trigger {
+  margin-top: 0.2rem;
+  align-self: center;
+}
+
+.tutorial__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(10, 59, 37, 0.82);
+}
+
+.tutorial__dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(34rem, 100%);
+  max-height: 100%;
+  border: 1px solid var(--accent);
+  border-radius: 0.5rem;
+  background: var(--felt);
+}
+
+.tutorial__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem 0.5rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.tutorial__heading {
+  margin: 0;
+  color: var(--accent);
+  font-family: var(--display);
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.tutorial__close {
+  padding: 0 0.35rem;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 1.15rem;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.tutorial__close:hover {
+  opacity: 1;
+}
+
+.tutorial__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.7rem 0.9rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tutorial__intro {
+  margin: 0 0 0.7rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  opacity: 0.85;
+}
+
+.tutorial__entries {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, max-content) 1fr;
+  gap: 0.55rem 0.9rem;
+  margin: 0;
+}
+
+.tutorial__entry {
+  display: contents;
+}
+
+.tutorial__term {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.tutorial__def {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.tutorial__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.55rem 0.9rem 0.7rem;
+  border-top: 1px solid var(--rule);
+}
+
+.tutorial__dots {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.tutorial__dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: rgba(245, 243, 238, 0.28);
+  transition: background 160ms ease;
+}
+
+.tutorial__dot[data-active] {
+  background: var(--accent);
+}
+
+.tutorial__nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tutorial__primary {
+  border-color: var(--accent);
+  background: rgba(232, 182, 76, 0.16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial__dot {
     transition: none;
   }
 }
