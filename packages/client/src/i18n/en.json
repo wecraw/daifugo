@@ -136,6 +136,7 @@
   "ui.tutorial.next": "Next",
   "ui.tutorial.done": "Got it",
   "ui.tutorial.progress": "Page {current} of {total}",
+  "ui.tutorial.or": "or",
 
   "ui.tutorial.basics.title": "The basics",
   "ui.tutorial.basics.goalLabel": "Goal",
@@ -152,7 +153,7 @@
   "ui.tutorial.basics.joker": "The Joker (★) is the strongest card of all. It can also stand in for any card you name, letting it join a set or set off a card power.",
 
   "ui.tutorial.rules.title": "Card powers",
-  "ui.tutorial.rules.intro": "Some ranks do more than beat the pile. Each power below is a house rule the host can switch on or off before the match. A Joker fires the power of whatever card it stands in for.",
+  "ui.tutorial.rules.intro": "Each power is a house rule the host can toggle. A Joker fires the power of whatever card it stands in for.",
   "ui.tutorial.rules.spade3BeatsJoker": "The 3 of Spades — and only the real 3♠ — beats a lone Joker.",
   "ui.tutorial.rules.fiveSkip": "Skips the following turns — one skip for every 5 played.",
   "ui.tutorial.rules.sevenPass": "Pass that many cards from your hand to the next player.",

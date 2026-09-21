@@ -12,20 +12,160 @@
  * and the host panel (§10.11) name each rule identically. Nothing here talks to
  * the socket — it reads no game state and sends no action.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { HOUSE_RULE_KEYS } from "@daifugo/core";
+import { HOUSE_RULE_KEYS, type Card, type HouseRuleKey, type Rank, type Suit } from "@daifugo/core";
 import { useTranslate } from "../i18n/index";
+import type { I18nKey } from "../i18n/keys";
+import { CardFace } from "./CardFace";
+import { TutorialDemo } from "./TutorialDemo";
 
-/** The three cards, in reading order. */
-const PAGES = ["basics", "rules", "postgame"] as const;
+/**
+ * The pages, in reading order. One idea per page so nothing scrolls on a phone
+ * (§10.1): the trick basics split a mechanic to a page (§5), the ten card powers
+ * (§6) split across two, and the between-round rules (§4, §9) across two more.
+ */
+const PAGES = [
+  "basics",
+  "lead",
+  "beat",
+  "pass",
+  "joker",
+  "powersIntro",
+  "powersA",
+  "powersB",
+  "powersC",
+  "postgameA",
+  "postgameB",
+] as const;
 
-/** One entry in a card's term/description list. */
-function Entry({ term, children }: { term: string; children: string }) {
+type PageId = (typeof PAGES)[number];
+
+/** Each page's heading. The single-mechanic pages reuse their basics label. */
+const PAGE_TITLE: Readonly<Record<PageId, I18nKey>> = {
+  basics: "ui.tutorial.basics.title",
+  lead: "ui.tutorial.basics.leadLabel",
+  beat: "ui.tutorial.basics.followLabel",
+  pass: "ui.tutorial.basics.passLabel",
+  joker: "ui.tutorial.basics.jokerLabel",
+  powersIntro: "ui.tutorial.rules.title",
+  powersA: "ui.tutorial.rules.title",
+  powersB: "ui.tutorial.rules.title",
+  powersC: "ui.tutorial.rules.title",
+  postgameA: "ui.tutorial.postgame.title",
+  postgameB: "ui.tutorial.postgame.title",
+};
+
+/**
+ * The card powers (§6) split across pages, in `HOUSE_RULE_KEYS` order. Four to a
+ * page keeps even a short landscape phone from scrolling (§10.1); the slice each
+ * powers page shows is its position among them times this.
+ */
+const POWERS_PER_PAGE = 4;
+const POWERS_PAGES = ["powersA", "powersB", "powersC"] as const;
+
+/** A natural card built for illustration only — never dealt, never played. */
+function card(suit: Suit, rank: Rank): Card {
+  return { id: `${suit}-${rank}`, suit, rank, isJoker: false };
+}
+
+/** The wildcard, shown pure (no binding) so it reads as the Joker itself. */
+const JOKER_CARD: Card = { id: "JKR-1", suit: null, rank: null, isJoker: true };
+
+/**
+ * The plays the lead and beat demos animate. Each mechanic shows a single and a
+ * matching set (§5.3) side by side, so the reader sees that a play is one card
+ * *or* a set of the same rank. The beat pair (a pair of 9s over a pair of 5s)
+ * mirrors the single (a Jack over a 7): a higher play of the same size wins.
+ */
+const LEAD_SINGLE: readonly Card[] = [card("H", 9)];
+const LEAD_PAIR: readonly Card[] = [card("S", 12), card("D", 12)];
+const BEAT_UNDER_SINGLE: readonly Card[] = [card("D", 7)];
+const BEAT_OVER_SINGLE: readonly Card[] = [card("S", 11)];
+const BEAT_UNDER_PAIR: readonly Card[] = [card("H", 5), card("S", 5)];
+const BEAT_OVER_PAIR: readonly Card[] = [card("C", 9), card("D", 9)];
+const PASS_PLAY: readonly Card[] = [card("C", 2)];
+
+/**
+ * The card(s) that stand in for each power's name, so the tutorial shows the
+ * trigger rather than spelling it out. The seven single-card powers show the one
+ * rank that fires them; the three no single card can name show a representative
+ * shape instead — four of a kind for a revolution, two same-suit cards for a
+ * suit lock, a climbing run for a kaidan. Suit is irrelevant to every rank
+ * trigger, so the pips here are arbitrary — except Spade-3-beats-joker, which is
+ * the real 3♠ and nothing else (§5.4).
+ */
+const RULE_CARDS: Readonly<Record<HouseRuleKey, readonly Card[]>> = {
+  spade3BeatsJoker: [card("S", 3)],
+  fiveSkip: [card("D", 5)],
+  sevenPass: [card("D", 7)],
+  eightGiri: [card("D", 8)],
+  nineGiriMinPair: [card("D", 9), card("C", 9)],
+  tenDiscard: [card("D", 10)],
+  elevenBack: [card("D", 11)],
+  kakumei: [card("S", 13), card("H", 13), card("D", 13), card("C", 13)],
+  shibari: [card("S", 6), card("S", 10)],
+  kaidan: [card("H", 5), card("H", 6), card("H", 7)],
+};
+
+/**
+ * One entry in a card's term/description list. The term is either a text label
+ * or a picture of the card(s) it names, in which case `termLabel` carries the
+ * name for assistive tech since the pips are otherwise unlabelled.
+ */
+function Entry({
+  term,
+  cards,
+  termLabel,
+  children,
+}: {
+  term?: string;
+  cards?: readonly Card[];
+  termLabel?: string;
+  children: string;
+}) {
   return (
     <div className="tutorial__entry">
-      <dt className="tutorial__term">{term}</dt>
+      {cards ? (
+        <dt className="tutorial__term tutorial__cards" aria-label={termLabel}>
+          {cards.map((c) => (
+            <CardFace key={c.id} card={c} />
+          ))}
+        </dt>
+      ) : (
+        <dt className="tutorial__term">{term}</dt>
+      )}
       <dd className="tutorial__def">{children}</dd>
+    </div>
+  );
+}
+
+/**
+ * A single-mechanic page (§5): the visual above one line of prose, centered with
+ * the whole page to itself so nothing scrolls. The visual is a demo, a pair of
+ * demos split by an "or", or a still hero card — composed by the caller.
+ */
+function MechanicPage({ visual, children }: { visual: ReactNode; children: string }) {
+  return (
+    <div className="tutorial__mechanic">
+      {visual}
+      <p className="tutorial__def">{children}</p>
+    </div>
+  );
+}
+
+/**
+ * Two demos of the same mechanic side by side — a single and a matching set —
+ * with an "or" between, so both loop at once and no one waits on a frame (§5.3).
+ */
+function DemoSplit({ or, children }: { or: string; children: [ReactNode, ReactNode] }) {
+  return (
+    <div className="tutorial__demo-split">
+      {children[0]}
+      <span className="tutorial__demo-or" aria-hidden="true">
+        {or}
+      </span>
+      {children[1]}
     </div>
   );
 }
@@ -105,7 +245,7 @@ export function Tutorial({
               aria-label={t("ui.tutorial.title")}
             >
               <header className="tutorial__header">
-                <h2 className="tutorial__heading">{t(`ui.tutorial.${current}.title`)}</h2>
+                <h2 className="tutorial__heading">{t(PAGE_TITLE[current])}</h2>
                 <button
                   type="button"
                   className="tutorial__close"
@@ -118,7 +258,7 @@ export function Tutorial({
                 </button>
               </header>
 
-              <div className="tutorial__body">
+              <div className="tutorial__body" data-page={current}>
                 {current === "basics" && (
                   <dl className="tutorial__entries">
                     <Entry term={t("ui.tutorial.basics.goalLabel")}>
@@ -127,35 +267,115 @@ export function Tutorial({
                     <Entry term={t("ui.tutorial.basics.turnsLabel")}>
                       {t("ui.tutorial.basics.turns")}
                     </Entry>
-                    <Entry term={t("ui.tutorial.basics.leadLabel")}>
-                      {t("ui.tutorial.basics.lead")}
-                    </Entry>
-                    <Entry term={t("ui.tutorial.basics.followLabel")}>
-                      {t("ui.tutorial.basics.follow")}
-                    </Entry>
-                    <Entry term={t("ui.tutorial.basics.passLabel")}>
-                      {t("ui.tutorial.basics.pass")}
-                    </Entry>
-                    <Entry term={t("ui.tutorial.basics.jokerLabel")}>
-                      {t("ui.tutorial.basics.joker")}
-                    </Entry>
                   </dl>
                 )}
 
-                {current === "rules" && (
-                  <>
-                    <p className="tutorial__intro">{t("ui.tutorial.rules.intro")}</p>
-                    <dl className="tutorial__entries">
-                      {HOUSE_RULE_KEYS.map((key) => (
-                        <Entry key={key} term={t(`rule.${key}`)}>
-                          {t(`ui.tutorial.rules.${key}`)}
-                        </Entry>
-                      ))}
-                    </dl>
-                  </>
+                {current === "lead" && (
+                  <MechanicPage
+                    visual={
+                      <DemoSplit or={t("ui.tutorial.or")}>
+                        {[
+                          <TutorialDemo
+                            key="single"
+                            kind="lead"
+                            cards={LEAD_SINGLE}
+                            label={t("ui.tutorial.basics.leadLabel")}
+                          />,
+                          <TutorialDemo
+                            key="set"
+                            kind="lead"
+                            cards={LEAD_PAIR}
+                            label={t("ui.tutorial.basics.leadLabel")}
+                          />,
+                        ]}
+                      </DemoSplit>
+                    }
+                  >
+                    {t("ui.tutorial.basics.lead")}
+                  </MechanicPage>
                 )}
 
-                {current === "postgame" && (
+                {current === "beat" && (
+                  <MechanicPage
+                    visual={
+                      <DemoSplit or={t("ui.tutorial.or")}>
+                        {[
+                          <TutorialDemo
+                            key="single"
+                            kind="beat"
+                            under={BEAT_UNDER_SINGLE}
+                            cards={BEAT_OVER_SINGLE}
+                            label={t("ui.tutorial.basics.followLabel")}
+                          />,
+                          <TutorialDemo
+                            key="set"
+                            kind="beat"
+                            under={BEAT_UNDER_PAIR}
+                            cards={BEAT_OVER_PAIR}
+                            label={t("ui.tutorial.basics.followLabel")}
+                          />,
+                        ]}
+                      </DemoSplit>
+                    }
+                  >
+                    {t("ui.tutorial.basics.follow")}
+                  </MechanicPage>
+                )}
+
+                {current === "pass" && (
+                  <MechanicPage
+                    visual={
+                      <TutorialDemo
+                        kind="pass"
+                        cards={PASS_PLAY}
+                        passLabel={t("ui.action.pass")}
+                        label={t("ui.tutorial.basics.passLabel")}
+                      />
+                    }
+                  >
+                    {t("ui.tutorial.basics.pass")}
+                  </MechanicPage>
+                )}
+
+                {current === "joker" && (
+                  <MechanicPage
+                    visual={
+                      <div
+                        className="tutorial__cards tutorial__cards--hero"
+                        role="img"
+                        aria-label={t("ui.tutorial.basics.jokerLabel")}
+                      >
+                        <CardFace card={JOKER_CARD} />
+                      </div>
+                    }
+                  >
+                    {t("ui.tutorial.basics.joker")}
+                  </MechanicPage>
+                )}
+
+                {current === "powersIntro" && (
+                  <div className="tutorial__mechanic">
+                    <p className="tutorial__def">{t("ui.tutorial.rules.intro")}</p>
+                  </div>
+                )}
+
+                {POWERS_PAGES.includes(current as (typeof POWERS_PAGES)[number]) &&
+                  (() => {
+                    const start =
+                      POWERS_PAGES.indexOf(current as (typeof POWERS_PAGES)[number]) *
+                      POWERS_PER_PAGE;
+                    return (
+                      <dl className="tutorial__entries">
+                        {HOUSE_RULE_KEYS.slice(start, start + POWERS_PER_PAGE).map((key) => (
+                          <Entry key={key} cards={RULE_CARDS[key]} termLabel={t(`rule.${key}`)}>
+                            {t(`ui.tutorial.rules.${key}`)}
+                          </Entry>
+                        ))}
+                      </dl>
+                    );
+                  })()}
+
+                {current === "postgameA" && (
                   <dl className="tutorial__entries">
                     <Entry term={t("ui.tutorial.postgame.ranksLabel")}>
                       {t("ui.tutorial.postgame.ranks")}
@@ -163,6 +383,11 @@ export function Tutorial({
                     <Entry term={t("ui.tutorial.postgame.scoringLabel")}>
                       {t("ui.tutorial.postgame.scoring")}
                     </Entry>
+                  </dl>
+                )}
+
+                {current === "postgameB" && (
+                  <dl className="tutorial__entries">
                     <Entry term={t("ui.tutorial.postgame.exchangeLabel")}>
                       {t("ui.tutorial.postgame.exchange")}
                     </Entry>

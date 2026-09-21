@@ -3483,6 +3483,29 @@ button:disabled {
   line-height: 1.45;
 }
 
+/* A term that is a picture of the card(s) it names rather than a word. The
+   cards overlap left-to-right into a small fanned hand, so a run or a four of a
+   kind still fits the term column beside its description. The card sizes are
+   set here outright: the table's --card-width lives on the felt, and the
+   tutorial portals to the body where it is undefined. */
+.tutorial__cards {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 0.05rem;
+}
+
+.tutorial__cards .card-face {
+  width: 1.7rem;
+  height: 2.4rem;
+  font-size: 0.72rem;
+  flex: none;
+  box-shadow: -1px 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.tutorial__cards .card-face + .card-face {
+  margin-left: -0.5rem;
+}
+
 .tutorial__footer {
   display: flex;
   align-items: center;
@@ -3523,4 +3546,225 @@ button:disabled {
   .tutorial__dot {
     transition: none;
   }
+}
+
+/* Auto-playing basics demos (`TutorialDemo.tsx`). Each stage is a small felt
+   panel; the cards are absolutely centered and their resting transform IS the
+   meaningful composed scene, so a reader who never sees the motion (reduced
+   motion, or a glance mid-pause) still reads the mechanic. The keyframes are
+   layered on only under `no-preference`. */
+.tutorial-demo {
+  margin: 0.15rem 0 0.1rem;
+}
+
+.tutorial-demo__stage {
+  position: relative;
+  height: 3.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.35rem;
+  background: rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.tutorial-demo .card-face {
+  width: 1.9rem;
+  height: 2.7rem;
+  font-size: 0.78rem;
+  box-shadow: -1px 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* One play: a single card, or a matching set (§5.3) overlapped into a small fan.
+   The group is what animates; the cards inside it hold their overlap. */
+.tutorial-demo__card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: inline-flex;
+  transform: translate(-50%, -50%);
+}
+
+.tutorial-demo__card .card-face + .card-face {
+  margin-left: -0.55rem;
+}
+
+/* Resting scene per demo: lead sits centered; beat shows the higher card
+   overlapping the one it beat; pass shows the swept card still centered with
+   its label. */
+.tutorial-demo__card--under {
+  transform: translate(calc(-50% - 9px), calc(-50% + 7px));
+}
+
+.tutorial-demo__card--over {
+  transform: translate(calc(-50% + 11px), calc(-50% - 9px));
+}
+
+.tutorial-demo__pass {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.5rem;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: rgba(232, 182, 76, 0.16);
+  color: var(--accent);
+  font-family: var(--display);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tutorial-demo__card--lead {
+    animation: tutorial-demo-lead 3.4s ease-in-out infinite;
+  }
+
+  .tutorial-demo__card--over {
+    animation: tutorial-demo-beat 3.8s ease-in-out infinite;
+  }
+
+  .tutorial-demo__card--sweep {
+    animation: tutorial-demo-sweep 4s ease-in-out infinite;
+  }
+
+  .tutorial-demo__pass {
+    animation: tutorial-demo-passlabel 4s ease-in-out infinite;
+  }
+}
+
+/* A card led onto an empty pile: rises from the hand, settles, holds, resets. */
+@keyframes tutorial-demo-lead {
+  0% {
+    transform: translate(-50%, 55%);
+    opacity: 0;
+  }
+  22%,
+  90% {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, 55%);
+    opacity: 0;
+  }
+}
+
+/* The higher card rising to land on top of the one it beats. */
+@keyframes tutorial-demo-beat {
+  0% {
+    transform: translate(-50%, 60%);
+    opacity: 0;
+  }
+  28%,
+  88% {
+    transform: translate(calc(-50% + 11px), calc(-50% - 9px));
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, 60%);
+    opacity: 0;
+  }
+}
+
+/* Nothing to beat it: the pile is swept off to the side and clears. */
+@keyframes tutorial-demo-sweep {
+  0%,
+  42% {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+  }
+  68%,
+  100% {
+    transform: translate(210%, -50%) rotate(8deg);
+    opacity: 0;
+  }
+}
+
+@keyframes tutorial-demo-passlabel {
+  0%,
+  16% {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  30%,
+  60% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  74%,
+  100% {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+/* A single-mechanic page: one demo (or hero card) over one line, centered in the
+   body so the whole page fits a phone without scrolling. */
+.tutorial__body[data-page="lead"],
+.tutorial__body[data-page="beat"],
+.tutorial__body[data-page="pass"],
+.tutorial__body[data-page="joker"],
+.tutorial__body[data-page="powersIntro"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tutorial__mechanic {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  text-align: center;
+}
+
+.tutorial__mechanic .tutorial-demo {
+  width: min(20rem, 100%);
+}
+
+/* Two demos of one mechanic, single and set, side by side with an "or" between.
+   Landscape has the width to spare, so both loop at once (§5.3). */
+.tutorial__demo-split {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.6rem, 4vw, 2rem);
+  width: 100%;
+}
+
+.tutorial__demo-split .tutorial-demo {
+  flex: 1 1 0;
+  width: auto;
+  max-width: 13rem;
+}
+
+.tutorial__demo-or {
+  flex: none;
+  color: var(--accent);
+  font-family: var(--display);
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+.tutorial__mechanic .tutorial-demo__stage {
+  height: 5.2rem;
+}
+
+.tutorial__mechanic .tutorial-demo .card-face {
+  width: 2.2rem;
+  height: 3.1rem;
+  font-size: 0.9rem;
+}
+
+.tutorial__mechanic .tutorial__def {
+  max-width: 26rem;
+}
+
+/* The Joker page shows one still card at hero size instead of a demo. */
+.tutorial__cards--hero {
+  padding: 0;
+}
+
+.tutorial__cards--hero .card-face {
+  width: 2.6rem;
+  height: 3.7rem;
+  font-size: 1.05rem;
 }

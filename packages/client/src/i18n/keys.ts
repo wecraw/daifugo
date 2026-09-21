@@ -57,6 +57,7 @@ export const UI_I18N_KEYS = [
   "ui.tutorial.next",
   "ui.tutorial.done",
   "ui.tutorial.progress",
+  "ui.tutorial.or",
 
   "ui.tutorial.basics.title",
   "ui.tutorial.basics.goalLabel",
