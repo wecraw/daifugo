@@ -3598,35 +3598,91 @@ button:disabled {
   transform: translate(calc(-50% + 11px), calc(-50% - 9px));
 }
 
-.tutorial-demo__pass {
+/* The pass demos share the beat/lead vocabulary but differ in what sits on the
+   stage. The auto-pass hand is dimmed and nudged low, standing down the way the
+   real fan does under the §10.7 badge; the choose-to-pass pile sits up top so the
+   Pass button below it has room to press. */
+.tutorial-demo__card--dim {
+  transform: translate(-50%, calc(-50% + 3px));
+  filter: saturate(0.4) brightness(0.85);
+  opacity: 0.72;
+}
+
+.tutorial-demo__card--pile {
+  transform: translate(-50%, calc(-50% + 10px));
+}
+
+/* Mirrors the real "No legal play, passing" badge (`.hand__auto-pass`) so a
+   reader recognises it when the game raises it for them. */
+.tutorial-demo__autopass {
   position: absolute;
-  top: 0.4rem;
-  right: 0.5rem;
-  padding: 0.1rem 0.45rem;
-  border: 1px solid var(--accent);
-  border-radius: 999px;
-  background: rgba(232, 182, 76, 0.16);
-  color: var(--accent);
+  left: 50%;
+  bottom: 0.4rem;
+  transform: translateX(-50%);
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.35rem;
+  background: rgba(10, 59, 37, 0.92);
+  color: var(--ink);
+  font-size: 0.64rem;
+  white-space: nowrap;
+}
+
+/* The Pass button, scaled to the secondary CTA it is on the real table (§10.6),
+   and sitting above the pile the way the action row does over the played cards. */
+.tutorial-demo__pass-btn {
+  position: absolute;
+  left: 50%;
+  top: 0.45rem;
+  transform: translateX(-50%);
+  padding: 0.18rem 0.7rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(245, 243, 238, 0.35);
+  background: rgba(10, 22, 16, 0.85);
+  color: var(--ink);
   font-family: var(--display);
   font-size: 0.72rem;
-  letter-spacing: 0.02em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  /* The single and the set share one duration so they rise and reset together —
+     they mount at once, so equal-length loops stay locked (a mismatch drifts). */
   .tutorial-demo__card--lead {
-    animation: tutorial-demo-lead 3.4s ease-in-out infinite;
+    animation: tutorial-demo-lead 4.8s ease-in-out infinite;
+  }
+
+  /* The set builds as it holds: the pair rises, then a third and a fourth card
+     of the rank drop on in turn, so the loop shows a set is any number (§5.3). */
+  .tutorial-demo__card--lead-set {
+    animation: tutorial-demo-lead 4.8s ease-in-out infinite;
+  }
+
+  .tutorial-demo__card--lead-set .card-face:nth-child(3) {
+    animation: tutorial-demo-grow3 4.8s ease-in-out infinite;
+  }
+
+  .tutorial-demo__card--lead-set .card-face:nth-child(4) {
+    animation: tutorial-demo-grow4 4.8s ease-in-out infinite;
   }
 
   .tutorial-demo__card--over {
     animation: tutorial-demo-beat 3.8s ease-in-out infinite;
   }
 
-  .tutorial-demo__card--sweep {
-    animation: tutorial-demo-sweep 4s ease-in-out infinite;
+  /* The badge rises, holds, and clears, the way it does on the real table before
+     the pass is sent (§10.7); the dimmed hand sinks a touch under it. */
+  .tutorial-demo__autopass {
+    animation: tutorial-demo-autopass 4s ease-in-out infinite;
   }
 
-  .tutorial-demo__pass {
-    animation: tutorial-demo-passlabel 4s ease-in-out infinite;
+  .tutorial-demo__card--dim {
+    animation: tutorial-demo-standdown 4s ease-in-out infinite;
+  }
+
+  /* The Pass button gets tapped: it presses in and flashes the accent, then rests
+     — so the reader sees passing as something they do, not something that happens. */
+  .tutorial-demo__pass-btn {
+    animation: tutorial-demo-passtap 4s ease-in-out infinite;
   }
 }
 
@@ -3647,6 +3703,43 @@ button:disabled {
   }
 }
 
+/* The third and fourth cards of a set dropping on after the pair has landed,
+   staggered so the set is seen to grow. Their opacity rides on top of the
+   group's own fade, so they vanish with it on reset. */
+@keyframes tutorial-demo-grow3 {
+  0%,
+  34% {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  42%,
+  90% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes tutorial-demo-grow4 {
+  0%,
+  60% {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  68%,
+  90% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+
 /* The higher card rising to land on top of the one it beats. */
 @keyframes tutorial-demo-beat {
   0% {
@@ -3664,35 +3757,69 @@ button:disabled {
   }
 }
 
-/* Nothing to beat it: the pile is swept off to the side and clears. */
-@keyframes tutorial-demo-sweep {
+/* The auto-pass badge: rises in, holds, then clears as the pass is sent. */
+@keyframes tutorial-demo-autopass {
   0%,
-  42% {
-    transform: translate(-50%, -50%);
-    opacity: 1;
-  }
-  68%,
-  100% {
-    transform: translate(210%, -50%) rotate(8deg);
+  10% {
     opacity: 0;
+    transform: translate(-50%, 8px) scale(0.9);
+  }
+  24%,
+  74% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  90%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.94);
   }
 }
 
-@keyframes tutorial-demo-passlabel {
+/* The hand stands down while the badge is up, then settles back for the reset. */
+@keyframes tutorial-demo-standdown {
   0%,
-  16% {
-    opacity: 0;
-    transform: translateY(-3px);
+  10% {
+    transform: translate(-50%, calc(-50% + 3px));
+    filter: saturate(0.4) brightness(0.85);
+    opacity: 0.72;
   }
-  30%,
-  60% {
-    opacity: 1;
-    transform: translateY(0);
+  24%,
+  74% {
+    transform: translate(-50%, calc(-50% + 8px));
+    filter: saturate(0.3) brightness(0.75);
+    opacity: 0.6;
   }
-  74%,
+  90%,
   100% {
-    opacity: 0;
-    transform: translateY(-3px);
+    transform: translate(-50%, calc(-50% + 3px));
+    filter: saturate(0.4) brightness(0.85);
+    opacity: 0.72;
+  }
+}
+
+/* The Pass button resting, then a tap: it presses in and flashes the accent. */
+@keyframes tutorial-demo-passtap {
+  0%,
+  40% {
+    transform: translateX(-50%) scale(1);
+    background: rgba(10, 22, 16, 0.85);
+    border-color: rgba(245, 243, 238, 0.35);
+    color: var(--ink);
+  }
+  52%,
+  70% {
+    transform: translateX(-50%) scale(0.92);
+    background: rgba(232, 182, 76, 0.22);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  82%,
+  100% {
+    transform: translateX(-50%) scale(1);
+    background: rgba(10, 22, 16, 0.85);
+    border-color: rgba(245, 243, 238, 0.35);
+    color: var(--ink);
   }
 }
 
@@ -3734,6 +3861,29 @@ button:disabled {
   flex: 1 1 0;
   width: auto;
   max-width: 13rem;
+}
+
+/* The pass split captions each demo, since the two cases differ in meaning, not
+   just in size the way the single/set demos do — the label names which is which. */
+.tutorial__demo-figure {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 13rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tutorial__demo-figure .tutorial-demo {
+  width: 100%;
+}
+
+.tutorial__demo-caption {
+  color: var(--ink);
+  font-size: 0.78rem;
+  opacity: 0.75;
 }
 
 .tutorial__demo-or {

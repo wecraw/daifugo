@@ -70,6 +70,8 @@ export const UI_I18N_KEYS = [
   "ui.tutorial.basics.follow",
   "ui.tutorial.basics.passLabel",
   "ui.tutorial.basics.pass",
+  "ui.tutorial.basics.passAutoLabel",
+  "ui.tutorial.basics.passChooseLabel",
   "ui.tutorial.basics.jokerLabel",
   "ui.tutorial.basics.joker",
 

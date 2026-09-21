@@ -79,12 +79,16 @@ const JOKER_CARD: Card = { id: "JKR-1", suit: null, rank: null, isJoker: true };
  * mirrors the single (a Jack over a 7): a higher play of the same size wins.
  */
 const LEAD_SINGLE: readonly Card[] = [card("H", 9)];
-const LEAD_PAIR: readonly Card[] = [card("S", 12), card("D", 12)];
+const LEAD_SET: readonly Card[] = [card("S", 12), card("H", 12), card("D", 12), card("C", 12)];
 const BEAT_UNDER_SINGLE: readonly Card[] = [card("D", 7)];
 const BEAT_OVER_SINGLE: readonly Card[] = [card("S", 11)];
 const BEAT_UNDER_PAIR: readonly Card[] = [card("H", 5), card("S", 5)];
 const BEAT_OVER_PAIR: readonly Card[] = [card("C", 9), card("D", 9)];
-const PASS_PLAY: readonly Card[] = [card("C", 2)];
+// The pass page shows the two ways a turn is passed (§7.5, §10.7). `PASS_HAND` is
+// a weak hand that beats nothing, so it is passed for you; `PASS_PILE` is a single
+// card you face and could beat, but choose to pass on instead.
+const PASS_HAND: readonly Card[] = [card("C", 4), card("D", 6), card("S", 8)];
+const PASS_PILE: readonly Card[] = [card("H", 9)];
 
 /**
  * The card(s) that stand in for each power's name, so the tutorial shows the
@@ -284,7 +288,8 @@ export function Tutorial({
                           <TutorialDemo
                             key="set"
                             kind="lead"
-                            cards={LEAD_PAIR}
+                            cards={LEAD_SET}
+                            grow
                             label={t("ui.tutorial.basics.leadLabel")}
                           />,
                         ]}
@@ -325,12 +330,32 @@ export function Tutorial({
                 {current === "pass" && (
                   <MechanicPage
                     visual={
-                      <TutorialDemo
-                        kind="pass"
-                        cards={PASS_PLAY}
-                        passLabel={t("ui.action.pass")}
-                        label={t("ui.tutorial.basics.passLabel")}
-                      />
+                      <DemoSplit or={t("ui.tutorial.or")}>
+                        {[
+                          <figure key="auto" className="tutorial__demo-figure">
+                            <TutorialDemo
+                              kind="passAuto"
+                              cards={PASS_HAND}
+                              autoPassLabel={t("ui.action.autoPass")}
+                              label={t("ui.tutorial.basics.passAutoLabel")}
+                            />
+                            <figcaption className="tutorial__demo-caption" aria-hidden="true">
+                              {t("ui.tutorial.basics.passAutoLabel")}
+                            </figcaption>
+                          </figure>,
+                          <figure key="choose" className="tutorial__demo-figure">
+                            <TutorialDemo
+                              kind="passChoose"
+                              cards={PASS_PILE}
+                              passLabel={t("ui.action.pass")}
+                              label={t("ui.tutorial.basics.passChooseLabel")}
+                            />
+                            <figcaption className="tutorial__demo-caption" aria-hidden="true">
+                              {t("ui.tutorial.basics.passChooseLabel")}
+                            </figcaption>
+                          </figure>,
+                        ]}
+                      </DemoSplit>
                     }
                   >
                     {t("ui.tutorial.basics.pass")}

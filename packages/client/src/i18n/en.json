@@ -148,7 +148,9 @@
   "ui.tutorial.basics.followLabel": "Beating a play",
   "ui.tutorial.basics.follow": "To stay in, match the number of cards on the table with a higher rank. Ranks run 3-4-5-6-7-8-9-10-J-Q-K-A-2, so a 2 is the highest card.",
   "ui.tutorial.basics.passLabel": "Passing",
-  "ui.tutorial.basics.pass": "Passing sits you out until the pile clears. Once everyone but the last player to play has passed, the pile is swept away and that player leads again.",
+  "ui.tutorial.basics.pass": "You can pass instead of playing — and if nothing in your hand beats the pile, the game passes for you. Either way you sit out until the pile clears, then the last player to play leads a new one.",
+  "ui.tutorial.basics.passAutoLabel": "Passed for you",
+  "ui.tutorial.basics.passChooseLabel": "Pass by choice",
   "ui.tutorial.basics.jokerLabel": "The Joker",
   "ui.tutorial.basics.joker": "The Joker (★) is the strongest card of all. It can also stand in for any card you name, letting it join a set or set off a card power.",
 
