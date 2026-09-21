@@ -26,6 +26,7 @@ import { useCopy, type I18nKey } from "../i18n/index";
 import { useSocket } from "../context/SocketContext";
 import { useKeyboardInset } from "../hooks/useKeyboardInset";
 import { TerminologyToggle } from "./TerminologyToggle";
+import { Tutorial } from "./Tutorial";
 import { readStoredPlayerName } from "../playerName";
 
 import { EmojiPicker } from "./EmojiPicker";
@@ -307,6 +308,8 @@ export function MainMenu() {
             {t(notice)}
           </p>
         )}
+
+        <Tutorial />
       </div>
     </div>
   );

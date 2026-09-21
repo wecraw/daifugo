@@ -45,6 +45,62 @@ export const UI_I18N_KEYS = [
   "ui.terminology.grandMillionaire",
   "ui.terminology.daifugo",
 
+  // The how-to-play tutorial (a main-menu popup). Three paged cards — the basics
+  // of a trick, the rank-triggered card powers (§6), and the between-round ranks
+  // and exchange (§4, §9) — plus its own chrome. It is presentation only, so it
+  // lives entirely in `ui.*`; the card-power rows reuse the core `rule.*` names
+  // (§11) so the tutorial and the host panel say the same thing.
+  "ui.tutorial.open",
+  "ui.tutorial.title",
+  "ui.tutorial.close",
+  "ui.tutorial.back",
+  "ui.tutorial.next",
+  "ui.tutorial.done",
+  "ui.tutorial.progress",
+  "ui.tutorial.or",
+
+  "ui.tutorial.basics.title",
+  "ui.tutorial.basics.goalLabel",
+  "ui.tutorial.basics.goal",
+  "ui.tutorial.basics.turnsLabel",
+  "ui.tutorial.basics.turns",
+  "ui.tutorial.basics.leadLabel",
+  "ui.tutorial.basics.lead",
+  "ui.tutorial.basics.followLabel",
+  "ui.tutorial.basics.follow",
+  "ui.tutorial.basics.passLabel",
+  "ui.tutorial.basics.pass",
+  "ui.tutorial.basics.passAutoLabel",
+  "ui.tutorial.basics.passChooseLabel",
+  "ui.tutorial.basics.jokerLabel",
+  "ui.tutorial.basics.joker",
+
+  // The card-power descriptions. Keyed by the same `HouseRuleKey` the core
+  // `rule.*` names use, so the component can render name + description off one
+  // list (§6 order lives in `HOUSE_RULE_KEYS`).
+  "ui.tutorial.rules.title",
+  "ui.tutorial.rules.intro",
+  "ui.tutorial.rules.spade3BeatsJoker",
+  "ui.tutorial.rules.fiveSkip",
+  "ui.tutorial.rules.sevenPass",
+  "ui.tutorial.rules.eightGiri",
+  "ui.tutorial.rules.nineGiriMinPair",
+  "ui.tutorial.rules.tenDiscard",
+  "ui.tutorial.rules.elevenBack",
+  "ui.tutorial.rules.kakumei",
+  "ui.tutorial.rules.shibari",
+  "ui.tutorial.rules.kaidan",
+
+  "ui.tutorial.postgame.title",
+  "ui.tutorial.postgame.ranksLabel",
+  "ui.tutorial.postgame.ranks",
+  "ui.tutorial.postgame.scoringLabel",
+  "ui.tutorial.postgame.scoring",
+  "ui.tutorial.postgame.exchangeLabel",
+  "ui.tutorial.postgame.exchange",
+  "ui.tutorial.postgame.miyakoOchiLabel",
+  "ui.tutorial.postgame.miyakoOchi",
+
   // Connection status
   "ui.connection.connecting",
   "ui.connection.connected",

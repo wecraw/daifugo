@@ -53,6 +53,7 @@ import { PlayerSeat } from "./PlayerSeat";
 import { ReactionMenu } from "./ReactionMenu";
 import { TrickArea } from "./TrickArea";
 import { TurnTimer } from "./TurnTimer";
+import { Tutorial } from "./Tutorial";
 import { YourTurnPopup } from "./YourTurnPopup";
 
 export function GameTable({ room }: { room: PublicGameState }) {
@@ -172,6 +173,8 @@ export function GameTable({ room }: { room: PublicGameState }) {
             <TurnTimer deadline={room.deadline} durationMs={TURN_DURATION_MS} size="strip" />
           )}
         </div>
+        {/* The rules a tap away without leaving the table (§10). */}
+        <Tutorial variant="icon" className="game-table__help" />
         {/* The lobby's leave button is out of reach mid-round; §7.7 says a seat
             may go at any time, so the table keeps one of its own. */}
         <button
